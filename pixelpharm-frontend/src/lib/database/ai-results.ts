@@ -46,42 +46,75 @@ export async function storeOCRResults(data: StoreOCRResultsData) {
 
       // If we have structured biomarker data, store blood test results
       if (data.biomarkers && data.biomarkers.length > 0) {
+        // Parse test date safely
+        let testDate = new Date(); // Default to today
+        if (data.testInfo?.testDate) {
+          const parsedDate = new Date(data.testInfo.testDate);
+          if (!isNaN(parsedDate.getTime())) {
+            testDate = parsedDate;
+          }
+        }
+
         const bloodTestResult = await tx.bloodTestResult.create({
           data: {
             userId: data.userId,
             uploadId: data.uploadId,
-            testDate: data.testInfo?.testDate
-              ? new Date(data.testInfo.testDate)
-              : new Date(),
+            testDate: testDate,
             labName: data.testInfo?.labName || null,
             biomarkers: data.biomarkers,
           },
         });
 
         // Store individual biomarker values for trend analysis
-        const biomarkerValues = data.biomarkers.map((biomarker) => ({
-          userId: data.userId,
-          resultId: bloodTestResult.resultId,
-          biomarkerName: biomarker.name,
-          value: parseFloat(biomarker.value) || 0,
-          unit: biomarker.unit || "",
-          referenceRange: biomarker.referenceRange || null,
-          isAbnormal: false, // TODO: Calculate based on reference ranges
-          testDate: data.testInfo?.testDate
-            ? new Date(data.testInfo.testDate)
-            : new Date(),
-        }));
+        const validBiomarkers: Array<{
+          userId: string;
+          resultId: string;
+          biomarkerName: string;
+          value: number;
+          unit: string;
+          referenceRange: string | null;
+          isAbnormal: boolean;
+          testDate: Date;
+        }> = [];
 
-        if (biomarkerValues.length > 0) {
+        for (const biomarker of data.biomarkers) {
+          const numericValue = parseFloat(biomarker.value);
+
+          // Skip invalid biomarkers
+          if (
+            isNaN(numericValue) ||
+            numericValue < 0 ||
+            numericValue > 999999
+          ) {
+            console.warn(
+              `Skipping invalid biomarker value: ${biomarker.name} = ${biomarker.value}`
+            );
+            continue;
+          }
+
+          validBiomarkers.push({
+            userId: data.userId,
+            resultId: bloodTestResult.resultId,
+            biomarkerName: biomarker.name,
+            value: numericValue,
+            unit: biomarker.unit || "",
+            referenceRange: biomarker.referenceRange || null,
+            isAbnormal: false, // TODO: Calculate based on reference ranges
+            testDate: testDate,
+          });
+        }
+
+        // Only create biomarker values if we have valid ones
+        if (validBiomarkers.length > 0) {
           await tx.biomarkerValue.createMany({
-            data: biomarkerValues,
+            data: validBiomarkers,
           });
         }
 
         return {
           aiResult,
           bloodTestResult,
-          biomarkerCount: biomarkerValues.length,
+          biomarkerCount: validBiomarkers.length,
         };
       }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation"; // Add this line
+import { useState, useCallback } from "react";
 import ProtectedRoute from "@/components/auth/protected-route";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,7 @@ import Link from "next/link";
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
+  const router = useRouter();
 
   return (
     <ProtectedRoute>
@@ -89,6 +92,21 @@ export default function Dashboard() {
 
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <Card
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => router.push("/dashboard/health-analytics")}
+            >
+              <CardContent className="p-6 text-center">
+                <Activity className="h-8 w-8 text-purple-600 mx-auto mb-3" />
+                <h3 className="font-semibold text-slate-900 mb-2">
+                  Health Analytics
+                </h3>
+                <p className="text-sm text-slate-600">
+                  View biomarker trends and health insights
+                </p>
+              </CardContent>
+            </Card>
+
             <Card className="bg-gradient-to-r from-slate-500 to-slate-600 text-white border-0">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">

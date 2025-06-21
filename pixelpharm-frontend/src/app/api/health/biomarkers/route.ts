@@ -56,10 +56,10 @@ export async function GET(request: NextRequest) {
       data: {
         trends: trendsByBiomarker,
         totalDataPoints: trends.length,
-        healthSummary: {
-          totalUploads: healthSummary?._count.fileUploads || 0,
-          totalBloodTests: healthSummary?._count.bloodTestResults || 0,
-          totalBiomarkers: healthSummary?._count.biomarkerValues || 0,
+        summary: {
+          totalUploads: healthSummary?._count?.fileUploads || 0,
+          totalBloodTests: healthSummary?._count?.bloodTestResults || 0,
+          totalBiomarkers: healthSummary?._count?.biomarkerValues || 0,
         },
       },
     });
@@ -71,6 +71,15 @@ export async function GET(request: NextRequest) {
         success: false,
         error: "Failed to get biomarker data",
         details: error instanceof Error ? error.message : "Unknown error",
+        data: {
+          trends: {},
+          totalDataPoints: 0,
+          summary: {
+            totalUploads: 0,
+            totalBloodTests: 0,
+            totalBiomarkers: 0,
+          },
+        },
       },
       { status: 500 }
     );
