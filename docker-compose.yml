@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database for PixelPharm
+  postgres:
+    image: postgres:15-alpine
+    container_name: pixelpharm-postgres
+    environment:
+      POSTGRES_DB: pixelpharm
+      POSTGRES_USER: pixelpharm_user
+      POSTGRES_PASSWORD: dev_password_123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pixelpharm_user -d pixelpharm"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - pixelpharm-network
+
+  # pgAdmin for database management (optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pixelpharm-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@pixelpharm.local
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - pixelpharm-network
+    profiles:
+      - admin # Only start with: docker-compose --profile admin up
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  pixelpharm-network:
+    driver: bridge

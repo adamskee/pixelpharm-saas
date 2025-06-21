@@ -1,3 +1,6 @@
+// src/components/upload/file-upload.tsx
+// Enhanced with database integration
+
 "use client";
 
 import { useState, useCallback } from "react";
@@ -13,12 +16,18 @@ import {
   AlertCircle,
   Brain,
   Eye,
+  Database,
 } from "lucide-react";
 
 interface FileUploadProps {
-  onUploadComplete?: (fileKey: string, ocrResults?: any) => void;
+  onUploadComplete?: (
+    fileKey: string,
+    ocrResults?: any,
+    uploadId?: string
+  ) => void;
   acceptedFileTypes?: string[];
   maxFileSize?: number;
+  uploadType?: string;
 }
 
 interface OCRResult {
@@ -41,16 +50,21 @@ export default function FileUpload({
   onUploadComplete,
   acceptedFileTypes = [".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".webp"],
   maxFileSize = 25 * 1024 * 1024, // 25MB
+  uploadType = "blood-tests",
 }: FileUploadProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<
-    "idle" | "uploading" | "processing" | "success" | "error"
+    "idle" | "uploading" | "processing" | "storing" | "success" | "error"
   >("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [ocrResults, setOcrResults] = useState<OCRResult | null>(null);
   const [processingStep, setProcessingStep] = useState("");
+  const [uploadId, setUploadId] = useState<string | null>(null);
+
+  // TODO: Get real user ID from Cognito/Auth context
+  const userId = "cmc64o5u70000w1dsmzexzi88"; // Using test user from database
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -69,6 +83,7 @@ export default function FileUpload({
       setUploadStatus("idle");
       setErrorMessage("");
       setOcrResults(null);
+      setUploadId(null);
     },
     [maxFileSize]
   );
@@ -98,7 +113,7 @@ export default function FileUpload({
 
         setProcessingStep(`Uploading ${file.name}...`);
 
-        // Get presigned URL
+        // Step 1: Get presigned URL and upload to S3
         const response = await fetch("/api/upload/presigned-url", {
           method: "POST",
           headers: {
@@ -107,7 +122,7 @@ export default function FileUpload({
           body: JSON.stringify({
             fileName: file.name,
             fileType: file.type,
-            uploadType: "blood-tests",
+            uploadType: uploadType,
           }),
         });
 
@@ -136,9 +151,37 @@ export default function FileUpload({
           throw new Error(`Upload failed: ${uploadResponse.status}`);
         }
 
-        setUploadProgress(((i + 1) / files.length) * 50); // Upload is 50% of total progress
+        setUploadProgress(25); // 25% - File uploaded
+        // Step 2: Track upload in database
+        setProcessingStep("Tracking upload in database...");
+        let trackData = null; // 🆕 Add this line
 
-        // Start OCR processing for PDF and image files
+        const trackResponse = await fetch("/api/uploads/track", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId,
+            fileKey,
+            originalFilename: file.name,
+            fileType: file.type,
+            uploadType: uploadType,
+            fileSize: file.size,
+          }),
+        });
+
+        if (!trackResponse.ok) {
+          console.warn("Failed to track upload in database");
+        } else {
+          trackData = await trackResponse.json(); // 🔄 Remove 'const'
+          setUploadId(trackData.uploadId);
+        }
+
+        setUploadProgress(50); // 50% - Upload tracked
+
+        // Step 3: OCR Processing (for PDFs and images)
+        let ocrData = null;
         if (file.type === "application/pdf" || file.type.startsWith("image/")) {
           setUploadStatus("processing");
           setProcessingStep("Analyzing document with AI...");
@@ -151,12 +194,12 @@ export default function FileUpload({
               },
               body: JSON.stringify({
                 fileKey,
-                uploadType: "blood-tests",
+                uploadType: uploadType,
               }),
             });
 
             if (ocrResponse.ok) {
-              const ocrData = await ocrResponse.json();
+              ocrData = await ocrResponse.json();
               setOcrResults(ocrData);
               setProcessingStep(
                 `Found ${ocrData.biomarkers?.length || 0} biomarkers`
@@ -171,10 +214,45 @@ export default function FileUpload({
           }
         }
 
+        setUploadProgress(75); // 75% - OCR complete
+
+        // Step 4: Store AI results in database
+        if (ocrData && trackData?.uploadId) {
+          setUploadStatus("storing");
+          setProcessingStep("Storing AI results in database...");
+
+          try {
+            const storeResponse = await fetch("/api/ai/store-results", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                uploadId: trackData.uploadId,
+                userId,
+                ocrResults: ocrData,
+              }),
+            });
+
+            if (storeResponse.ok) {
+              const storeData = await storeResponse.json();
+              setProcessingStep(
+                `Stored ${storeData.biomarkerCount} biomarkers in database`
+              );
+            } else {
+              console.warn("Failed to store AI results in database");
+              setProcessingStep("Results processed (database storage failed)");
+            }
+          } catch (storeError) {
+            console.warn("Database storage error:", storeError);
+            setProcessingStep("Results processed (database storage failed)");
+          }
+        }
+
         setUploadProgress(((i + 1) / files.length) * 100);
 
         if (onUploadComplete) {
-          onUploadComplete(fileKey, ocrResults);
+          onUploadComplete(fileKey, ocrData, trackData?.uploadId);
         }
       }
 
@@ -192,33 +270,37 @@ export default function FileUpload({
     setFiles(files.filter((_, i) => i !== index));
   };
 
-  const getStatusColor = () => {
-    switch (uploadStatus) {
-      case "uploading":
-        return "blue";
-      case "processing":
-        return "purple";
-      case "success":
-        return "green";
-      case "error":
-        return "red";
-      default:
-        return "gray";
-    }
-  };
-
   const getStatusIcon = () => {
     switch (uploadStatus) {
       case "uploading":
         return <Upload className="h-4 w-4" />;
       case "processing":
         return <Brain className="h-4 w-4" />;
+      case "storing":
+        return <Database className="h-4 w-4" />;
       case "success":
         return <CheckCircle className="h-4 w-4" />;
       case "error":
         return <AlertCircle className="h-4 w-4" />;
       default:
         return null;
+    }
+  };
+
+  const getStatusText = () => {
+    switch (uploadStatus) {
+      case "uploading":
+        return "Uploading...";
+      case "processing":
+        return "AI Processing...";
+      case "storing":
+        return "Saving to Database...";
+      case "success":
+        return "Complete!";
+      case "error":
+        return "Error";
+      default:
+        return "";
     }
   };
 
@@ -242,7 +324,7 @@ export default function FileUpload({
           Supports: PDF, JPEG, PNG, TIFF, WebP (max 25MB each)
         </p>
         <p className="text-xs text-blue-600 mt-2 font-medium">
-          ✨ AI-powered analysis for blood test documents
+          ✨ AI-powered analysis + database storage
         </p>
       </div>
 
@@ -264,7 +346,7 @@ export default function FileUpload({
                       {(file.type === "application/pdf" ||
                         file.type.startsWith("image/")) && (
                         <span className="ml-2 text-blue-600">
-                          • AI Analysis Available
+                          • AI Analysis + Database Storage
                         </span>
                       )}
                     </p>
@@ -287,10 +369,7 @@ export default function FileUpload({
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
                   {getStatusIcon()}
-                  <span className="text-sm font-medium">
-                    {uploadStatus === "uploading" && "Uploading..."}
-                    {uploadStatus === "processing" && "AI Processing..."}
-                  </span>
+                  <span className="text-sm font-medium">{getStatusText()}</span>
                 </div>
                 <span className="text-sm text-gray-500">
                   {Math.round(uploadProgress)}%
@@ -312,10 +391,7 @@ export default function FileUpload({
               {uploading ? (
                 <>
                   {getStatusIcon()}
-                  <span className="ml-2">
-                    {uploadStatus === "uploading" && "Uploading..."}
-                    {uploadStatus === "processing" && "AI Processing..."}
-                  </span>
+                  <span className="ml-2">{getStatusText()}</span>
                 </>
               ) : (
                 "Upload & Analyze Files"
@@ -336,11 +412,16 @@ export default function FileUpload({
         <Alert className="mt-4 border-green-200 bg-green-50">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">
-            Files uploaded successfully!
+            Files uploaded and processed successfully!
             {ocrResults && ocrResults.biomarkers.length > 0 && (
               <span className="block mt-1">
-                ✨ AI found {ocrResults.biomarkers.length} biomarkers in your
-                document
+                ✨ AI found {ocrResults.biomarkers.length} biomarkers and saved
+                to database
+              </span>
+            )}
+            {uploadId && (
+              <span className="block mt-1 text-xs">
+                📊 Upload ID: {uploadId}
               </span>
             )}
           </AlertDescription>
@@ -373,6 +454,8 @@ export default function FileUpload({
             >
               {ocrResults.confidence} confidence
             </span>
+            <Database className="h-4 w-4 text-blue-600" />
+            <span className="text-xs text-blue-600">Saved to Database</span>
           </div>
 
           {/* Test Information */}
@@ -427,21 +510,10 @@ export default function FileUpload({
             <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
               <p className="text-sm text-yellow-700">
                 📝 Document processed, but no biomarkers were automatically
-                detected. This could be due to document format or image quality.
+                detected.
               </p>
             </div>
           )}
-
-          {/* Extracted Text Preview */}
-          <details className="mt-4">
-            <summary className="cursor-pointer text-sm font-medium text-slate-600 hover:text-slate-800">
-              <Eye className="inline h-4 w-4 mr-1" />
-              View Extracted Text Preview
-            </summary>
-            <div className="mt-2 p-3 bg-white border rounded text-xs font-mono text-slate-600 max-h-32 overflow-y-auto">
-              {ocrResults.extractedText || "No text preview available"}
-            </div>
-          </details>
 
           <div className="mt-4 flex space-x-3">
             <Button
@@ -468,7 +540,7 @@ export default function FileUpload({
         </div>
       )}
 
-      {/* Next Steps Hint */}
+      {/* Next Steps */}
       {uploadStatus === "success" && (
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <h4 className="text-sm font-semibold text-blue-800 mb-2">
@@ -477,14 +549,10 @@ export default function FileUpload({
           <ul className="text-xs text-blue-700 space-y-1">
             <li>• Your document has been securely uploaded and analyzed</li>
             <li>
-              • AI-extracted biomarkers will be used for health trend analysis
+              • AI-extracted biomarkers are now stored in your health database
             </li>
-            <li>• Visit your dashboard to see insights and recommendations</li>
-            {ocrResults && ocrResults.biomarkers.length > 0 && (
-              <li>
-                • Detected values will be compared against reference ranges
-              </li>
-            )}
+            <li>• Visit your dashboard to see trends and insights</li>
+            <li>• Upload more tests to track health progress over time</li>
           </ul>
         </div>
       )}

@@ -1,0 +1,247 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User profiles (extends AWS Cognito authentication)
+model User {
+  userId      String   @id @default(cuid()) @map("user_id")
+  cognitoSub  String?  @unique @map("cognito_sub") // AWS Cognito user ID
+  email       String   @unique
+  firstName   String?  @map("first_name")
+  lastName    String?  @map("last_name")
+  dateOfBirth DateTime? @map("date_of_birth") @db.Date
+  gender      Gender?
+  timezone    String?  @default("UTC")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  fileUploads            FileUpload[]
+  aiProcessingResults    AiProcessingResult[]
+  bloodTestResults       BloodTestResult[]
+  biomarkerValues        BiomarkerValue[]
+  bodyCompositionResults BodyCompositionResult[]
+  fitnessActivities      FitnessActivity[]
+  healthInsights         HealthInsight[]
+
+  @@map("users")
+}
+
+// File uploads tracking
+model FileUpload {
+  uploadId         String       @id @default(cuid()) @map("upload_id")
+  userId           String       @map("user_id")
+  fileKey          String       @map("file_key") // S3 key
+  originalFilename String       @map("original_filename")
+  fileType         String       @map("file_type")
+  uploadType       UploadType   @map("upload_type")
+  fileSize         BigInt       @map("file_size")
+  uploadStatus     UploadStatus @default(UPLOADED) @map("upload_status")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  // Relationships
+  user                   User                     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  aiProcessingResults    AiProcessingResult[]
+  bloodTestResults       BloodTestResult[]
+  bodyCompositionResults BodyCompositionResult[]
+  fitnessActivities      FitnessActivity[]
+
+  @@map("file_uploads")
+}
+
+// OCR and AI processing results
+model AiProcessingResult {
+  processingId     String            @id @default(cuid()) @map("processing_id")
+  uploadId         String            @map("upload_id")
+  userId           String            @map("user_id")
+  processingType   ProcessingType    @map("processing_type")
+  rawResults       Json              @map("raw_results") // Full AI response
+  confidenceScore  Decimal?          @map("confidence_score") @db.Decimal(5, 4)
+  processingStatus ProcessingStatus  @default(PENDING) @map("processing_status")
+  errorMessage     String?           @map("error_message")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  processedAt      DateTime?         @map("processed_at")
+
+  // Relationships
+  upload FileUpload @relation(fields: [uploadId], references: [uploadId], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("ai_processing_results")
+}
+
+// Blood test results (structured biomarker data)
+model BloodTestResult {
+  resultId   String    @id @default(cuid()) @map("result_id")
+  userId     String    @map("user_id")
+  uploadId   String    @map("upload_id")
+  testDate   DateTime  @map("test_date") @db.Date
+  labName    String?   @map("lab_name")
+  biomarkers Json      @map("biomarkers") // Structured biomarker array
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  // Relationships
+  user            User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  upload          FileUpload       @relation(fields: [uploadId], references: [uploadId], onDelete: Cascade)
+  biomarkerValues BiomarkerValue[]
+
+  @@map("blood_test_results")
+}
+
+// Individual biomarker tracking for trends
+model BiomarkerValue {
+  valueId        String    @id @default(cuid()) @map("value_id")
+  userId         String    @map("user_id")
+  resultId       String    @map("result_id")
+  biomarkerName  String    @map("biomarker_name")
+  value          Decimal   @map("value") @db.Decimal(10, 3)
+  unit           String    @map("unit")
+  referenceRange String?   @map("reference_range")
+  isAbnormal     Boolean   @default(false) @map("is_abnormal")
+  testDate       DateTime  @map("test_date") @db.Date
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  // Relationships
+  user   User            @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  result BloodTestResult @relation(fields: [resultId], references: [resultId], onDelete: Cascade)
+
+  @@index([userId, biomarkerName, testDate])
+  @@map("biomarker_values")
+}
+
+// Body composition data (InBody 570, etc.)
+model BodyCompositionResult {
+  compositionId      String    @id @default(cuid()) @map("composition_id")
+  userId             String    @map("user_id")
+  uploadId           String    @map("upload_id")
+  testDate           DateTime  @map("test_date") @db.Date
+  totalWeight        Decimal?  @map("total_weight") @db.Decimal(5, 2)
+  bodyFatPercentage  Decimal?  @map("body_fat_percentage") @db.Decimal(5, 2)
+  skeletalMuscleMass Decimal?  @map("skeletal_muscle_mass") @db.Decimal(5, 2)
+  visceralFatLevel   Int?      @map("visceral_fat_level")
+  bmr                Int?      @map("bmr") // Basal Metabolic Rate
+  rawData            Json?     @map("raw_data") // Full InBody data
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  // Relationships
+  user   User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  upload FileUpload @relation(fields: [uploadId], references: [uploadId], onDelete: Cascade)
+
+  @@map("body_composition_results")
+}
+
+// Fitness activity data (Garmin Connect, etc.)
+model FitnessActivity {
+  activityId     String    @id @default(cuid()) @map("activity_id")
+  userId         String    @map("user_id")
+  uploadId       String    @map("upload_id")
+  activityDate   DateTime  @map("activity_date") @db.Date
+  activityType   String    @map("activity_type")
+  durationMinutes Int?     @map("duration_minutes")
+  caloriesBurned Int?      @map("calories_burned")
+  avgHeartRate   Int?      @map("avg_heart_rate")
+  maxHeartRate   Int?      @map("max_heart_rate")
+  distanceKm     Decimal?  @map("distance_km") @db.Decimal(8, 3)
+  rawData        Json?     @map("raw_data") // Full Garmin data
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  // Relationships
+  user   User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  upload FileUpload @relation(fields: [uploadId], references: [uploadId], onDelete: Cascade)
+
+  @@map("fitness_activities")
+}
+
+// AI-generated health insights and recommendations
+model HealthInsight {
+  insightId     String        @id @default(cuid()) @map("insight_id")
+  userId        String        @map("user_id")
+  insightType   InsightType   @map("insight_type")
+  title         String        @map("title")
+  description   String        @map("description")
+  priority      Priority      @map("priority")
+  dataSources   Json?         @map("data_sources") // References to source data
+  aiConfidence  Decimal?      @map("ai_confidence") @db.Decimal(5, 4)
+  isRead        Boolean       @default(false) @map("is_read")
+  expiresAt     DateTime?     @map("expires_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relationships
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("health_insights")
+}
+
+// Reference ranges for biomarkers
+model BiomarkerReference {
+  referenceId   String   @id @default(cuid()) @map("reference_id")
+  biomarkerName String   @map("biomarker_name")
+  gender        Gender   @default(ALL) @map("gender")
+  ageMin        Int?     @map("age_min")
+  ageMax        Int?     @map("age_max")
+  normalMin     Decimal? @map("normal_min") @db.Decimal(10, 3)
+  normalMax     Decimal? @map("normal_max") @db.Decimal(10, 3)
+  optimalMin    Decimal? @map("optimal_min") @db.Decimal(10, 3)
+  optimalMax    Decimal? @map("optimal_max") @db.Decimal(10, 3)
+  unit          String   @map("unit")
+  source        String?  @map("source") // Medical authority
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([biomarkerName, gender, ageMin, ageMax])
+  @@map("biomarker_references")
+}
+
+// Enums
+enum Gender {
+  MALE
+  FEMALE
+  ALL
+}
+
+enum UploadType {
+  BLOOD_TESTS
+  BODY_COMPOSITION
+  FITNESS_ACTIVITIES
+}
+
+enum UploadStatus {
+  UPLOADED
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum ProcessingType {
+  OCR
+  HEALTH_ANALYSIS
+  RECOMMENDATIONS
+}
+
+enum ProcessingStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum InsightType {
+  TREND_ANALYSIS
+  RISK_ASSESSMENT
+  RECOMMENDATION
+  ALERT
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
