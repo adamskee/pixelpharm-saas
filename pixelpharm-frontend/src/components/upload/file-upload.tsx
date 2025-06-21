@@ -77,10 +77,21 @@ export default function FileUpload({
           body: JSON.stringify({
             fileName: file.name,
             fileType: file.type,
+            uploadType: "blood-tests",
           }),
         });
 
-        const { uploadUrl, fileKey } = await response.json();
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`API request failed: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        const { uploadUrl, fileKey } = responseData;
+
+        if (!uploadUrl) {
+          throw new Error("No upload URL received from API");
+        }
 
         // Upload file to S3
         const uploadResponse = await fetch(uploadUrl, {
@@ -92,7 +103,7 @@ export default function FileUpload({
         });
 
         if (!uploadResponse.ok) {
-          throw new Error(`Upload failed for ${file.name}`);
+          throw new Error(`Upload failed: ${uploadResponse.status}`);
         }
 
         setUploadProgress(((i + 1) / files.length) * 100);
@@ -104,6 +115,7 @@ export default function FileUpload({
 
       setUploadStatus("success");
     } catch (error) {
+      console.error("Upload error:", error);
       setUploadStatus("error");
       setErrorMessage(error instanceof Error ? error.message : "Upload failed");
     } finally {
