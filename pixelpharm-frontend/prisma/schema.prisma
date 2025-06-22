@@ -28,6 +28,8 @@ model User {
   bodyCompositionResults BodyCompositionResult[]
   fitnessActivities      FitnessActivity[]
   healthInsights         HealthInsight[]
+ 
+
 
   @@map("users")
 }
@@ -199,6 +201,8 @@ model BiomarkerReference {
   @@unique([biomarkerName, gender, ageMin, ageMax])
   @@map("biomarker_references")
 }
+
+
 
 // Enums
 enum Gender {
