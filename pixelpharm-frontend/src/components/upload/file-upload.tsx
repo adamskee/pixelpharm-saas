@@ -6,6 +6,7 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth/auth-context";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -50,7 +51,7 @@ export default function FileUpload({
   onUploadComplete,
   acceptedFileTypes = [".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".webp"],
   maxFileSize = 25 * 1024 * 1024, // 25MB
-  uploadType = "blood-tests",
+  uploadType = "BLOOD_TESTS",
 }: FileUploadProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -62,9 +63,22 @@ export default function FileUpload({
   const [ocrResults, setOcrResults] = useState<OCRResult | null>(null);
   const [processingStep, setProcessingStep] = useState("");
   const [uploadId, setUploadId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userId = user?.userId || "";
 
-  // TODO: Get real user ID from Cognito/Auth context
-  const userId = "cmc64o5u70000w1dsmzexzi88"; // Using test user from database
+  if (!userId) {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-6">
+        <div className="border-2 border-gray-300 rounded-lg p-8 text-center">
+          <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <p className="text-lg text-gray-600 mb-2">Authentication Required</p>
+          <p className="text-sm text-gray-500">
+            Please sign in to upload files
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -163,6 +177,9 @@ export default function FileUpload({
           },
           body: JSON.stringify({
             userId,
+            userEmail: user?.email,
+            userFirstName: user?.firstName,
+            userLastName: user?.lastName,
             fileKey,
             originalFilename: file.name,
             fileType: file.type,

@@ -1,15 +1,12 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+// File: src/app/layout.tsx
+
+"use client";
+
 import "./globals.css";
-import { AuthProvider } from "@/components/auth/auth-provider";
-// Remove this line: import '@/lib/aws/amplify-config';
+import { Inter } from "next/font/google";
+import { AuthProvider } from "@/lib/auth/auth-context";
 
 const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "PixelPharm - AI-Powered Health Analytics",
-  description: "Upload blood tests and get AI-powered health insights",
-};
 
 export default function RootLayout({
   children,

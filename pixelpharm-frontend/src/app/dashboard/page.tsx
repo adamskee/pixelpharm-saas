@@ -1,326 +1,174 @@
+// File: src/app/dashboard/page.tsx
+
 "use client";
 
-import { useRouter } from "next/navigation"; // Add this line
-import { useState, useCallback } from "react";
-import ProtectedRoute from "@/components/auth/protected-route";
-import { useAuth } from "@/components/auth/auth-provider";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Upload,
-  Activity,
-  Scale,
-  FileText,
-  Settings,
-  LogOut,
-  BarChart3,
-  User,
-  Bell,
-  Search,
-} from "lucide-react";
+import { useAuth } from "@/lib/auth/auth-context";
+import AuthForms from "@/components/auth/auth-forms";
 import Link from "next/link";
 
-export default function Dashboard() {
-  const { user, signOut } = useAuth();
-  const router = useRouter();
+export default function DashboardPage() {
+  const { user, loading, isAuthenticated } = useAuth();
 
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Show auth forms if not authenticated
+  if (!isAuthenticated) {
+    return <AuthForms />;
+  }
+
+  // Show dashboard for authenticated users
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
-        {/* Header */}
-        <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-slate-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-4">
-                <div className="bg-gradient-to-r from-slate-600 to-slate-800 bg-clip-text text-transparent">
-                  <h1 className="text-2xl font-bold">PixelPharm</h1>
-                </div>
-                <Badge
-                  variant="secondary"
-                  className="bg-slate-100 text-slate-700 border-slate-200"
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Welcome back, {user?.firstName || "User"}!
+        </h1>
+        <p className="text-gray-600">
+          Your personalized health analytics dashboard
+        </p>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Link href="/upload" className="group">
+          <div className="bg-white p-6 rounded-lg shadow-md border hover:shadow-lg transition-shadow">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  Health Analytics
-                </Badge>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
               </div>
-
-              <div className="flex items-center space-x-3">
-                <Button variant="ghost" size="sm" className="hidden sm:flex">
-                  <Bell className="h-4 w-4 mr-2" />
-                  Notifications
-                </Button>
-
-                <div className="flex items-center space-x-2 px-3 py-1 bg-slate-100 rounded-full">
-                  <User className="h-4 w-4 text-slate-600" />
-                  <span className="text-sm text-slate-700 max-w-32 truncate">
-                    {user?.attributes?.email || "User"}
-                  </span>
-                </div>
-
-                <Button variant="ghost" size="sm">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Settings
-                </Button>
-
-                <Button variant="outline" size="sm" onClick={signOut}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
-              </div>
+              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600">
+                Upload Health Data
+              </h3>
             </div>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Welcome Section */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">
-              Welcome back! 👋
-            </h2>
-            <p className="text-lg text-slate-600">
-              Track your health metrics and get AI-powered insights from your
-              data
+            <p className="text-gray-600">
+              Upload blood tests, body composition data, or fitness activities
             </p>
           </div>
+        </Link>
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card
-              className="hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => router.push("/dashboard/health-analytics")}
-            >
-              <CardContent className="p-6 text-center">
-                <Activity className="h-8 w-8 text-purple-600 mx-auto mb-3" />
-                <h3 className="font-semibold text-slate-900 mb-2">
-                  Health Analytics
-                </h3>
-                <p className="text-sm text-slate-600">
-                  View biomarker trends and health insights
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-slate-500 to-slate-600 text-white border-0">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-100 text-sm">Blood Tests</p>
-                    <p className="text-2xl font-bold">0</p>
-                  </div>
-                  <FileText className="h-8 w-8 text-slate-200" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-slate-600 to-slate-700 text-white border-0">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-100 text-sm">Body Scans</p>
-                    <p className="text-2xl font-bold">0</p>
-                  </div>
-                  <Scale className="h-8 w-8 text-slate-200" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-slate-700 to-slate-800 text-white border-0">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-100 text-sm">Activities</p>
-                    <p className="text-2xl font-bold">0</p>
-                  </div>
-                  <Activity className="h-8 w-8 text-slate-200" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-slate-800 to-slate-900 text-white border-0">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-100 text-sm">AI Insights</p>
-                    <p className="text-2xl font-bold">0</p>
-                  </div>
-                  <BarChart3 className="h-8 w-8 text-slate-200" />
-                </div>
-              </CardContent>
-            </Card>
+        <Link href="/dashboard/health-analytics" className="group">
+          <div className="bg-white p-6 rounded-lg shadow-md border hover:shadow-lg transition-shadow">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                <svg
+                  className="w-6 h-6 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-green-600">
+                Health Analytics
+              </h3>
+            </div>
+            <p className="text-gray-600">
+              View AI-powered insights and personalized recommendations
+            </p>
           </div>
+        </Link>
 
-          {/* Quick Actions Grid */}
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold text-slate-900 mb-4">
-              Quick Actions
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Link href="/upload" className="group">
-                <Card className="hover:shadow-xl transition-all duration-300 group-hover:scale-105 border-2 hover:border-slate-300 bg-gradient-to-br from-slate-50 to-white">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-slate-200 transition-colors">
-                        <Upload className="h-6 w-6 text-slate-600" />
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="bg-slate-50 text-slate-700 border-slate-200"
-                      >
-                        Lab Work
-                      </Badge>
-                    </div>
-                    <CardTitle className="text-lg group-hover:text-slate-700 transition-colors">
-                      Blood Tests
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-sm">
-                      Upload lab results for AI analysis and health insights
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              </Link>
+        <Link href="/body-composition" className="group">
+          <div className="bg-white p-6 rounded-lg shadow-md border hover:shadow-lg transition-shadow">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+                <svg
+                  className="w-6 h-6 text-purple-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-purple-600">
+                Body Composition
+              </h3>
+            </div>
+            <p className="text-gray-600">
+              Track your body composition and fitness metrics
+            </p>
+          </div>
+        </Link>
+      </div>
 
-              <Link href="/body-composition" className="group">
-                <Card className="hover:shadow-xl transition-all duration-300 group-hover:scale-105 border-2 hover:border-slate-300 bg-gradient-to-br from-slate-50 to-white">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-slate-200 transition-colors">
-                        <Scale className="h-6 w-6 text-slate-600" />
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="bg-slate-50 text-slate-700 border-slate-200"
-                      >
-                        InBody
-                      </Badge>
-                    </div>
-                    <CardTitle className="text-lg group-hover:text-slate-700 transition-colors">
-                      Body Composition
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-sm">
-                      Upload InBody 570 scans and track body composition trends
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              </Link>
-
-              <Link href="/fitness-activities" className="group">
-                <Card className="hover:shadow-xl transition-all duration-300 group-hover:scale-105 border-2 hover:border-slate-300 bg-gradient-to-br from-slate-50 to-white">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-slate-200 transition-colors">
-                        <Activity className="h-6 w-6 text-slate-600" />
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="bg-slate-50 text-slate-700 border-slate-200"
-                      >
-                        Garmin
-                      </Badge>
-                    </div>
-                    <CardTitle className="text-lg group-hover:text-slate-700 transition-colors">
-                      Fitness Data
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-sm">
-                      Import Garmin Connect activities and analyze performance
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              </Link>
-
-              <Link href="/analytics" className="group">
-                <Card className="hover:shadow-xl transition-all duration-300 group-hover:scale-105 border-2 hover:border-slate-300 bg-gradient-to-br from-slate-50 to-white">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-slate-200 transition-colors">
-                        <BarChart3 className="h-6 w-6 text-slate-600" />
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="bg-slate-50 text-slate-700 border-slate-200"
-                      >
-                        AI Powered
-                      </Badge>
-                    </div>
-                    <CardTitle className="text-lg group-hover:text-slate-700 transition-colors">
-                      Analytics
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-sm">
-                      View trends, correlations, and AI-generated insights
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              </Link>
+      {/* Recent Activity */}
+      <div className="bg-white rounded-lg shadow-md border p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          Getting Started
+        </h2>
+        <div className="space-y-4">
+          <div className="flex items-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center mr-4">
+              <span className="text-white font-semibold text-sm">1</span>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900">
+                Upload Your Health Data
+              </h3>
+              <p className="text-gray-600 text-sm">
+                Start by uploading a blood test or health report
+              </p>
             </div>
           </div>
 
-          {/* Recent Activity Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-white shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-t-lg">
-                <CardTitle className="flex items-center text-white">
-                  <FileText className="h-5 w-5 mr-2" />
-                  Recent Blood Tests
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Upload className="h-8 w-8 text-slate-600" />
-                  </div>
-                  <p className="text-slate-500 text-sm mb-4">
-                    No blood tests uploaded yet. Start by uploading your first
-                    lab results.
-                  </p>
-                  <Button asChild className="bg-slate-600 hover:bg-slate-700">
-                    <Link href="/upload">Upload First Test</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-t-lg">
-                <CardTitle className="flex items-center text-white">
-                  <Activity className="h-5 w-5 mr-2" />
-                  AI Health Insights
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <BarChart3 className="h-8 w-8 text-slate-600" />
-                  </div>
-                  <p className="text-slate-500 text-sm mb-4">
-                    AI insights will appear here after uploading your health
-                    data.
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="border-slate-600 text-slate-600 hover:bg-slate-50"
-                  >
-                    Learn More
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="flex items-center p-4 bg-green-50 rounded-lg border border-green-200">
+            <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center mr-4">
+              <span className="text-white font-semibold text-sm">2</span>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900">Get AI Analysis</h3>
+              <p className="text-gray-600 text-sm">
+                Our AI will analyze your biomarkers and generate insights
+              </p>
+            </div>
           </div>
-        </main>
+
+          <div className="flex items-center p-4 bg-purple-50 rounded-lg border border-purple-200">
+            <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center mr-4">
+              <span className="text-white font-semibold text-sm">3</span>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900">
+                View Health Analytics
+              </h3>
+              <p className="text-gray-600 text-sm">
+                Access personalized recommendations and track trends
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
-    </ProtectedRoute>
+    </div>
   );
 }

@@ -211,7 +211,30 @@ Return JSON with trend analysis.`;
       const userProfile = await getUserProfile(userId);
 
       if (!biomarkers || biomarkers.length === 0) {
-        throw new Error("No biomarker data found for analysis");
+        console.log("No biomarker data found, returning empty state response");
+
+        return {
+          healthScore: 0,
+          riskLevel: "UNKNOWN" as RiskLevel,
+          keyFindings: ["No health data available"],
+          recommendations: [
+            {
+              category: "Getting Started",
+              title: "Upload Your First Health Document",
+              description:
+                "Upload a blood test or health report to begin your personalized health analysis.",
+              priority: "HIGH" as Priority,
+            },
+          ],
+          abnormalValues: [],
+          summary:
+            "No health data available. Upload your first health document to get started.",
+          confidence: 0,
+          lastAnalysisDate: new Date(),
+          dataCompleteness: 0,
+          trendAnalysis: [],
+          alerts: [],
+        };
       }
 
       const request: HealthAnalysisRequest = {

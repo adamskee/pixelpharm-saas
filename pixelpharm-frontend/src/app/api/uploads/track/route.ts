@@ -1,9 +1,10 @@
-// src/app/api/uploads/track/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { createUploadRecord } from "@/lib/database/uploads";
-import { UploadType } from "@prisma/client";
+// File: src/app/api/uploads/track/route.ts
 
-export async function POST(request: NextRequest) {
+import { NextResponse } from "next/server";
+import { createUploadRecord } from "@/lib/database/uploads";
+import { prisma } from "@/lib/database/client";
+
+export async function POST(request: Request) {
   try {
     const {
       userId,
@@ -20,28 +21,26 @@ export async function POST(request: NextRequest) {
       uploadType,
     });
 
-    if (!userId || !fileKey || !originalFilename) {
-      return NextResponse.json(
-        { error: "Missing required fields: userId, fileKey, originalFilename" },
-        { status: 400 }
-      );
-    }
-
-    // Convert upload type to enum
-    const uploadTypeEnum = uploadType
-      .toUpperCase()
-      .replace("-", "_") as UploadType;
+    // ENSURE USER EXISTS FIRST
+    await prisma.user.upsert({
+      where: { userId },
+      update: {}, // Don't update if exists
+      create: {
+        userId,
+        email: "user@example.com", // You'll need to get this from auth context
+        firstName: "User",
+        lastName: "Test",
+      },
+    });
 
     const uploadRecord = await createUploadRecord({
       userId,
       fileKey,
       originalFilename,
-      fileType: fileType || "application/octet-stream",
-      uploadType: uploadTypeEnum,
-      fileSize: fileSize || 0,
+      fileType,
+      uploadType,
+      fileSize,
     });
-
-    console.log("✅ Upload tracked successfully:", uploadRecord.uploadId);
 
     return NextResponse.json({
       success: true,
@@ -50,12 +49,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("❌ Failed to track upload:", error);
-
     return NextResponse.json(
       {
-        success: false,
         error: "Failed to track upload",
-        details: error instanceof Error ? error.message : "Unknown error",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );

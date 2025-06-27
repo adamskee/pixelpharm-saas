@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/auth/auth-context";
 import {
   Card,
   CardContent,
@@ -44,24 +45,26 @@ interface HealthInsights {
 }
 
 export default function HealthAnalyticsPage() {
+  const { user } = useAuth();
   const [insights, setInsights] = useState<HealthInsights | null>(null);
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [lastAnalyzed, setLastAnalyzed] = useState<string | null>(null);
   const [cached, setCached] = useState(false);
 
-  // Your existing biomarker data fetching logic here...
-  const userId = "cmc64o5u70000w1dsmzexzi88"; // Replace with actual user ID
-
   const fetchHealthInsights = async (forceRefresh = false) => {
+    if (!user) return;
+
     setLoading(true);
     try {
       const response = await fetch("/api/health/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, forceRefresh }),
+        body: JSON.stringify({
+          userId: user.userId, // Use real user ID
+          forceRefresh,
+        }),
       });
-
       const data = await response.json();
 
       if (response.ok) {
