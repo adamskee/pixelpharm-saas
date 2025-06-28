@@ -67,6 +67,13 @@ export default function HealthAnalyticsPage() {
       });
       const data = await response.json();
 
+      // Add debug logging here instead
+      console.log("🔍 Health Analytics API Response:", data);
+      console.log("🔍 Current User ID:", user.userId);
+      console.log("🔍 Response Success:", data.success);
+      console.log("🔍 Has Data:", data.hasData);
+      console.log("🔍 Insights:", data.insights);
+
       if (response.ok) {
         setInsights(data.insights);
         setLastAnalyzed(data.analyzedAt);

@@ -1,3 +1,4 @@
+// src/app/dashboard/layout.tsx
 "use client";
 
 import { AuthProvider, useAuth } from "@/lib/auth/auth-context";
@@ -44,7 +45,6 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               <span className="text-xl font-bold">PixelPharm</span>
             </Link>
           </div>
-
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             <Link
@@ -66,14 +66,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               Upload Data
             </Link>
           </nav>
-
           {/* User Menu */}
           <div className="flex items-center space-x-4">
             {/* Notifications */}
             <Button variant="ghost" size="sm">
               <Bell className="h-4 w-4" />
             </Button>
-
             {/* User Profile */}
             <div className="flex items-center space-x-3">
               <div className="text-right hidden sm:block">
@@ -82,17 +80,14 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 </div>
                 <div className="text-xs text-gray-500">{user?.email}</div>
               </div>
-
               {/* User Avatar */}
               <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
                 {userInitials}
               </div>
-
               {/* Settings */}
               <Button variant="ghost" size="sm">
                 <Settings className="h-4 w-4" />
               </Button>
-
               {/* Sign Out */}
               <Button variant="ghost" size="sm" onClick={signOut}>
                 <LogOut className="h-4 w-4" />
@@ -101,7 +96,6 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-
       <main className="py-8">{children}</main>
     </div>
   );

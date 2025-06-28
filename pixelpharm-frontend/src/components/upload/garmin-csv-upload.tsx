@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import Papa from "papaparse";
+import { useAuth } from "@/lib/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -60,6 +61,7 @@ export default function GarminCsvUpload({
   onUploadComplete,
 }: GarminCsvUploadProps) {
   const [file, setFile] = useState<File | null>(null);
+  const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [activities, setActivities] = useState<GarminActivity[]>([]);
@@ -198,8 +200,12 @@ export default function GarminCsvUpload({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ activities }),
-      });
+
+        body: JSON.stringify({
+          userId: user.userId,
+          activities,
+        }),
+      }); // <-- Add this closing brace and semicolon
 
       if (!response.ok) {
         throw new Error("Failed to save activities to database");
