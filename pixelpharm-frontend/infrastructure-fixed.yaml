@@ -1,0 +1,229 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "PixelPharm SaaS Infrastructure for Beta Release - Simplified Version"
+
+Parameters:
+  Environment:
+    Type: String
+    Default: prod
+    AllowedValues: [dev, prod]
+    Description: Environment name
+
+  ProjectName:
+    Type: String
+    Default: pixelpharm
+    Description: Project name for resource naming
+
+  # Add a unique suffix to ensure bucket names are globally unique
+  UniqueId:
+    Type: String
+    Default: "20250103"
+    Description: Unique identifier for resource naming
+
+Resources:
+  # ============================================================================
+  # S3 Bucket for File Uploads (HIPAA Compliant)
+  # ============================================================================
+  FileUploadsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-uploads-${Environment}-${UniqueId}"
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: ["*"]
+            AllowedMethods: [GET, PUT, POST, DELETE, HEAD]
+            AllowedHeaders: ["*"]
+            MaxAge: 3000
+
+  # ============================================================================
+  # Cognito User Pool for Authentication
+  # ============================================================================
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${ProjectName}-users-${Environment}"
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false # Made less strict
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE # Changed from CONFIRM_WITH_LINK
+        EmailSubject: "Welcome to PixelPharm - Verification Code"
+        EmailMessage: "Your verification code is {####}"
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      UserAttributeUpdateSettings:
+        AttributesRequireVerificationBeforeUpdate:
+          - email
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "${ProjectName}-client-${Environment}"
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_USER_PASSWORD_AUTH # Added for easier testing
+        - ALLOW_REFRESH_TOKEN_AUTH
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
+      AccessTokenValidity: 24
+      IdTokenValidity: 24
+      RefreshTokenValidity: 30
+      PreventUserExistenceErrors: ENABLED
+      SupportedIdentityProviders:
+        - COGNITO
+
+  # ============================================================================
+  # IAM Roles and Policies (Simplified)
+  # ============================================================================
+  S3AccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-s3-role-${Environment}-${UniqueId}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:GetObjectVersion
+                Resource: !Sub "${FileUploadsBucket}/*"
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Ref FileUploadsBucket
+
+  # Application execution role (for Vercel/Lambda functions)
+  ApplicationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-app-role-${Environment}-${UniqueId}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: BedrockAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                  - bedrock:ListFoundationModels
+                Resource: "*" # Bedrock resources are region-specific
+        - PolicyName: S3AndCognitoAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub "${FileUploadsBucket}/*"
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Ref FileUploadsBucket
+              - Effect: Allow
+                Action:
+                  - cognito-idp:AdminGetUser
+                  - cognito-idp:AdminUpdateUserAttributes
+                Resource: !GetAtt UserPool.Arn
+
+  # ============================================================================
+  # CloudWatch Logs (Optional - for monitoring)
+  # ============================================================================
+  ApplicationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ProjectName}-${Environment}"
+      RetentionInDays: 14 # Reduced for cost savings
+
+Outputs:
+  UserPoolId:
+    Description: "Cognito User Pool ID"
+    Value: !Ref UserPool
+    Export:
+      Name: !Sub "${ProjectName}-user-pool-id-${Environment}"
+
+  UserPoolClientId:
+    Description: "Cognito User Pool Client ID"
+    Value: !Ref UserPoolClient
+    Export:
+      Name: !Sub "${ProjectName}-user-pool-client-id-${Environment}"
+
+  S3BucketName:
+    Description: "S3 Bucket for file uploads"
+    Value: !Ref FileUploadsBucket
+    Export:
+      Name: !Sub "${ProjectName}-uploads-bucket-${Environment}"
+
+  S3BucketArn:
+    Description: "S3 Bucket ARN"
+    Value: !GetAtt FileUploadsBucket.Arn
+    Export:
+      Name: !Sub "${ProjectName}-uploads-bucket-arn-${Environment}"
+
+  ApplicationRoleArn:
+    Description: "IAM Role ARN for application access"
+    Value: !GetAtt ApplicationExecutionRole.Arn
+    Export:
+      Name: !Sub "${ProjectName}-app-role-arn-${Environment}"
+
+  Region:
+    Description: "AWS Region"
+    Value: !Ref "AWS::Region"
+    Export:
+      Name: !Sub "${ProjectName}-region-${Environment}"

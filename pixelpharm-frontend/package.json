@@ -4,18 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.11.2",
     "@aws-amplify/ui-react-auth": "^0.0.0-next-release-2c7a887-20230924174347",
-    "@aws-sdk/client-bedrock-runtime": "^3.830.0",
-    "@aws-sdk/client-s3": "^3.832.0",
+    "@aws-sdk/client-bedrock": "^3.840.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.842.0",
+    "@aws-sdk/client-s3": "^3.842.0",
     "@aws-sdk/client-textract": "^3.830.0",
-    "@aws-sdk/credential-providers": "^3.834.0",
-    "@aws-sdk/s3-request-presigner": "^3.832.0",
+    "@aws-sdk/credential-providers": "^3.840.0",
+    "@aws-sdk/s3-request-presigner": "^3.842.0",
     "@aws-sdk/util-create-request": "^3.826.0",
     "@aws-sdk/util-format-url": "^3.821.0",
     "@hookform/resolvers": "^5.1.1",

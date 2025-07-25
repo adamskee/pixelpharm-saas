@@ -28,10 +28,32 @@ model User {
   bodyCompositionResults BodyCompositionResult[]
   fitnessActivities      FitnessActivity[]
   healthInsights         HealthInsight[]
+  medicalReviews       MedicalReview[]
  
 
 
   @@map("users")
+}
+
+model MedicalReview {
+  id                   String   @id @default(cuid()) @map("id")
+  userId               String   @unique @map("user_id")
+  overallHealthScore   Int      @map("overall_health_score")
+  healthGrade          String   @map("health_grade") // A, B, C, D, F
+  riskLevel            String   @map("risk_level") // LOW, MODERATE, HIGH, CRITICAL
+  primaryRisks         String[] @map("primary_risks")
+  criticalFindings     Int      @map("critical_findings")
+  abnormalFindings     Int      @map("abnormal_findings")
+  dataCompleteness     Float    @map("data_completeness")
+  nextReviewDate       DateTime @map("next_review_date")
+  analysisVersion      String   @map("analysis_version")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user                 User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("medical_reviews")
 }
 
 // File uploads tracking

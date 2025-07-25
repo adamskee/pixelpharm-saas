@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "env": {
+    "NEXT_PUBLIC_AWS_REGION": "us-east-1",
+    "AWS_BEDROCK_REGION": "us-east-1",
+    "BEDROCK_MODEL_ID": "anthropic.claude-3-haiku-20240307-v1:0"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_AWS_REGION": "us-east-1",
+      "AWS_BEDROCK_REGION": "us-east-1",
+      "BEDROCK_MODEL_ID": "anthropic.claude-3-haiku-20240307-v1:0"
+    }
+  },
+  "functions": {
+    "src/app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/health",
+      "destination": "/api/health"
+    }
+  ]
+}

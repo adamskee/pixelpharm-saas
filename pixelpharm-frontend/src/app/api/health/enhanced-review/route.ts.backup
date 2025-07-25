@@ -1,0 +1,259 @@
+// File: src/app/api/health/enhanced-review/route.ts
+// Copy this file to your project
+
+import { NextResponse } from "next/server";
+import { enhancedMedicalReview } from "@/lib/medical/enhanced-review-system";
+import { prisma } from "@/lib/prisma";
+
+export async function POST(request: Request) {
+  try {
+    const { userId, config } = await request.json();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 }
+      );
+    }
+
+    console.log(`🏥 Generating enhanced medical review for user: ${userId}`);
+
+    // Fetch comprehensive user data
+    const [biomarkers, bodyComposition, userProfile] = await Promise.all([
+      // Get biomarkers
+      prisma.biomarkerValue.findMany({
+        where: { userId },
+        orderBy: { testDate: "desc" },
+        take: 100, // Get more data for comprehensive review
+      }),
+
+      // Get body composition
+      prisma.bodyCompositionResult.findFirst({
+        where: { userId },
+        orderBy: { testDate: "desc" },
+      }),
+
+      // Get user profile
+      prisma.user.findUnique({
+        where: { userId },
+        select: {
+          dateOfBirth: true,
+          gender: true,
+          firstName: true,
+          lastName: true,
+          timezone: true,
+        },
+      }),
+    ]);
+
+    if (biomarkers.length === 0) {
+      return NextResponse.json(
+        {
+          error: "No biomarker data available for comprehensive review",
+          suggestion:
+            "Please upload blood test results to generate a medical review",
+        },
+        { status: 404 }
+      );
+    }
+
+    console.log(
+      `📊 Processing ${biomarkers.length} biomarkers for comprehensive review`
+    );
+
+    // Generate enhanced medical review
+    const startTime = Date.now();
+    const medicalReview = await enhancedMedicalReview.generateEnhancedReview(
+      biomarkers,
+      bodyComposition,
+      userProfile,
+      config
+    );
+
+    const processingTime = Date.now() - startTime;
+    console.log(`✅ Enhanced medical review completed in ${processingTime}ms`);
+
+    // Store the review summary in database for future reference
+    try {
+      await prisma.medicalReview.upsert({
+        where: { userId },
+        update: {
+          overallHealthScore: medicalReview.overview.overallHealth.score,
+          healthGrade: medicalReview.overview.overallHealth.grade,
+          riskLevel: medicalReview.overview.riskProfile.level,
+          primaryRisks: medicalReview.overview.riskProfile.primaryRisks,
+          criticalFindings: medicalReview.clinicalFindings.critical.length,
+          abnormalFindings: medicalReview.clinicalFindings.abnormal.length,
+          dataCompleteness: medicalReview.overview.dataQuality.completeness,
+          nextReviewDate: medicalReview.metadata.nextReviewDate,
+          analysisVersion: medicalReview.metadata.analysisVersion,
+          updatedAt: new Date(),
+        },
+        create: {
+          userId,
+          overallHealthScore: medicalReview.overview.overallHealth.score,
+          healthGrade: medicalReview.overview.overallHealth.grade,
+          riskLevel: medicalReview.overview.riskProfile.level,
+          primaryRisks: medicalReview.overview.riskProfile.primaryRisks,
+          criticalFindings: medicalReview.clinicalFindings.critical.length,
+          abnormalFindings: medicalReview.clinicalFindings.abnormal.length,
+          dataCompleteness: medicalReview.overview.dataQuality.completeness,
+          nextReviewDate: medicalReview.metadata.nextReviewDate,
+          analysisVersion: medicalReview.metadata.analysisVersion,
+        },
+      });
+      console.log("💾 Medical review summary saved to database");
+    } catch (dbError) {
+      console.error("⚠️  Database save failed (continuing anyway):", dbError);
+    }
+
+    // Return comprehensive medical review
+    return NextResponse.json({
+      ...medicalReview,
+      performance: {
+        processingTime,
+        dataPoints: biomarkers.length,
+        hasBodyComposition: !!bodyComposition,
+        generatedAt: new Date().toISOString(),
+      },
+    });
+  } catch (error: any) {
+    console.error("❌ Enhanced medical review failed:", error);
+
+    return NextResponse.json(
+      {
+        error: "Enhanced medical review failed",
+        details: error.message,
+        fallback: {
+          overview: {
+            overallHealth: {
+              score: 50,
+              grade: "C",
+              status: "Analysis temporarily unavailable",
+              trend: "stable",
+            },
+            riskProfile: {
+              level: "UNKNOWN",
+              primaryRisks: ["Analysis unavailable"],
+              timeToAction: "routine",
+            },
+            dataQuality: {
+              completeness: 0,
+              recency: 0,
+              reliability: 0,
+            },
+          },
+          clinicalFindings: {
+            critical: [],
+            abnormal: [],
+            borderline: [],
+            normal: [],
+          },
+          systemReviews: {},
+          recommendations: {
+            immediate: [],
+            shortTerm: [],
+            longTerm: [],
+            lifestyle: [],
+            monitoring: [],
+          },
+          trends: {
+            improving: [],
+            stable: [],
+            concerning: [],
+          },
+          visualizations: {
+            healthScoreHistory: { data: [] },
+            biomarkerTrends: [],
+            riskFactorRadar: { data: [] },
+            comparativeAnalysis: { data: [] },
+          },
+          metadata: {
+            generatedAt: new Date(),
+            analysisVersion: "fallback",
+            dataPoints: 0,
+            confidenceScore: 0,
+            nextReviewDate: new Date(),
+          },
+        },
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// GET endpoint to retrieve cached medical review
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Get cached medical review from database
+    const cachedReview = await prisma.medicalReview.findUnique({
+      where: { userId },
+    });
+
+    if (!cachedReview) {
+      return NextResponse.json(
+        {
+          message: "No cached medical review found",
+          suggestion: "Generate a new medical review via POST request",
+        },
+        { status: 404 }
+      );
+    }
+
+    // Return cached review summary
+    return NextResponse.json({
+      cached: true,
+      lastGenerated: cachedReview.updatedAt,
+      overview: {
+        overallHealth: {
+          score: cachedReview.overallHealthScore,
+          grade: cachedReview.healthGrade,
+          status:
+            cachedReview.riskLevel === "LOW"
+              ? "Excellent health profile"
+              : cachedReview.riskLevel === "MODERATE"
+              ? "Good health with areas for improvement"
+              : "Health concerns requiring attention",
+          trend: "stable", // Would need historical data to determine
+        },
+        riskProfile: {
+          level: cachedReview.riskLevel,
+          primaryRisks: cachedReview.primaryRisks,
+          timeToAction:
+            cachedReview.criticalFindings > 0
+              ? "immediate"
+              : cachedReview.abnormalFindings > 0
+              ? "within_week"
+              : "routine",
+        },
+        dataQuality: {
+          completeness: cachedReview.dataCompleteness,
+          recency: 90, // Mock value
+          reliability: 85, // Mock value
+        },
+      },
+      metadata: {
+        nextReviewDate: cachedReview.nextReviewDate,
+        analysisVersion: cachedReview.analysisVersion,
+        criticalFindings: cachedReview.criticalFindings,
+        abnormalFindings: cachedReview.abnormalFindings,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error retrieving cached medical review:", error);
+    return NextResponse.json(
+      { error: "Failed to retrieve medical review", details: error.message },
+      { status: 500 }
+    );
+  }
+}

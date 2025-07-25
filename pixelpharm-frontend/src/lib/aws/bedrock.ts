@@ -1,10 +1,12 @@
 // File: src/lib/aws/bedrock.ts
+// FIXED VERSION - Throttling Handling & Correct Fitness Table Query
 
 import {
   BedrockRuntimeClient,
   InvokeModelCommand,
 } from "@aws-sdk/client-bedrock-runtime";
 import { fromEnv } from "@aws-sdk/credential-providers";
+import { prisma } from "@/lib/database/client";
 
 const client = new BedrockRuntimeClient({
   region: process.env.AWS_BEDROCK_REGION || "us-east-1",
@@ -27,6 +29,32 @@ export interface HealthAnalysisRequest {
     skeletalMuscleMass?: number;
     visceralFatLevel?: number;
     bmr?: number;
+  };
+  fitnessActivities?: {
+    recentActivities: Array<{
+      activityType: string;
+      date: string;
+      duration: number; // minutes
+      distance?: number; // km
+      calories: number;
+      avgHeartRate?: number;
+      maxHeartRate?: number;
+      trainingStressScore?: number;
+    }>;
+    weeklyStats: {
+      totalActivities: number;
+      totalDuration: number; // minutes
+      totalCalories: number;
+      totalDistance: number; // km
+      avgHeartRate: number;
+      activeDays: number;
+    };
+    monthlyTrends: {
+      totalActivities: number;
+      avgWeeklyDuration: number;
+      mostCommonActivity: string;
+      fitnessProgress: "improving" | "stable" | "declining";
+    };
   };
   userProfile: {
     age?: number;
@@ -64,6 +92,16 @@ export interface HealthAnalysisResponse {
     trend: string;
     timeframe: string;
   }>;
+  fitnessInsights?: {
+    activityCorrelations: Array<{
+      biomarker: string;
+      correlation: string;
+      insight: string;
+    }>;
+    cardioFitnessScore: number;
+    recoveryAssessment: string;
+    trainingRecommendations: string[];
+  };
   summary: string;
   confidence?: number;
   lastAnalysisDate?: Date;
@@ -74,346 +112,334 @@ export interface HealthAnalysisResponse {
 
 export class BedrockHealthAnalyzer {
   private async invokeModel(prompt: string): Promise<string> {
-    try {
-      const command = new InvokeModelCommand({
-        modelId: process.env.BEDROCK_MODEL_ID!,
-        body: JSON.stringify({
-          anthropic_version: "bedrock-2023-05-31",
-          max_tokens: 4000,
-          temperature: 0.1,
-          messages: [
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-        }),
-        contentType: "application/json",
-        accept: "application/json",
-      });
+    let retryCount = 0;
+    const maxRetries = 3;
+    const baseDelay = 2000; // 2 seconds
 
-      const response = await client.send(command);
-      const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-      return responseBody.content[0].text;
-    } catch (error) {
-      console.error("Bedrock invocation error:", error);
-      throw new Error("Failed to analyze health data");
+    while (retryCount < maxRetries) {
+      try {
+        // Check environment variables
+        const modelId = process.env.BEDROCK_MODEL_ID;
+        if (!modelId) {
+          throw new Error("BEDROCK_MODEL_ID environment variable is not set");
+        }
+
+        console.log(
+          `🔍 Bedrock invoke attempt ${retryCount + 1}/${maxRetries}`
+        );
+
+        const command = new InvokeModelCommand({
+          modelId: modelId,
+          body: JSON.stringify({
+            anthropic_version: "bedrock-2023-05-31",
+            max_tokens: 3000, // Reduced from 4000 to help with throttling
+            temperature: 0.1,
+            messages: [
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+          }),
+          contentType: "application/json",
+          accept: "application/json",
+        });
+
+        console.log("📡 Sending command to Bedrock...");
+        const response = await client.send(command);
+
+        console.log("✅ Bedrock response received successfully");
+        const responseBody = JSON.parse(
+          new TextDecoder().decode(response.body)
+        );
+        return responseBody.content[0].text;
+      } catch (error: any) {
+        console.error(
+          `❌ Bedrock invocation error (attempt ${retryCount + 1}):`,
+          {
+            name: error.name,
+            message: error.message,
+            code: error.code || error.$metadata?.httpStatusCode,
+          }
+        );
+
+        // Handle throttling specifically
+        if (
+          error.name === "ThrottlingException" ||
+          error.message?.includes("Too many requests")
+        ) {
+          retryCount++;
+          if (retryCount < maxRetries) {
+            const delay = baseDelay * Math.pow(2, retryCount - 1); // Exponential backoff
+            console.log(
+              `⏳ Throttling detected. Waiting ${delay}ms before retry ${
+                retryCount + 1
+              }/${maxRetries}...`
+            );
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            continue;
+          } else {
+            throw new Error(
+              "Bedrock API rate limit exceeded. Please wait a few minutes before trying again."
+            );
+          }
+        }
+
+        // Handle other specific errors
+        if (error.name === "UnrecognizedClientException") {
+          throw new Error(
+            "AWS credentials are invalid. Please check your AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY."
+          );
+        }
+
+        if (error.name === "AccessDeniedException") {
+          throw new Error(
+            "AWS credentials don't have permission to invoke Bedrock models. Please add 'bedrock:InvokeModel' permission."
+          );
+        }
+
+        if (error.message?.includes("ValidationException")) {
+          throw new Error(
+            `Invalid model ID or request format. Current model: ${process.env.BEDROCK_MODEL_ID}`
+          );
+        }
+
+        throw new Error(`Bedrock API error: ${error.message}`);
+      }
     }
+
+    throw new Error("Max retries exceeded for Bedrock API");
   }
 
   private buildAnalysisPrompt(request: HealthAnalysisRequest): string {
-    const { biomarkers, bodyComposition, userProfile, analysisType } = request;
+    const {
+      biomarkers,
+      bodyComposition,
+      fitnessActivities,
+      userProfile,
+      analysisType,
+    } = request;
 
-    // Your comprehensive medical prompt as the system instruction
-    const systemPrompt = `# AWS Bedrock Health Data Analysis Prompt
+    // Simplified prompt to reduce token usage and avoid throttling
+    const systemPrompt = `# AI Health Analysis
 
-## System Instructions
+You are an AI health professional analyzing patient data. Provide evidence-based insights.
 
-You are an advanced AI health and medical professional with extensive expertise in clinical laboratory analysis, preventive medicine, and evidence-based healthcare. Your role is to provide comprehensive, analytical health assessments based on uploaded data while maintaining the highest standards of medical accuracy and scientific rigor.
+## Analysis Framework
+Analyze laboratory biomarkers${bodyComposition ? ", body composition" : ""}${
+      fitnessActivities ? ", and fitness activities" : ""
+    } together for comprehensive health assessment.
 
-## Core Competencies
-
-- **Clinical Laboratory Medicine**: Expert interpretation of blood chemistry, hematology, lipid panels, metabolic markers, and specialized biomarkers
-- **Preventive Medicine**: Risk assessment, lifestyle interventions, and preventive care recommendations
-- **Evidence-Based Practice**: All recommendations must be grounded in peer-reviewed research and established clinical guidelines
-- **Data Analytics**: Statistical analysis of health trends, pattern recognition, and predictive modeling
-
-## Data Analysis Framework
-
-### Phase 1: Blood Test Data Analysis (Independent Assessment)
-
-When analyzing blood test results, perform the following systematic evaluation:
-
-1. **Reference Range Assessment**
-   - Compare each biomarker against age-specific and gender-specific reference ranges
-   - Identify values outside normal parameters (high, low, critical)
-   - Note any borderline values requiring monitoring
-
-2. **Clinical Significance Evaluation**
-   - Assess the clinical implications of each abnormal finding
-   - Identify potential underlying pathophysiology
-   - Consider differential diagnoses for abnormal patterns
-
-3. **Biomarker Correlation Analysis**
-   - Examine relationships between related markers (e.g., glucose and HbA1c)
-   - Identify metabolic patterns and syndrome clusters
-   - Assess inflammatory markers in context
-
-4. **Trend Analysis** (if historical data available)
-   - Calculate rate of change for key markers
-   - Identify improving or deteriorating trends
-   - Assess effectiveness of previous interventions
-
-### Phase 2: Health Metrics Analysis (Independent Assessment)
-
-For health metrics data (vital signs, body composition, activity data, etc.):
-
-1. **Physiological Assessment**
-   - Evaluate cardiovascular metrics (BP, HR, HRV)
-   - Analyze body composition and metabolic indicators
-   - Assess physical activity and fitness markers
-
-2. **Risk Stratification**
-   - Calculate cardiovascular risk scores where applicable
-   - Assess metabolic syndrome criteria
-   - Evaluate lifestyle-related health risks
-
-3. **Performance Metrics**
-   - Analyze fitness and activity levels
-   - Assess sleep quality and recovery metrics
-   - Evaluate stress and autonomic function indicators
-
-## Analytical Approach Requirements
-
-### Scientific Rigor
-- Cite specific reference ranges and their sources
-- Reference established clinical guidelines (AHA, ADA, ESC, etc.)
-- Include statistical significance and confidence intervals where applicable
-- Mention relevant research studies supporting recommendations
-
-### Data-Driven Insights
-- Provide quantitative analysis with specific values and percentages
-- Calculate risk ratios and odds ratios where appropriate
-- Use evidence-based risk calculators (Framingham, ASCVD, etc.)
-- Include population-based comparisons when relevant
-
-### Clinical Context
-- Consider age, gender, ethnicity, and genetic factors
-- Account for medications and supplements that may affect results
-- Evaluate findings in context of medical history and symptoms
-- Assess urgency of findings (routine, urgent, critical)
-
-## Final Integrated Health Analysis Report
-
-### Report Structure
-
-**Executive Summary**
-- Key findings and immediate concerns
-- Overall health status assessment
-- Priority recommendations
-
-**Detailed Analysis**
-
-1. **Laboratory Results Interpretation**
-   - Comprehensive review of blood test findings
-   - Clinical significance of abnormal values
-   - Metabolic and physiological insights
-
-2. **Health Metrics Evaluation**
-   - Cardiovascular and metabolic health assessment
-   - Physical fitness and lifestyle analysis
-   - Risk factor identification
-
-3. **Integrated Assessment**
-   - Correlation between lab results and health metrics
-   - Comprehensive risk stratification
-   - Identification of health patterns and trends
-
-4. **Evidence-Based Recommendations**
-   - Specific, actionable interventions
-   - Lifestyle modifications with scientific rationale
-   - Monitoring and follow-up suggestions
-   - Referral recommendations when appropriate
-
-### Recommendation Categories
-
-**Immediate Actions Required**
-- Critical findings requiring urgent medical attention
-- Specific timeline for follow-up
-
-**Lifestyle Interventions**
-- Dietary modifications with specific macronutrient targets
-- Exercise prescriptions with intensity and duration specifications
-- Sleep hygiene and stress management protocols
-
-**Monitoring and Follow-up**
-- Specific biomarkers to retest and timeline
-- Health metrics to track regularly
-- Preventive screening recommendations
-
-**Supplementation and Therapeutics**
-- Evidence-based supplement recommendations with dosages
-- Consideration of pharmaceutical interventions
-- Drug-nutrient interactions and contraindications
-
-## Quality Assurance Standards
-
-- **Accuracy**: All numerical values and reference ranges must be verified
-- **Completeness**: Address all significant findings in the data
-- **Clarity**: Use clear, professional language accessible to the patient
-- **Safety**: Always err on the side of caution with medical recommendations
-- **Disclaimer**: Include appropriate medical disclaimers about AI limitations
-
-## Medical Disclaimer Template
-
-"This analysis is generated by AI for informational purposes only and does not constitute medical advice, diagnosis, or treatment recommendations. All findings should be reviewed with a qualified healthcare provider. Urgent or critical findings require immediate medical attention. This analysis does not replace professional medical consultation."
-
-## Response Format
-
-Structure your response with clear headers, bullet points for key findings, and specific numerical values. Include confidence levels for recommendations and always provide the scientific rationale behind your conclusions.`;
-
-    // Format the biomarker data
-    let biomarkerData = "**Laboratory Results:**\n";
-    biomarkers.forEach((biomarker) => {
-      biomarkerData += `- ${biomarker.name}: ${biomarker.value} ${
-        biomarker.unit
-      } (Reference: ${biomarker.referenceRange}) ${
-        biomarker.isAbnormal ? "[ABNORMAL]" : "[NORMAL]"
-      } (Test Date: ${biomarker.testDate})\n`;
-    });
-
-    // Add body composition data
-    let bodyCompositionData = "";
-    if (bodyComposition) {
-      bodyCompositionData = `\n**Body Composition Results (${bodyComposition.testDate}):**\n`;
-      if (bodyComposition.totalWeight)
-        bodyCompositionData += `- Total Weight: ${bodyComposition.totalWeight} kg\n`;
-      if (bodyComposition.bodyFatPercentage)
-        bodyCompositionData += `- Body Fat Percentage: ${bodyComposition.bodyFatPercentage}%\n`;
-      if (bodyComposition.skeletalMuscleMass)
-        bodyCompositionData += `- Skeletal Muscle Mass: ${bodyComposition.skeletalMuscleMass} kg\n`;
-      if (bodyComposition.visceralFatLevel)
-        bodyCompositionData += `- Visceral Fat Level: ${bodyComposition.visceralFatLevel}\n`;
-      if (bodyComposition.bmr)
-        bodyCompositionData += `- Basal Metabolic Rate: ${bodyComposition.bmr} kcal/day\n`;
-    }
-
-    // User profile context
-    const userContext = `**Patient Profile:**
-- Age: ${userProfile.age || "Not specified"}
-- Gender: ${userProfile.gender || "Not specified"}
-- Height: ${userProfile.height || "Not specified"} cm
-- Current Weight: ${userProfile.weight || "Not specified"} kg`;
-
-    // Analysis type specific instructions
-    let analysisInstructions = "";
-    switch (analysisType) {
-      case "comprehensive":
-        analysisInstructions = `
-## Final Integrated Health Analysis Report
-
-Please provide a comprehensive health analysis following the framework outlined above. Your analysis should include:
-
-**Executive Summary**
-- Key findings and immediate concerns
-- Overall health status assessment
-- Priority recommendations
-
-**Detailed Analysis**
-1. Laboratory Results Interpretation
-2. Health Metrics Evaluation (if available)
-3. Integrated Assessment
-4. Evidence-Based Recommendations
-
-**Recommendation Categories**
-- Immediate Actions Required
-- Lifestyle Interventions
-- Monitoring and Follow-up
-- Supplementation and Therapeutics
-
-CRITICAL: Format your response as valid JSON matching this exact structure:
-{
-  "healthScore": number (0-100),
-  "riskLevel": "LOW|MODERATE|HIGH|CRITICAL",
-  "keyFindings": [string],
-  "recommendations": [{"category": string, "priority": string, "recommendation": string, "reasoning": string}],
-  "abnormalValues": [{"biomarker": string, "value": number, "concern": string, "urgency": string}],
-  "trends": [{"biomarker": string, "trend": string, "timeframe": string}],
-  "summary": string
+${
+  fitnessActivities
+    ? `## Key Correlations
+- Cardiovascular: Heart rate data vs lipid panels vs exercise capacity
+- Metabolic: Glucose/HbA1c vs exercise frequency vs body composition  
+- Recovery: Training load vs inflammatory markers (CRP, etc.)`
+    : ""
 }`;
-        break;
 
-      case "risk_assessment":
-        analysisInstructions = `
-Focus on comprehensive risk assessment following the framework above. Identify cardiovascular, metabolic, and other health risks based on the biomarker patterns. Return JSON with risk-focused analysis.`;
-        break;
+    // Build user context
+    const userContext = `
+## Patient Profile
+- Age: ${userProfile.age || "Unknown"}
+- Gender: ${userProfile.gender || "Unknown"}`;
 
-      case "recommendations":
-        analysisInstructions = `
-Focus on evidence-based, actionable recommendations following the framework above. Provide specific interventions based on the biomarker findings. Return JSON with detailed recommendations.`;
-        break;
+    // Build biomarker data (simplified)
+    const biomarkerData =
+      biomarkers.length > 0
+        ? `
+## Laboratory Results (${biomarkers.length} biomarkers)
+${biomarkers
+  .slice(0, 10)
+  .map((b) => `- ${b.name}: ${b.value} ${b.unit} ${b.isAbnormal ? "⚠️" : "✓"}`)
+  .join("\n")}${
+            biomarkers.length > 10
+              ? `\n... and ${biomarkers.length - 10} more biomarkers`
+              : ""
+          }`
+        : "\n## Laboratory Results: No data available";
 
-      case "trends":
-        analysisInstructions = `
-Analyze biomarker trends and patterns following the framework above. Identify improving, stable, or declining patterns and their clinical significance. Return JSON with trend analysis.`;
-        break;
-    }
+    // Build body composition data (simplified)
+    const bodyCompositionData = bodyComposition
+      ? `
+## Body Composition
+- Weight: ${bodyComposition.totalWeight || "N/A"} kg, Body Fat: ${
+          bodyComposition.bodyFatPercentage || "N/A"
+        }%
+- Muscle Mass: ${bodyComposition.skeletalMuscleMass || "N/A"} kg, BMR: ${
+          bodyComposition.bmr || "N/A"
+        } cal/day`
+      : "";
 
-    // Combine everything into the final prompt
-    const fullPrompt = `${systemPrompt}
+    // Build fitness activity data (simplified)
+    const fitnessData = fitnessActivities
+      ? `
+## Fitness Activities
+- Weekly: ${
+          fitnessActivities.weeklyStats.totalActivities
+        } activities, ${Math.round(
+          fitnessActivities.weeklyStats.totalDuration / 60
+        )} hours
+- Calories: ${fitnessActivities.weeklyStats.totalCalories}/week, Avg HR: ${
+          fitnessActivities.weeklyStats.avgHeartRate
+        } bpm
+- Main Activity: ${
+          fitnessActivities.monthlyTrends.mostCommonActivity
+        }, Trend: ${fitnessActivities.monthlyTrends.fitnessProgress}`
+      : "";
 
----
+    // FIXED: More explicit JSON instructions
+    const analysisInstructions = `
+## CRITICAL: Respond ONLY with valid JSON
 
-## Current Patient Data for Analysis:
+You must respond with ONLY a JSON object, no explanatory text before or after. The response must start with { and end with }.
 
-${userContext}
+Required JSON structure:
+{
+  "healthScore": 75,
+  "riskLevel": "MODERATE",
+  "keyFindings": ["Finding 1", "Finding 2"],
+  "recommendations": [{"category": "Nutrition", "priority": "high", "recommendation": "Specific advice", "reasoning": "Why this helps"}],
+  "abnormalValues": [{"biomarker": "Cholesterol", "value": 240, "concern": "Elevated", "urgency": "medium"}],
+  "trends": [{"biomarker": "Glucose", "trend": "stable", "timeframe": "3 months"}],
+  ${
+    fitnessActivities
+      ? `"fitnessInsights": {
+    "activityCorrelations": [{"biomarker": "HDL", "correlation": "positive", "insight": "Exercise improving cholesterol"}],
+    "cardioFitnessScore": 65,
+    "recoveryAssessment": "Good recovery based on heart rate patterns",
+    "trainingRecommendations": ["Add strength training", "Monitor recovery"]
+  },`
+      : ""
+  }
+  "summary": "Brief health summary with standard medical disclaimer that this is for educational purposes only."
+}
 
-${biomarkerData}${bodyCompositionData}
+IMPORTANT: Return ONLY the JSON object above, no other text.`;
 
-${analysisInstructions}
-
-**Important Guidelines:**
-- Integrate both laboratory biomarkers and body composition data in your analysis
-- Consider correlations between metabolic markers and body composition
-- Provide evidence-based recommendations for both biomarker optimization and body composition goals
-- Flag any critical values that need immediate attention
-- Consider age, gender, and other patient factors in analysis
-- Ensure all JSON is properly formatted and valid
-- Include the medical disclaimer in your summary`;
-
-    return fullPrompt;
+    return `${systemPrompt}${userContext}${biomarkerData}${bodyCompositionData}${fitnessData}${analysisInstructions}`;
   }
 
-  public async analyzeHealth(
-    request: HealthAnalysisRequest
-  ): Promise<HealthAnalysisResponse> {
-    const prompt = this.buildAnalysisPrompt(request);
-    const response = await this.invokeModel(prompt);
-
+  private async fetchFitnessData(userId: string) {
     try {
-      // Parse the JSON response from Claude
-      const analysisResult = JSON.parse(response);
+      console.log(`🔍 Fetching fitness data for user: ${userId}`);
 
-      // Add additional fields that your system expects
-      return {
-        ...analysisResult,
-        confidence: 0.85, // Default confidence score
-        lastAnalysisDate: new Date(),
-        dataCompleteness: Math.min(request.biomarkers.length * 10, 100), // Rough estimate
-        trendAnalysis: analysisResult.trends || [],
-        alerts:
-          analysisResult.abnormalValues?.filter(
-            (v: any) => v.urgency === "immediate"
-          ) || [],
-      } as HealthAnalysisResponse;
-    } catch (error) {
-      console.error("Failed to parse Bedrock response:", error);
-      console.error("Raw response:", response);
+      // Fetch recent fitness activities (last 30 days)
+      // FIXED: Use correct Prisma model name and field mapping
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-      // Fallback response if parsing fails
-      return {
-        healthScore: 50,
-        riskLevel: "MODERATE",
-        keyFindings: ["Analysis temporarily unavailable"],
-        recommendations: [
-          {
-            category: "system",
-            priority: "low",
-            recommendation:
-              "Health analysis is temporarily unavailable. Please try again later.",
-            reasoning: "System error occurred during analysis.",
+      const recentActivities = await prisma.fitnessActivity.findMany({
+        where: {
+          userId,
+          startTime: {
+            // FIXED: Use startTime instead of activityDate
+            gte: thirtyDaysAgo,
           },
-        ],
-        abnormalValues: [],
-        trends: [],
-        summary:
-          "Health analysis is temporarily unavailable. Please try again later.",
-        confidence: 0,
-        lastAnalysisDate: new Date(),
-        dataCompleteness: 0,
-        trendAnalysis: [],
-        alerts: [],
+        },
+        orderBy: {
+          startTime: "desc", // FIXED: Use startTime
+        },
+        take: 20,
+      });
+
+      console.log(`📊 Found ${recentActivities.length} fitness activities`);
+
+      if (recentActivities.length === 0) {
+        console.log("📊 No fitness activities found for user:", userId);
+        return null;
+      }
+
+      // Calculate weekly stats (last 7 days)
+      const weeklyActivities = recentActivities.filter(
+        (activity) => activity.startTime >= sevenDaysAgo
+      );
+
+      const weeklyStats = {
+        totalActivities: weeklyActivities.length,
+        totalDuration: weeklyActivities.reduce(
+          (sum, activity) => sum + (activity.durationMinutes || 0),
+          0
+        ),
+        totalCalories: weeklyActivities.reduce(
+          (sum, activity) => sum + (activity.calories || 0),
+          0
+        ), // FIXED: Use calories field
+        totalDistance: weeklyActivities.reduce(
+          (sum, activity) =>
+            sum +
+            (activity.distanceKm
+              ? parseFloat(activity.distanceKm.toString())
+              : 0),
+          0
+        ), // FIXED: Handle Decimal type
+        avgHeartRate:
+          weeklyActivities.length > 0
+            ? weeklyActivities
+                .filter((a) => a.avgHeartRate && a.avgHeartRate > 0)
+                .reduce((sum, a) => sum + (a.avgHeartRate || 0), 0) /
+                weeklyActivities.filter(
+                  (a) => a.avgHeartRate && a.avgHeartRate > 0
+                ).length || 0
+            : 0,
+        activeDays: new Set(
+          weeklyActivities.map((a) => a.startTime.toISOString().split("T")[0])
+        ).size,
       };
+
+      // Calculate monthly trends
+      const activityTypes = recentActivities
+        .map((a) => a.activityType)
+        .filter(Boolean);
+      const mostCommonActivity =
+        activityTypes.length > 0
+          ? activityTypes.reduce((a, b, i, arr) =>
+              arr.filter((v) => v === a).length >=
+              arr.filter((v) => v === b).length
+                ? a
+                : b
+            )
+          : "Mixed Activities";
+
+      const monthlyTrends = {
+        totalActivities: recentActivities.length,
+        avgWeeklyDuration: weeklyStats.totalDuration * (30 / 7),
+        mostCommonActivity,
+        fitnessProgress: "stable" as "improving" | "stable" | "declining",
+      };
+
+      // Format recent activities for analysis
+      const formattedActivities = recentActivities
+        .slice(0, 10)
+        .map((activity) => ({
+          activityType: activity.activityType || "Unknown",
+          date: activity.startTime.toISOString(),
+          duration: activity.durationMinutes || 0,
+          distance: activity.distanceKm
+            ? parseFloat(activity.distanceKm.toString())
+            : undefined,
+          calories: activity.calories || 0,
+          avgHeartRate: activity.avgHeartRate || undefined,
+          maxHeartRate: activity.maxHeartRate || undefined,
+          trainingStressScore: activity.trainingStressScore || undefined,
+        }));
+
+      console.log(`✅ Fitness data processed:`, {
+        recentActivities: formattedActivities.length,
+        weeklyActivities: weeklyStats.totalActivities,
+        totalDuration: weeklyStats.totalDuration,
+        avgHeartRate: weeklyStats.avgHeartRate,
+      });
+
+      return {
+        recentActivities: formattedActivities,
+        weeklyStats,
+        monthlyTrends,
+      };
+    } catch (error) {
+      console.error("❌ Error fetching fitness data:", error);
+      return null;
     }
   }
 
@@ -421,39 +447,62 @@ ${analysisInstructions}
     userId: string
   ): Promise<HealthAnalysisResponse> {
     try {
-      // Import your existing database functions
-      const { getBiomarkersByUserId } = await import("../database/biomarkers");
-      const { getUserProfile } = await import("../database/users");
-      const { getLatestBodyComposition } = await import(
-        "../database/body-composition"
-      );
+      console.log(`🔍 Getting health insights for user: ${userId}`);
 
-      const biomarkers = await getBiomarkersByUserId(userId);
-      const userProfile = await getUserProfile(userId);
-      const bodyComposition = await getLatestBodyComposition(userId);
+      // Fetch user profile
+      const userProfile = await prisma.user.findUnique({
+        where: { userId },
+      });
 
-      if (!biomarkers || biomarkers.length === 0) {
-        // No-data response
+      if (!userProfile) {
+        throw new Error("User not found");
+      }
+
+      // Fetch biomarkers
+      const biomarkers = await prisma.biomarkerValue.findMany({
+        where: { userId },
+        orderBy: { testDate: "desc" },
+        take: 50,
+      });
+
+      // Fetch body composition
+      const bodyComposition = await prisma.bodyCompositionResult.findFirst({
+        where: { userId },
+        orderBy: { testDate: "desc" },
+      });
+
+      // Fetch fitness activities (FIXED!)
+      const fitnessActivities = await this.fetchFitnessData(userId);
+
+      console.log(`📊 Data summary:`, {
+        biomarkers: biomarkers.length,
+        hasBodyComposition: !!bodyComposition,
+        hasFitnessData: !!fitnessActivities,
+        fitnessActivitiesCount: fitnessActivities?.recentActivities.length || 0,
+      });
+
+      if (biomarkers.length === 0 && !bodyComposition && !fitnessActivities) {
+        // Return fallback response for no data
         return {
           healthScore: 0,
           riskLevel: "UNKNOWN",
-          keyFindings: ["No health data available"],
+          keyFindings: [
+            "No health data available - upload blood tests, body composition data, or fitness activities to get started",
+          ],
           recommendations: [
             {
-              category: "Getting Started",
-              priority: "HIGH",
+              category: "Data Collection",
+              priority: "high",
               recommendation:
-                "Upload your first health document to begin your personalized health analysis.",
-              reasoning: "No biomarker data available for analysis.",
-              title: "Upload Your First Health Document",
-              description:
-                "Upload a blood test or health report to begin your personalized health analysis.",
+                "Upload blood test results, body composition data, or fitness activities to receive personalized health insights.",
+              reasoning:
+                "Analysis requires health data to provide meaningful recommendations.",
             },
           ],
           abnormalValues: [],
           trends: [],
           summary:
-            "No health data available. Upload your first health document to get started.",
+            "Upload your health data to begin receiving AI-powered insights and recommendations. This platform integrates blood biomarkers, body composition, and fitness data for comprehensive health analysis.",
           confidence: 0,
           lastAnalysisDate: new Date(),
           dataCompleteness: 0,
@@ -462,29 +511,33 @@ ${analysisInstructions}
         };
       }
 
+      // Build analysis request
       const request: HealthAnalysisRequest = {
         biomarkers: biomarkers.map((b) => ({
-          name: b.biomarkerName || b.biomarker_name,
-          value: Number(b.value),
+          name: b.biomarkerName,
+          value: parseFloat(b.value.toString()),
           unit: b.unit || "",
-          referenceRange: b.referenceRange || b.reference_range || "",
-          isAbnormal: b.isAbnormal || b.is_abnormal || false,
-          testDate:
-            b.testDate?.toISOString() ||
-            b.test_date?.toISOString() ||
-            new Date().toISOString(),
+          referenceRange: b.referenceRange || "",
+          isAbnormal: b.isAbnormal || false,
+          testDate: b.testDate.toISOString(),
         })),
         bodyComposition: bodyComposition
           ? {
               testDate: bodyComposition.testDate.toISOString(),
-              totalWeight: bodyComposition.totalWeight || undefined,
-              bodyFatPercentage: bodyComposition.bodyFatPercentage || undefined,
-              skeletalMuscleMass:
-                bodyComposition.skeletalMuscleMass || undefined,
+              totalWeight: bodyComposition.totalWeight
+                ? parseFloat(bodyComposition.totalWeight.toString())
+                : undefined,
+              bodyFatPercentage: bodyComposition.bodyFatPercentage
+                ? parseFloat(bodyComposition.bodyFatPercentage.toString())
+                : undefined,
+              skeletalMuscleMass: bodyComposition.skeletalMuscleMass
+                ? parseFloat(bodyComposition.skeletalMuscleMass.toString())
+                : undefined,
               visceralFatLevel: bodyComposition.visceralFatLevel || undefined,
               bmr: bodyComposition.bmr || undefined,
             }
           : undefined,
+        fitnessActivities, // Now this should have data!
         userProfile: {
           age:
             userProfile?.dateOfBirth || userProfile?.date_of_birth
@@ -494,32 +547,135 @@ ${analysisInstructions}
                 ).getFullYear()
               : undefined,
           gender: userProfile?.gender || undefined,
-          weight: bodyComposition?.totalWeight || undefined,
+          weight: bodyComposition?.totalWeight
+            ? parseFloat(bodyComposition.totalWeight.toString())
+            : undefined,
         },
         analysisType: "comprehensive",
       };
 
       return await this.analyzeHealth(request);
     } catch (error) {
-      console.error("Error getting health insights:", error);
+      console.error("❌ Error getting health insights:", error);
 
-      // Error fallback
+      // Return error fallback
       return {
         healthScore: 0,
         riskLevel: "UNKNOWN",
-        keyFindings: ["Analysis temporarily unavailable"],
+        keyFindings: [
+          `Health analysis temporarily unavailable: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+        ],
         recommendations: [
           {
             category: "System",
             priority: "low",
-            recommendation: "Health analysis failed. Please try again later.",
-            reasoning: "System error occurred during analysis.",
+            recommendation:
+              "Health analysis failed. Please try again in a few minutes.",
+            reasoning: `System error: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
           },
         ],
         abnormalValues: [],
         trends: [],
-        summary:
-          "Health analysis is temporarily unavailable. Please try again later.",
+        summary: `Health analysis is temporarily unavailable due to: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }. Please try again in a few minutes.`,
+        confidence: 0,
+        lastAnalysisDate: new Date(),
+        dataCompleteness: 0,
+        trendAnalysis: [],
+        alerts: [],
+      };
+    }
+  }
+
+  public async analyzeHealth(
+    request: HealthAnalysisRequest
+  ): Promise<HealthAnalysisResponse> {
+    let response = ""; // Declare response variable at function scope
+
+    try {
+      const prompt = this.buildAnalysisPrompt(request);
+      console.log(`🧠 AI Analysis prompt length: ${prompt.length} characters`);
+
+      response = await this.invokeModel(prompt);
+      console.log("🧠 AI Analysis Response Length:", response.length);
+      console.log(
+        "🧠 AI Response Preview:",
+        response.substring(0, 100) + "..."
+      );
+
+      // Try to extract JSON from response
+      let jsonResponse = response.trim();
+
+      // Remove any text before the first {
+      const firstBrace = jsonResponse.indexOf("{");
+      if (firstBrace > 0) {
+        jsonResponse = jsonResponse.substring(firstBrace);
+        console.log("🔧 Extracted JSON from position:", firstBrace);
+      }
+
+      // Remove any text after the last }
+      const lastBrace = jsonResponse.lastIndexOf("}");
+      if (lastBrace > 0 && lastBrace < jsonResponse.length - 1) {
+        jsonResponse = jsonResponse.substring(0, lastBrace + 1);
+        console.log("🔧 Trimmed JSON to position:", lastBrace + 1);
+      }
+
+      const analysisResult = JSON.parse(jsonResponse);
+
+      // Add additional fields that your system expects
+      return {
+        ...analysisResult,
+        confidence: 0.85,
+        lastAnalysisDate: new Date(),
+        dataCompleteness: Math.min(
+          request.biomarkers.length * 10 +
+            (request.bodyComposition ? 20 : 0) +
+            (request.fitnessActivities ? 30 : 0),
+          100
+        ),
+        trendAnalysis: analysisResult.trends || [],
+        alerts:
+          analysisResult.abnormalValues?.filter(
+            (v: any) => v.urgency === "immediate"
+          ) || [],
+      } as HealthAnalysisResponse;
+    } catch (error) {
+      console.error(
+        "❌ Failed to parse Bedrock response or analyze health:",
+        error
+      );
+      console.error("❌ Raw AI response:", response); // Now response is defined
+
+      // Fallback response
+      return {
+        healthScore: 50,
+        riskLevel: "MODERATE",
+        keyFindings: [
+          `Analysis temporarily unavailable: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+        ],
+        recommendations: [
+          {
+            category: "system",
+            priority: "low",
+            recommendation:
+              "Health analysis is temporarily unavailable. Please try again later.",
+            reasoning: `System error: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
+          },
+        ],
+        abnormalValues: [],
+        trends: [],
+        summary: `Health analysis is temporarily unavailable due to: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         confidence: 0,
         lastAnalysisDate: new Date(),
         dataCompleteness: 0,

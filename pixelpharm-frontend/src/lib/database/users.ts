@@ -12,6 +12,15 @@ export async function getUserProfile(userId: string) {
   }
 }
 
+export async function getUserHealthSummary(userId: string) {
+  // Placeholder implementation - replace with your actual logic
+  return {
+    totalBiomarkers: 0,
+    lastTestDate: null,
+    riskLevel: "UNKNOWN" as const,
+  };
+}
+
 export async function createUser(userData: {
   cognitoSub: string;
   email: string;
