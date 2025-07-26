@@ -1,31 +1,66 @@
+// middleware.ts (in root directory, not src/)
 import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
-    console.log("🔐 Middleware protecting:", req.nextUrl.pathname);
+    console.log("🔒 Middleware executing for:", req.nextUrl.pathname);
+    console.log("🔒 User token:", !!req.nextauth.token);
+
+    // Allow the request to continue
+    return NextResponse.next();
   },
   {
     callbacks: {
       authorized: ({ token, req }) => {
-        // Protect dashboard routes
-        if (req.nextUrl.pathname.startsWith("/dashboard")) {
-          return !!token;
+        const { pathname } = req.nextUrl;
+
+        console.log("🔒 Authorization check:", {
+          pathname,
+          hasToken: !!token,
+          email: token?.email,
+        });
+
+        // Allow access to public routes
+        if (
+          pathname === "/" ||
+          pathname.startsWith("/auth/") ||
+          pathname.startsWith("/api/auth/") ||
+          pathname.startsWith("/_next/") ||
+          pathname.startsWith("/favicon")
+        ) {
+          return true;
         }
-        // Protect upload routes
-        if (req.nextUrl.pathname.startsWith("/upload")) {
-          return !!token;
+
+        // Protect dashboard and other authenticated routes
+        if (
+          pathname.startsWith("/dashboard") ||
+          pathname.startsWith("/upload") ||
+          pathname.startsWith("/profile")
+        ) {
+          return !!token; // Require authentication
         }
+
+        // Allow all other routes by default
         return true;
       },
+    },
+    pages: {
+      signIn: "/auth/signin", // Redirect to your custom sign-in page
     },
   }
 );
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/upload/:path*",
-    "/profile/:path*",
-    "/settings/:path*",
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (public folder)
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|public).*)",
   ],
 };

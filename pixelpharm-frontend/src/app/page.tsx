@@ -29,11 +29,11 @@ export default function PixelPharmHomepage() {
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
 
   const handleGetStarted = () => {
-    router.push("/dashboard");
+    router.push("/auth/signin");
   };
 
   const handleUploadResults = () => {
-    router.push("/upload");
+    router.push("/auth/signin");
   };
 
   const healthGoals = [

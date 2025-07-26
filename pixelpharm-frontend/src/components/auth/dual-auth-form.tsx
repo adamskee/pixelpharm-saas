@@ -1,3 +1,4 @@
+// src/components/auth/dual-auth-form.tsx
 "use client";
 
 import { useState } from "react";
@@ -9,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
-export default function SignInPage() {
+export default function DualAuthForm() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -141,6 +142,7 @@ export default function SignInPage() {
         </CardHeader>
 
         <CardContent className="space-y-6">
+          {/* Error/Success Messages */}
           {error && (
             <Alert className="border-red-200 bg-red-50">
               <AlertDescription className="text-red-700">
@@ -157,6 +159,7 @@ export default function SignInPage() {
             </Alert>
           )}
 
+          {/* Google Sign In */}
           <Button
             onClick={handleGoogleAuth}
             disabled={googleLoading || loading}
@@ -188,6 +191,7 @@ export default function SignInPage() {
             Continue with Google
           </Button>
 
+          {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-gray-300" />
@@ -197,7 +201,9 @@ export default function SignInPage() {
             </div>
           </div>
 
+          {/* Credentials Form */}
           <form onSubmit={handleCredentialsAuth} className="space-y-4">
+            {/* First Name & Last Name (Sign Up Only) */}
             {isSignUp && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative">
@@ -227,6 +233,7 @@ export default function SignInPage() {
               </div>
             )}
 
+            {/* Email */}
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -240,6 +247,7 @@ export default function SignInPage() {
               />
             </div>
 
+            {/* Password */}
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -264,6 +272,7 @@ export default function SignInPage() {
               </button>
             </div>
 
+            {/* Submit Button */}
             <Button
               type="submit"
               disabled={loading || googleLoading}
@@ -277,6 +286,7 @@ export default function SignInPage() {
             </Button>
           </form>
 
+          {/* Demo Credentials Button */}
           <Button
             onClick={fillDemoCredentials}
             variant="outline"
@@ -286,6 +296,7 @@ export default function SignInPage() {
             Use Demo Credentials
           </Button>
 
+          {/* Mode Toggle */}
           <div className="text-center">
             <p className="text-sm text-gray-600">
               {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
@@ -299,6 +310,7 @@ export default function SignInPage() {
             </p>
           </div>
 
+          {/* Back to Home */}
           <div className="text-center">
             <Link
               href="/"
