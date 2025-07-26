@@ -10,12 +10,13 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.10.0",
     "@aws-amplify/ui-react": "^6.11.2",
     "@aws-amplify/ui-react-auth": "^0.0.0-next-release-2c7a887-20230924174347",
     "@aws-sdk/client-bedrock": "^3.840.0",
     "@aws-sdk/client-bedrock-runtime": "^3.842.0",
-    "@aws-sdk/client-s3": "^3.842.0",
-    "@aws-sdk/client-textract": "^3.830.0",
+    "@aws-sdk/client-s3": "^3.850.0",
+    "@aws-sdk/client-textract": "^3.848.0",
     "@aws-sdk/credential-providers": "^3.840.0",
     "@aws-sdk/s3-request-presigner": "^3.842.0",
     "@aws-sdk/util-create-request": "^3.826.0",
@@ -38,6 +39,7 @@
     "jspdf": "^3.0.1",
     "lucide-react": "^0.517.0",
     "next": "15.3.4",
+    "next-auth": "^4.24.11",
     "papaparse": "^5.5.3",
     "pg": "^8.16.2",
     "prisma": "^6.10.1",

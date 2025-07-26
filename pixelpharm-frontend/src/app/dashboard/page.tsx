@@ -1,4 +1,5 @@
-// src/app/dashboard/page.tsx
+// File: src/app/dashboard/page.tsx
+
 "use client";
 
 import React from "react";
@@ -38,34 +39,106 @@ import {
 import { useAuth } from "@/lib/auth/auth-context";
 
 interface DashboardStats {
-  totalUploads: number;
-  bloodTestUploads: number;
-  bodyCompositionUploads: number;
-  fitnessActivityUploads: number;
-  biomarkersTracked: number;
-  uniqueBiomarkers: number;
-  lastUploadDate: string | null;
-  firstUploadDate: string | null;
-  aiAnalysesRun: number;
-  healthInsightsGenerated: number;
-  abnormalValues: number;
-  criticalValues: number;
-  healthScore: number | null;
-  trendingBiomarkers: Array<{
+  user?: {
+    userId: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+  };
+  healthMetrics?: {
+    totalReports: number;
+    latestHealthScore: number;
+    riskLevel: string;
+    lastAnalysisDate: string | null;
+  };
+  biomarkers?: {
+    totalBiomarkers: number;
+    abnormalCount: number;
+    criticalCount: number;
+    normalCount: number;
+    lastTestDate: string | null;
+  };
+  bodyComposition?: {
+    totalScans: number;
+    latestBMI: number | null;
+    bodyFatPercentage: number | null;
+    muscleMass: number | null;
+    lastScanDate: string | null;
+  };
+  trends?: {
+    healthScoreTrend: string;
+    weightTrend: string;
+    cholesterolTrend: string;
+    overallTrend: string;
+  };
+  recentActivity?: Array<{
+    type: string;
+    date: string;
+    description: string;
+    status: string;
+  }>;
+  recommendations?: {
+    activeCount: number;
+    highPriorityCount: number;
+    completedCount: number;
+    categories: string[];
+  };
+  dataQuality?: {
+    completeness: number;
+    reliability: string;
+    lastUpdated: string;
+  };
+  performance?: {
+    processingTime: number;
+    cacheHit: boolean;
+    dataSource: string;
+    generatedAt: string;
+  };
+  // Legacy properties for backward compatibility
+  totalUploads?: number;
+  bloodTestUploads?: number;
+  bodyCompositionUploads?: number;
+  fitnessActivityUploads?: number;
+  biomarkersTracked?: number;
+  uniqueBiomarkers?: number;
+  lastUploadDate?: string | null;
+  firstUploadDate?: string | null;
+  aiAnalysesRun?: number;
+  healthInsightsGenerated?: number;
+  abnormalValues?: number;
+  criticalValues?: number;
+  healthScore?: number | null;
+  trendingBiomarkers?: Array<{
     name: string;
     trend: "improving" | "stable" | "concerning";
     changePercent: number;
   }>;
-  dataCompleteness: number;
-  lastAnalysisDate: string | null;
-  consecutiveDaysTracked: number;
-  healthGoalsAchieved: number;
-  riskAssessments: {
+  dataCompleteness?: number;
+  lastAnalysisDate?: string | null;
+  consecutiveDaysTracked?: number;
+  healthGoalsAchieved?: number;
+  riskAssessments?: {
     cardiovascular: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
     metabolic: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
     overall: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
   };
 }
+
+// Safe accessor functions to prevent undefined errors
+const safeString = (value: any): string => {
+  if (value === null || value === undefined) return '';
+  return String(value);
+};
+
+const safeNumber = (value: any): number => {
+  if (value === null || value === undefined || isNaN(Number(value))) return 0;
+  return Number(value);
+};
+
+const safeArray = <T>(value: any): T[] => {
+  if (!Array.isArray(value)) return [];
+  return value;
+};
 
 export default function DashboardPage() {
   const { user, signOut } = useAuth();
@@ -93,6 +166,7 @@ export default function DashboardPage() {
       }
 
       const data = await response.json();
+      console.log("📊 Dashboard stats received:", data);
       setStats(data);
       setError(null);
     } catch (err) {
@@ -146,12 +220,9 @@ export default function DashboardPage() {
               </h3>
               <p className="text-sm text-gray-600 mt-1">{error}</p>
             </div>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
+            <Button onClick={() => window.location.reload()}>
               Retry
-            </button>
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -172,6 +243,12 @@ export default function DashboardPage() {
                 Upload your first health document to get started
               </p>
             </div>
+            <Link href="/upload">
+              <Button>
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Health Data
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
@@ -193,474 +270,261 @@ export default function DashboardPage() {
       (Date.now() - new Date(dateString).getTime()) / (1000 * 60 * 60 * 24)
     );
     if (days === 0) return "Today";
-    if (days === 1) return "1 day ago";
+    if (days === 1) return "Yesterday";
     return `${days} days ago`;
   };
 
-  const getRiskColor = (risk: string) => {
-    switch (risk) {
-      case "LOW":
-        return "text-green-600 bg-green-50";
-      case "MODERATE":
-        return "text-yellow-600 bg-yellow-50";
-      case "HIGH":
-        return "text-orange-600 bg-orange-50";
-      case "CRITICAL":
-        return "text-red-600 bg-red-50";
-      default:
-        return "text-gray-600 bg-gray-50";
+  const getRiskBadgeColor = (risk: string) => {
+    const riskLevel = safeString(risk).toUpperCase();
+    switch (riskLevel) {
+      case "LOW": return "bg-green-100 text-green-800";
+      case "MODERATE": return "bg-yellow-100 text-yellow-800";
+      case "HIGH": return "bg-red-100 text-red-800";
+      case "CRITICAL": return "bg-red-200 text-red-900";
+      default: return "bg-gray-100 text-gray-800";
     }
   };
 
   const getTrendIcon = (trend: string) => {
-    switch (trend) {
+    const trendType = safeString(trend).toLowerCase();
+    switch (trendType) {
       case "improving":
+      case "positive":
+      case "up":
         return <TrendingUp className="h-4 w-4 text-green-600" />;
-      case "stable":
-        return <CheckCircle className="h-4 w-4 text-blue-600" />;
       case "concerning":
-        return <AlertCircle className="h-4 w-4 text-red-600" />;
+      case "negative":
+      case "down":
+        return <TrendingUp className="h-4 w-4 text-red-600 rotate-180" />;
       default:
-        return <Activity className="h-4 w-4 text-gray-600" />;
+        return <Activity className="h-4 w-4 text-blue-600" />;
     }
   };
 
+  // Extract values safely from stats object
+  const totalReports = safeNumber(stats.healthMetrics?.totalReports || stats.aiAnalysesRun || 0);
+  const healthScore = safeNumber(stats.healthMetrics?.latestHealthScore || stats.healthScore || 0);
+  const riskLevel = safeString(stats.healthMetrics?.riskLevel || "UNKNOWN");
+  const totalBiomarkers = safeNumber(stats.biomarkers?.totalBiomarkers || stats.biomarkersTracked || 0);
+  const abnormalCount = safeNumber(stats.biomarkers?.abnormalCount || stats.abnormalValues || 0);
+  const criticalCount = safeNumber(stats.biomarkers?.criticalCount || stats.criticalValues || 0);
+  const normalCount = safeNumber(stats.biomarkers?.normalCount || (totalBiomarkers - abnormalCount - criticalCount));
+  const dataCompleteness = safeNumber(stats.dataQuality?.completeness || stats.dataCompleteness || 0);
+  const totalScans = safeNumber(stats.bodyComposition?.totalScans || stats.bodyCompositionUploads || 0);
+  const activeRecommendations = safeNumber(stats.recommendations?.activeCount || 0);
+  const highPriorityRecommendations = safeNumber(stats.recommendations?.highPriorityCount || 0);
+  const lastAnalysisDate = stats.healthMetrics?.lastAnalysisDate || stats.lastAnalysisDate;
+  const lastTestDate = stats.biomarkers?.lastTestDate || stats.lastUploadDate;
+
+  // Safe risk assessment access
+  const cardiovascularRisk = stats.riskAssessments?.cardiovascular || "LOW";
+  const metabolicRisk = stats.riskAssessments?.metabolic || "LOW";
+  const overallRisk = stats.riskAssessments?.overall || riskLevel || "LOW";
+
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
-      {/* Dashboard Header with Refresh Button */}
-      <div className="flex items-center justify-between mb-8">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.firstName || "Health Explorer"}! 👋
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome back, {user?.firstName || user?.email?.split('@')[0] || 'User'}!
           </h1>
-          <p className="text-lg text-gray-600">
-            Here's your comprehensive health analytics overview
+          <p className="text-gray-600">
+            Here's your health analytics overview • Last updated {getDaysAgo(lastAnalysisDate) || "Never"}
           </p>
         </div>
-        <Button
-          onClick={handleRefreshStats}
-          disabled={refreshing}
-          variant="outline"
-          className="flex items-center space-x-2 hover:bg-blue-50"
-        >
-          <RefreshCw
-            className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-          />
-          <span>{refreshing ? "Refreshing..." : "Refresh Stats"}</span>
-        </Button>
+        <div className="flex items-center space-x-4">
+          <Button
+            onClick={handleRefreshStats}
+            disabled={refreshing}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
+          <Link href="/dashboard/health-analytics">
+            <Button>
+              <BarChart3 className="w-4 h-4 mr-2" />
+              View Detailed Analytics
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Fitness Data Integration Notice */}
-      {stats.fitnessActivityUploads > 0 && (
-        <Card className="mb-8 bg-gradient-to-r from-orange-50 to-yellow-50 border-orange-200">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-3">
-              <Activity className="h-6 w-6 text-orange-600" />
-              <div>
-                <h3 className="font-semibold text-orange-900">
-                  Fitness Data Integrated! 🏃‍♂️
-                </h3>
-                <p className="text-sm text-orange-700">
-                  {stats.fitnessActivityUploads} Garmin activities successfully
-                  processed and included in your health analysis.
-                </p>
-              </div>
+      {/* Quick Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Health Score */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Health Score</CardTitle>
+            <Heart className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{healthScore}</div>
+            <div className="flex items-center space-x-2 mt-1">
+              <Badge className={getRiskBadgeColor(riskLevel)}>
+                {riskLevel} RISK
+              </Badge>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Quick Actions */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Zap className="h-5 w-5" />
-            <span>Quick Actions</span>
-          </CardTitle>
-          <CardDescription>
-            <p>
-              Your PixelPharm dashboard provides a comprehensive view of your
-              health data and MMMS powered insights. Here you can track your
-              uploaded health documents, monitor your overall health score, and
-              access personalized recommendations based on your latest biomarker
-              analysis. To get started, upload your blood test results, body
-              composition reports, or fitness activity data using the upload
-              buttons above.
-            </p>{" "}
-            <p>
-              Our advanced Multi Model Medical System (MMMS) will automatically
-              extract key health metrics and provide professional-grade analysis
-              with actionable recommendations. Your health score is calculated
-              in real-time based on all available data, giving you an instant
-              snapshot of your current wellness status.
-            </p>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link href="/upload">
-              <div className="flex items-center space-x-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer group">
-                <FileText className="h-6 w-6 text-blue-600" />
-                <div className="text-left flex-1">
-                  <div className="font-medium text-blue-900 group-hover:text-blue-700">
-                    Upload Blood Test
-                  </div>
-                  <div className="text-sm text-blue-600">
-                    Add new lab results
-                  </div>
-                </div>
-                <ArrowRight className="h-4 w-4 text-blue-400 group-hover:text-blue-600" />
-              </div>
-            </Link>
-
-            <Link href="/body-composition">
-              <div className="flex items-center space-x-3 p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors cursor-pointer group">
-                <Scale className="h-6 w-6 text-green-600" />
-                <div className="text-left flex-1">
-                  <div className="font-medium text-green-900 group-hover:text-green-700">
-                    Body Composition
-                  </div>
-                  <div className="text-sm text-green-600">
-                    Upload InBody/DEXA scan
-                  </div>
-                </div>
-                <ArrowRight className="h-4 w-4 text-green-400 group-hover:text-green-600" />
-              </div>
-            </Link>
-
-            <Link href="/dashboard/health-analytics">
-              <div className="flex items-center space-x-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors cursor-pointer group">
-                <Brain className="h-6 w-6 text-purple-600" />
-                <div className="text-left flex-1">
-                  <div className="font-medium text-purple-900 group-hover:text-purple-700">
-                    AI Health Analysis
-                  </div>
-                  <div className="text-sm text-purple-600">
-                    Get AI-powered insights
-                  </div>
-                </div>
-                <ArrowRight className="h-4 w-4 text-purple-400 group-hover:text-purple-600" />
-              </div>
-            </Link>
-
-            <Link href="/fitness-activities">
-              <div className="flex items-center space-x-3 p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors cursor-pointer group">
-                <Activity className="h-6 w-6 text-orange-600" />
-                <div className="text-left flex-1">
-                  <div className="font-medium text-orange-900 group-hover:text-orange-700">
-                    Fitness Data
-                  </div>
-                  <div className="text-sm text-orange-600">
-                    Upload activity data - Garmin Currently supported
-                  </div>
-                </div>
-                <ArrowRight className="h-4 w-4 text-orange-400 group-hover:text-orange-600" />
-              </div>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Health Score & Risk Assessment Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Overall Health Score */}
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 border-blue-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700">
-              Health Score
-            </CardTitle>
-            <Heart className="h-5 w-5 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-900">
-              {stats.healthScore !== null ? `${stats.healthScore}/100` : "N/A"}
-            </div>
-            {stats.healthScore !== null && (
-              <Progress value={stats.healthScore} className="mt-2" />
-            )}
-            <p className="text-xs text-blue-600 mt-2">
-              {stats.healthScore !== null
-                ? stats.healthScore >= 80
-                  ? "Excellent health indicators"
-                  : stats.healthScore >= 60
-                  ? "Good overall health"
-                  : stats.healthScore >= 40
-                  ? "Some areas need attention"
-                  : "Consider consulting healthcare provider"
-                : "Upload data for health score"}
+            <p className="text-xs text-muted-foreground mt-2">
+              {totalReports > 0 ? `Based on ${totalReports} report${totalReports !== 1 ? 's' : ''}` : 'No reports yet'}
             </p>
           </CardContent>
         </Card>
 
-        {/* Cardiovascular Risk */}
+        {/* Biomarkers */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Cardiovascular Risk
-            </CardTitle>
-            <Heart className="h-5 w-5 text-red-500" />
+            <CardTitle className="text-sm font-medium">Biomarkers Tracked</CardTitle>
+            <Activity className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <Badge
-              className={`${getRiskColor(
-                stats.riskAssessments.cardiovascular
-              )} text-sm font-semibold`}
-            >
-              {stats.riskAssessments.cardiovascular}
-            </Badge>
-            <p className="text-xs text-gray-600 mt-2">
-              Based on lipid panel, blood pressure markers
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Metabolic Risk */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Metabolic Risk
-            </CardTitle>
-            <Target className="h-5 w-5 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <Badge
-              className={`${getRiskColor(
-                stats.riskAssessments.metabolic
-              )} text-sm font-semibold`}
-            >
-              {stats.riskAssessments.metabolic}
-            </Badge>
-            <p className="text-xs text-gray-600 mt-2">
-              Glucose, insulin, metabolic markers
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Data Completeness */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Data Completeness
-            </CardTitle>
-            <BarChart3 className="h-5 w-5 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.dataCompleteness}%</div>
-            <Progress value={stats.dataCompleteness} className="mt-2" />
-            <p className="text-xs text-gray-600 mt-2">
-              {stats.dataCompleteness >= 80
-                ? "Comprehensive profile"
-                : "Upload more data for better insights"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Upload Statistics Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Total Uploads */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Health Uploads
-            </CardTitle>
-            <FileText className="h-5 w-5 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUploads}</div>
-            <p className="text-xs text-gray-600">
-              <span className="text-green-600">
-                {stats.bloodTestUploads} blood tests
-              </span>{" "}
-              •
-              <span className="text-purple-600">
-                {" "}
-                {stats.bodyCompositionUploads} body comp
-              </span>{" "}
-              •
-              <span className="text-orange-600">
-                {" "}
-                {stats.fitnessActivityUploads} fitness
-              </span>
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Biomarkers Tracked */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Biomarkers Tracked
-            </CardTitle>
-            <Activity className="h-5 w-5 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.biomarkersTracked}</div>
-            <p className="text-xs text-gray-600">
-              {stats.uniqueBiomarkers} unique markers across all tests
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Last Upload */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Last Upload</CardTitle>
-            <Calendar className="h-5 w-5 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold">
-              {formatDate(stats.lastUploadDate)}
-            </div>
-            <p className="text-xs text-gray-600">
-              {getDaysAgo(stats.lastUploadDate)}
-            </p>
-            {stats.firstUploadDate && (
-              <p className="text-xs text-gray-500 mt-1">
-                Tracking since {formatDate(stats.firstUploadDate)}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Consecutive Days */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Tracking Streak
-            </CardTitle>
-            <Zap className="h-5 w-5 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.consecutiveDaysTracked}
-            </div>
-            <p className="text-xs text-gray-600">
-              {stats.consecutiveDaysTracked === 1 ? "day" : "days"} of
-              consistent tracking
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* AI Analysis & Insights Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* AI Analyses Run */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">AI Analyses</CardTitle>
-            <Brain className="h-5 w-5 text-indigo-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.aiAnalysesRun}</div>
-            <p className="text-xs text-gray-600">
-              Comprehensive health assessments
-            </p>
-            {stats.lastAnalysisDate && (
-              <p className="text-xs text-gray-500 mt-1">
-                Last: {getDaysAgo(stats.lastAnalysisDate)}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Health Insights */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Health Insights
-            </CardTitle>
-            <TrendingUp className="h-5 w-5 text-teal-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.healthInsightsGenerated}
-            </div>
-            <p className="text-xs text-gray-600">
-              Personalized recommendations generated
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Abnormal Values */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Values Flagged
-            </CardTitle>
-            <AlertCircle className="h-5 w-5 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.abnormalValues}
-              {stats.criticalValues > 0 && (
-                <span className="text-lg text-red-600 ml-2">
-                  ({stats.criticalValues} critical)
-                </span>
+            <div className="text-2xl font-bold">{totalBiomarkers}</div>
+            <div className="flex items-center space-x-1 mt-1">
+              {criticalCount > 0 && (
+                <Badge variant="destructive" className="text-xs">
+                  {criticalCount} Critical
+                </Badge>
+              )}
+              {abnormalCount > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {abnormalCount} Abnormal
+                </Badge>
+              )}
+              {normalCount > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  {normalCount} Normal
+                </Badge>
               )}
             </div>
-            <p className="text-xs text-gray-600">
-              Values outside normal ranges
+            <p className="text-xs text-muted-foreground mt-2">
+              Last test: {getDaysAgo(lastTestDate) || 'Never'}
             </p>
           </CardContent>
         </Card>
 
-        {/* Health Goals */}
+        {/* Data Quality */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Goals Achieved
-            </CardTitle>
-            <CheckCircle className="h-5 w-5 text-green-500" />
+            <CardTitle className="text-sm font-medium">Data Completeness</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.healthGoalsAchieved}
-            </div>
-            <p className="text-xs text-gray-600">
-              Health targets successfully met
+            <div className="text-2xl font-bold">{dataCompleteness}%</div>
+            <Progress value={dataCompleteness} className="mt-2" />
+            <p className="text-xs text-muted-foreground mt-2">
+              {dataCompleteness >= 80 ? 'Excellent' : dataCompleteness >= 60 ? 'Good' : 'Needs improvement'}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Active Recommendations */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Recommendations</CardTitle>
+            <Target className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeRecommendations}</div>
+            {highPriorityRecommendations > 0 && (
+              <Badge variant="destructive" className="mt-1">
+                {highPriorityRecommendations} High Priority
+              </Badge>
+            )}
+            <p className="text-xs text-muted-foreground mt-2">
+              Based on recent analysis
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Trending Biomarkers */}
-      {stats.trendingBiomarkers.length > 0 && (
-        <Card className="mb-8">
+      {/* Risk Assessment Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5" />
-              <span>Biomarker Trends</span>
+              <Heart className="h-5 w-5 text-red-500" />
+              <span>Cardiovascular Risk</span>
             </CardTitle>
-            <CardDescription>
-              Recent changes in your key health markers
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {stats.trendingBiomarkers.map((biomarker, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center space-x-2">
-                    {getTrendIcon(biomarker.trend)}
-                    <span className="font-medium">{biomarker.name}</span>
+            <div className="flex items-center justify-between">
+              <Badge className={getRiskBadgeColor(cardiovascularRisk)}>
+                {cardiovascularRisk}
+              </Badge>
+              {getTrendIcon(stats.trends?.cholesterolTrend || "stable")}
+            </div>
+            <p className="text-sm text-gray-600 mt-2">
+              Based on cholesterol and cardiovascular biomarkers
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Activity className="h-5 w-5 text-blue-500" />
+              <span>Metabolic Health</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <Badge className={getRiskBadgeColor(metabolicRisk)}>
+                {metabolicRisk}
+              </Badge>
+              {getTrendIcon(stats.trends?.overallTrend || "stable")}
+            </div>
+            <p className="text-sm text-gray-600 mt-2">
+              Glucose, insulin, and metabolic markers
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Scale className="h-5 w-5 text-green-500" />
+              <span>Overall Health</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <Badge className={getRiskBadgeColor(overallRisk)}>
+                {overallRisk}
+              </Badge>
+              {getTrendIcon(stats.trends?.healthScoreTrend || "stable")}
+            </div>
+            <p className="text-sm text-gray-600 mt-2">
+              Comprehensive health assessment
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Activity */}
+      {stats.recentActivity && stats.recentActivity.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Clock className="h-5 w-5 text-gray-500" />
+              <span>Recent Activity</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {safeArray(stats.recentActivity).slice(0, 5).map((activity, index) => (
+                <div key={index} className="flex items-center justify-between border-b pb-2 last:border-b-0">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{safeString(activity.description)}</p>
+                    <p className="text-xs text-gray-500">{formatDate(activity.date)}</p>
                   </div>
-                  <div className="text-right">
-                    <span
-                      className={`text-sm font-bold ${
-                        biomarker.trend === "improving"
-                          ? "text-green-600"
-                          : biomarker.trend === "concerning"
-                          ? "text-red-600"
-                          : "text-blue-600"
-                      }`}
-                    >
-                      {biomarker.changePercent > 0 ? "+" : ""}
-                      {biomarker.changePercent}%
-                    </span>
-                  </div>
+                  <Badge 
+                    variant={activity.status === 'completed' ? 'default' : 'secondary'}
+                    className="text-xs"
+                  >
+                    {safeString(activity.status)}
+                  </Badge>
                 </div>
               ))}
             </div>
@@ -668,89 +532,76 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Recent Activity Summary */}
-      {stats.lastUploadDate && (
+      {/* Action Items */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Quick Actions */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Clock className="h-5 w-5" />
-              <span>Recent Activity</span>
-            </CardTitle>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>
+              Common tasks and data uploads
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <FileText className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <div className="font-medium">Latest upload processed</div>
-                    <div className="text-sm text-gray-600">
-                      {getDaysAgo(stats.lastUploadDate)}
-                    </div>
-                  </div>
-                </div>
-                <Badge
-                  variant="outline"
-                  className="bg-green-50 text-green-700 border-green-200"
-                >
-                  Completed
-                </Badge>
+          <CardContent className="space-y-3">
+            <Link href="/upload" className="block">
+              <Button className="w-full justify-start" variant="outline">
+                <Upload className="w-4 h-4 mr-2" />
+                Upload New Health Data
+              </Button>
+            </Link>
+            <Link href="/dashboard/health-analytics" className="block">
+              <Button className="w-full justify-start" variant="outline">
+                <Brain className="w-4 h-4 mr-2" />
+                View AI Health Analysis
+              </Button>
+            </Link>
+            <Link href="/body-composition" className="block">
+              <Button className="w-full justify-start" variant="outline">
+                <Scale className="w-4 h-4 mr-2" />
+                Body Composition Analysis
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* System Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle>System Status</CardTitle>
+            <CardDescription>
+              Platform performance and data processing
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Data Source</span>
+              <Badge variant="outline">
+                {safeString(stats.performance?.dataSource || 'Database')}
+              </Badge>
+            </div>
+            {stats.performance?.processingTime && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Processing Time</span>
+                <span className="text-sm font-medium">
+                  {(stats.performance.processingTime / 1000).toFixed(1)}s
+                </span>
               </div>
-
-              {stats.aiAnalysesRun > 0 && (
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                      <Brain className="h-4 w-4 text-purple-600" />
-                    </div>
-                    <div>
-                      <div className="font-medium">AI analysis completed</div>
-                      <div className="text-sm text-gray-600">
-                        {stats.aiAnalysesRun} total analyses
-                      </div>
-                    </div>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className="bg-purple-50 text-purple-700 border-purple-200"
-                  >
-                    Active
-                  </Badge>
-                </div>
-              )}
-
-              {stats.abnormalValues > 0 && (
-                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                      <AlertCircle className="h-4 w-4 text-yellow-600" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-yellow-800">
-                        Values flagged for review
-                      </div>
-                      <div className="text-sm text-yellow-600">
-                        {stats.abnormalValues} biomarkers outside normal range
-                      </div>
-                    </div>
-                  </div>
-                  <Link href="/dashboard/health-analytics">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
-                    >
-                      Review
-                    </Button>
-                  </Link>
-                </div>
-              )}
+            )}
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Cache Status</span>
+              <Badge className={stats.performance?.cacheHit ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}>
+                {stats.performance?.cacheHit ? 'Hit' : 'Fresh'}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Data Reliability</span>
+              <Badge variant="outline">
+                {safeString(stats.dataQuality?.reliability || 'HIGH')}
+              </Badge>
             </div>
           </CardContent>
         </Card>
-      )}
+      </div>
     </div>
   );
 }

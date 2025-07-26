@@ -1,5 +1,4 @@
-// src/components/upload/file-upload.tsx
-// Enhanced with database integration
+// File: src/components/upload/file-upload.tsx
 
 "use client";
 
@@ -142,7 +141,9 @@ export default function FileUpload({
 
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`API request failed: ${response.status}`);
+          throw new Error(
+            `API request failed: ${response.status} - ${errorText}`
+          );
         }
 
         const responseData = await response.json();
@@ -166,42 +167,46 @@ export default function FileUpload({
         }
 
         setUploadProgress(25); // 25% - File uploaded
+
         // Step 2: Track upload in database
-        setProcessingStep("Tracking upload in database...");
-        let trackData = null; // 🆕 Add this line
+        setProcessingStep(`Recording ${file.name} in database...`);
 
-        const trackResponse = await fetch("/api/uploads/track", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId,
-            userEmail: user?.email,
-            userFirstName: user?.firstName,
-            userLastName: user?.lastName,
-            fileKey,
-            originalFilename: file.name,
-            fileType: file.type,
-            uploadType: uploadType,
-            fileSize: file.size,
-          }),
-        });
+        try {
+          const trackResponse = await fetch("/api/uploads/track", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userId: userId,
+              fileKey,
+              uploadType: uploadType.toUpperCase().replace("-", "_"), // Convert to enum format
+              originalFilename: file.name,
+              fileType: file.type,
+              fileSize: file.size,
+            }),
+          });
 
-        if (!trackResponse.ok) {
-          console.warn("Failed to track upload in database");
-        } else {
-          trackData = await trackResponse.json(); // 🔄 Remove 'const'
-          setUploadId(trackData.uploadId);
+          if (trackResponse.ok) {
+            const trackData = await trackResponse.json();
+            console.log("✅ Upload tracked successfully:", trackData.uploadId);
+            setUploadId(trackData.uploadId);
+          } else {
+            const trackError = await trackResponse.text();
+            console.warn("Upload tracking failed:", trackError);
+            // Continue with processing even if tracking fails
+          }
+        } catch (trackError) {
+          console.warn("Upload tracking error:", trackError);
+          // Continue with processing even if tracking fails
         }
 
         setUploadProgress(50); // 50% - Upload tracked
 
         // Step 3: OCR Processing (for PDFs and images)
-        let ocrData = null;
         if (file.type === "application/pdf" || file.type.startsWith("image/")) {
           setUploadStatus("processing");
-          setProcessingStep("Analyzing document with AI...");
+          setProcessingStep(`Analyzing ${file.name} with AI...`);
 
           try {
             const ocrResponse = await fetch("/api/ai/extract-text", {
@@ -211,71 +216,56 @@ export default function FileUpload({
               },
               body: JSON.stringify({
                 fileKey,
-                uploadType: uploadType,
+                userId: userId,
               }),
             });
 
             if (ocrResponse.ok) {
-              ocrData = await ocrResponse.json();
+              const ocrData = await ocrResponse.json();
               setOcrResults(ocrData);
               setProcessingStep(
-                `Found ${ocrData.biomarkers?.length || 0} biomarkers`
+                `Found ${ocrData.biomarkers?.length || 0} biomarkers in ${
+                  file.name
+                }`
               );
+              console.log("✅ OCR processing completed:", ocrData);
             } else {
-              console.warn("OCR processing failed, but upload succeeded");
-              setProcessingStep("Document uploaded (OCR analysis unavailable)");
+              console.warn("OCR processing failed for:", file.name);
+              setProcessingStep(`Uploaded ${file.name} (OCR failed)`);
             }
           } catch (ocrError) {
             console.warn("OCR processing error:", ocrError);
-            setProcessingStep("Document uploaded (OCR analysis failed)");
+            setProcessingStep(`Uploaded ${file.name} (OCR error)`);
           }
         }
 
-        setUploadProgress(75); // 75% - OCR complete
+        setUploadProgress(100); // 100% - Processing complete
 
-        // Step 4: Store AI results in database
-        if (ocrData && trackData?.uploadId) {
-          setUploadStatus("storing");
-          setProcessingStep("Storing AI results in database...");
-
-          try {
-            const storeResponse = await fetch("/api/ai/store-results", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                uploadId: trackData.uploadId,
-                userId,
-                ocrResults: ocrData,
-              }),
-            });
-
-            if (storeResponse.ok) {
-              const storeData = await storeResponse.json();
-              setProcessingStep(
-                `Stored ${storeData.biomarkerCount} biomarkers in database`
-              );
-            } else {
-              console.warn("Failed to store AI results in database");
-              setProcessingStep("Results processed (database storage failed)");
-            }
-          } catch (storeError) {
-            console.warn("Database storage error:", storeError);
-            setProcessingStep("Results processed (database storage failed)");
-          }
-        }
-
-        setUploadProgress(((i + 1) / files.length) * 100);
-
-        if (onUploadComplete) {
-          onUploadComplete(fileKey, ocrData, trackData?.uploadId);
-        }
+        // Update progress for this file
+        const progress = ((i + 1) / files.length) * 100;
+        setUploadProgress(progress);
       }
 
       setUploadStatus("success");
+      setProcessingStep("All files processed successfully!");
+
+      // Call completion callback
+      if (onUploadComplete) {
+        onUploadComplete(
+          files[0] ? `fileKey-${Date.now()}` : "",
+          ocrResults,
+          uploadId
+        );
+      }
+
+      // Reset files after successful upload
+      setTimeout(() => {
+        setFiles([]);
+        setUploadProgress(0);
+        setProcessingStep("");
+      }, 3000);
     } catch (error) {
-      console.error("Upload error:", error);
+      console.error("❌ Upload failed:", error);
       setUploadStatus("error");
       setErrorMessage(error instanceof Error ? error.message : "Upload failed");
     } finally {
@@ -287,42 +277,19 @@ export default function FileUpload({
     setFiles(files.filter((_, i) => i !== index));
   };
 
-  const getStatusIcon = () => {
-    switch (uploadStatus) {
-      case "uploading":
-        return <Upload className="h-4 w-4" />;
-      case "processing":
-        return <Brain className="h-4 w-4" />;
-      case "storing":
-        return <Database className="h-4 w-4" />;
-      case "success":
-        return <CheckCircle className="h-4 w-4" />;
-      case "error":
-        return <AlertCircle className="h-4 w-4" />;
-      default:
-        return null;
-    }
-  };
-
-  const getStatusText = () => {
-    switch (uploadStatus) {
-      case "uploading":
-        return "Uploading...";
-      case "processing":
-        return "AI Processing...";
-      case "storing":
-        return "Saving to Database...";
-      case "success":
-        return "Complete!";
-      case "error":
-        return "Error";
-      default:
-        return "";
-    }
+  const resetUpload = () => {
+    setFiles([]);
+    setUploadStatus("idle");
+    setErrorMessage("");
+    setOcrResults(null);
+    setUploadProgress(0);
+    setProcessingStep("");
+    setUploadId(null);
   };
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
+      {/* Upload Area */}
       <div
         {...getRootProps()}
         className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
@@ -333,21 +300,24 @@ export default function FileUpload({
       >
         <input {...getInputProps()} />
         <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <p className="text-lg font-semibold text-gray-700 mb-2">
-          {isDragActive ? "Drop files here" : "Drag & drop files here"}
-        </p>
-        <p className="text-sm text-gray-500 mb-4">or click to select files</p>
-        <p className="text-xs text-gray-400">
-          Supports: PDF, JPEG, PNG, TIFF, WebP (max 25MB each)
-        </p>
-        <p className="text-xs text-blue-600 mt-2 font-medium">
-          ✨ AI-powered analysis + database storage
-        </p>
+        {isDragActive ? (
+          <p className="text-lg text-blue-600">Drop the files here...</p>
+        ) : (
+          <div>
+            <p className="text-lg text-gray-600 mb-2">
+              Drag & drop your files here, or click to select
+            </p>
+            <p className="text-sm text-gray-500">
+              Supported formats: PDF, JPEG, PNG, TIFF, WebP (max 25MB each)
+            </p>
+          </div>
+        )}
       </div>
 
+      {/* File List */}
       {files.length > 0 && (
         <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-4">Selected Files</h3>
+          <h3 className="text-lg font-medium mb-4">Selected Files</h3>
           <div className="space-y-2">
             {files.map((file, index) => (
               <div
@@ -355,17 +325,11 @@ export default function FileUpload({
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
               >
                 <div className="flex items-center space-x-3">
-                  <FileText className="h-5 w-5 text-gray-500" />
+                  <FileText className="h-5 w-5 text-gray-400" />
                   <div>
-                    <p className="font-medium text-gray-900">{file.name}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm font-medium">{file.name}</p>
+                    <p className="text-xs text-gray-500">
                       {(file.size / 1024 / 1024).toFixed(2)} MB
-                      {(file.type === "application/pdf" ||
-                        file.type.startsWith("image/")) && (
-                        <span className="ml-2 text-blue-600">
-                          • AI Analysis + Database Storage
-                        </span>
-                      )}
                     </p>
                   </div>
                 </div>
@@ -380,197 +344,102 @@ export default function FileUpload({
               </div>
             ))}
           </div>
-
-          {uploading && (
-            <div className="mt-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-2">
-                  {getStatusIcon()}
-                  <span className="text-sm font-medium">{getStatusText()}</span>
-                </div>
-                <span className="text-sm text-gray-500">
-                  {Math.round(uploadProgress)}%
-                </span>
-              </div>
-              <Progress value={uploadProgress} className="h-2" />
-              {processingStep && (
-                <p className="text-xs text-gray-600 mt-2">{processingStep}</p>
-              )}
-            </div>
-          )}
-
-          <div className="mt-4 flex space-x-3">
-            <Button
-              onClick={uploadFiles}
-              disabled={uploading || files.length === 0}
-              className="flex-1"
-            >
-              {uploading ? (
-                <>
-                  {getStatusIcon()}
-                  <span className="ml-2">{getStatusText()}</span>
-                </>
-              ) : (
-                "Upload & Analyze Files"
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setFiles([])}
-              disabled={uploading}
-            >
-              Clear All
-            </Button>
-          </div>
         </div>
       )}
 
-      {uploadStatus === "success" && (
-        <Alert className="mt-4 border-green-200 bg-green-50">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">
-            Files uploaded and processed successfully!
-            {ocrResults && ocrResults.biomarkers.length > 0 && (
-              <span className="block mt-1">
-                ✨ AI found {ocrResults.biomarkers.length} biomarkers and saved
-                to database
-              </span>
-            )}
-            {uploadId && (
-              <span className="block mt-1 text-xs">
-                📊 Upload ID: {uploadId}
-              </span>
-            )}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {uploadStatus === "error" && (
-        <Alert className="mt-4 border-red-200 bg-red-50">
-          <AlertCircle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800">
-            {errorMessage}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* OCR Results Display */}
-      {ocrResults && ocrResults.success && (
-        <div className="mt-6 border rounded-lg p-4 bg-slate-50">
-          <div className="flex items-center space-x-2 mb-4">
-            <Brain className="h-5 w-5 text-purple-600" />
-            <h4 className="text-lg font-semibold text-slate-700">
-              AI Analysis Results
-            </h4>
-            <span
-              className={`text-xs px-2 py-1 rounded ${
-                ocrResults.confidence === "high"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-yellow-100 text-yellow-700"
-              }`}
-            >
-              {ocrResults.confidence} confidence
+      {/* Upload Progress */}
+      {uploading && (
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Upload Progress</span>
+            <span className="text-sm text-gray-500">
+              {uploadProgress.toFixed(0)}%
             </span>
-            <Database className="h-4 w-4 text-blue-600" />
-            <span className="text-xs text-blue-600">Saved to Database</span>
           </div>
-
-          {/* Test Information */}
-          {(ocrResults.testInfo.testDate || ocrResults.testInfo.labName) && (
-            <div className="mb-4 p-3 bg-white rounded border">
-              <h5 className="font-medium text-slate-700 mb-2">
-                Test Information
-              </h5>
-              {ocrResults.testInfo.testDate && (
-                <p className="text-sm text-slate-600">
-                  📅 Date: {ocrResults.testInfo.testDate}
-                </p>
-              )}
-              {ocrResults.testInfo.labName && (
-                <p className="text-sm text-slate-600">
-                  🏥 Lab: {ocrResults.testInfo.labName}
-                </p>
-              )}
-            </div>
+          <Progress value={uploadProgress} className="w-full" />
+          {processingStep && (
+            <p className="text-sm text-gray-600 mt-2">{processingStep}</p>
           )}
+        </div>
+      )}
 
-          {/* Biomarkers */}
-          {ocrResults.biomarkers.length > 0 ? (
-            <div className="mb-4">
-              <h5 className="font-medium text-slate-700 mb-3">
-                Detected Biomarkers ({ocrResults.biomarkers.length})
-              </h5>
-              <div className="grid gap-2 max-h-64 overflow-y-auto">
-                {ocrResults.biomarkers.map((biomarker, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 bg-white rounded border text-sm"
-                  >
-                    <span className="font-medium text-slate-700">
-                      {biomarker.name}
-                    </span>
-                    <div className="text-right">
-                      <span className="text-slate-900">
-                        {biomarker.value} {biomarker.unit}
-                      </span>
-                      {biomarker.referenceRange && (
-                        <div className="text-xs text-slate-500">
-                          Ref: {biomarker.referenceRange}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+      {/* Upload Button */}
+      {files.length > 0 && !uploading && uploadStatus !== "success" && (
+        <div className="mt-6">
+          <Button onClick={uploadFiles} className="w-full" size="lg">
+            <Upload className="w-4 h-4 mr-2" />
+            Upload {files.length} file{files.length !== 1 ? "s" : ""}
+          </Button>
+        </div>
+      )}
+
+      {/* Success State */}
+      {uploadStatus === "success" && (
+        <Alert className="mt-6">
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            Files uploaded and processed successfully!
+            {ocrResults && (
+              <span>
+                {" "}
+                Found {ocrResults.biomarkers?.length || 0} biomarkers.
+              </span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Error State */}
+      {uploadStatus === "error" && (
+        <Alert variant="destructive" className="mt-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* OCR Results */}
+      {ocrResults && (
+        <div className="mt-6">
+          <h3 className="text-lg font-medium mb-4 flex items-center">
+            <Brain className="w-5 h-5 mr-2 text-blue-500" />
+            AI Analysis Results
+          </h3>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-medium mb-2">Biomarkers Found</h4>
+                <p className="text-sm text-gray-600">
+                  {ocrResults.biomarkers?.length || 0} biomarkers detected
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Confidence Score</h4>
+                <p className="text-sm text-gray-600">{ocrResults.confidence}</p>
               </div>
             </div>
-          ) : (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-              <p className="text-sm text-yellow-700">
-                📝 Document processed, but no biomarkers were automatically
-                detected.
-              </p>
-            </div>
-          )}
-
-          <div className="mt-4 flex space-x-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                navigator.clipboard.writeText(
-                  JSON.stringify(ocrResults.biomarkers, null, 2)
-                );
-              }}
-              className="text-xs"
-            >
-              📋 Copy Data
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setOcrResults(null)}
-              className="text-xs"
-            >
-              ✕ Close Results
-            </Button>
+            {ocrResults.biomarkers && ocrResults.biomarkers.length > 0 && (
+              <div className="mt-4">
+                <h4 className="font-medium mb-2">Detected Biomarkers</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {ocrResults.biomarkers.slice(0, 6).map((biomarker, index) => (
+                    <div key={index} className="text-xs bg-white p-2 rounded">
+                      <span className="font-medium">{biomarker.name}:</span>{" "}
+                      {biomarker.value} {biomarker.unit}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Next Steps */}
-      {uploadStatus === "success" && (
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="text-sm font-semibold text-blue-800 mb-2">
-            🚀 What's Next?
-          </h4>
-          <ul className="text-xs text-blue-700 space-y-1">
-            <li>• Your document has been securely uploaded and analyzed</li>
-            <li>
-              • AI-extracted biomarkers are now stored in your health database
-            </li>
-            <li>• Visit your dashboard to see trends and insights</li>
-            <li>• Upload more tests to track health progress over time</li>
-          </ul>
+      {/* Reset Button */}
+      {(uploadStatus === "success" || uploadStatus === "error") && (
+        <div className="mt-6">
+          <Button onClick={resetUpload} variant="outline" className="w-full">
+            Upload More Files
+          </Button>
         </div>
       )}
     </div>

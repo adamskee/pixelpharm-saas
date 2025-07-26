@@ -1,6 +1,4 @@
 // File: src/app/api/test/optimized-bedrock/route.ts
-// Copy this entire code into the file
-
 import { NextResponse } from "next/server";
 import { optimizedBedrockAnalyzer } from "@/lib/aws/bedrock-optimized";
 
@@ -11,6 +9,7 @@ export async function GET() {
     // Mock biomarker data for testing
     const mockBiomarkers = [
       {
+        biomarkerName: "Total Cholesterol",
         name: "Total Cholesterol",
         value: 220,
         unit: "mg/dL",
@@ -19,6 +18,7 @@ export async function GET() {
         testDate: new Date().toISOString(),
       },
       {
+        biomarkerName: "HDL Cholesterol",
         name: "HDL Cholesterol",
         value: 45,
         unit: "mg/dL",
@@ -27,6 +27,7 @@ export async function GET() {
         testDate: new Date().toISOString(),
       },
       {
+        biomarkerName: "Glucose",
         name: "Glucose",
         value: 95,
         unit: "mg/dL",
@@ -94,6 +95,7 @@ export async function GET() {
         cacheHit: cachedResult.cacheHit,
         processingTime: cachedResult.processingTime,
       },
+      metrics: optimizedBedrockAnalyzer.getPerformanceMetrics(),
     });
   } catch (error: any) {
     console.error("Error testing optimized analyzer:", error);
@@ -114,6 +116,7 @@ export async function POST() {
     const mockRequest = {
       biomarkers: [
         {
+          biomarkerName: "Creatinine",
           name: "Creatinine",
           value: 2.5, // High value - should trigger urgent priority
           unit: "mg/dL",
@@ -141,6 +144,7 @@ export async function POST() {
         processingTime: urgentResult.processingTime,
         riskLevel: urgentResult.riskLevel,
         urgentAlerts: urgentResult.alerts?.length || 0,
+        healthScore: urgentResult.healthScore,
       },
     });
   } catch (error: any) {
