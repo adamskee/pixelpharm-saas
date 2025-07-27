@@ -223,12 +223,76 @@ export default function FileUpload({
             if (ocrResponse.ok) {
               const ocrData = await ocrResponse.json();
               setOcrResults(ocrData);
-              setProcessingStep(
-                `Found ${ocrData.biomarkers?.length || 0} biomarkers in ${
-                  file.name
-                }`
-              );
               console.log("✅ OCR processing completed:", ocrData);
+
+              // ✨ NEW: Store biomarkers if found
+              if (
+                ocrData.success &&
+                ocrData.biomarkers &&
+                ocrData.biomarkers.length > 0
+              ) {
+                setUploadStatus("storing");
+                setProcessingStep(
+                  `Storing ${ocrData.biomarkers.length} biomarkers...`
+                );
+                console.log(
+                  "🩸 OCR extracted biomarkers, storing in database..."
+                );
+
+                try {
+                  const storageResponse = await fetch(
+                    "/api/ai/store-biomarkers",
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        userId: userId,
+                        uploadId: uploadId || `temp-${Date.now()}`, // Use actual uploadId or fallback
+                        biomarkers: ocrData.biomarkers,
+                        testDate: ocrData.testInfo?.testDate,
+                        labName: ocrData.testInfo?.labName,
+                      }),
+                    }
+                  );
+
+                  const storageResult = await storageResponse.json();
+
+                  if (storageResult.success) {
+                    console.log(
+                      "✅ Biomarkers stored successfully:",
+                      storageResult.data
+                    );
+                    setProcessingStep(
+                      `Found and stored ${
+                        storageResult.data?.storedBiomarkers ||
+                        ocrData.biomarkers.length
+                      } biomarkers from ${file.name}`
+                    );
+                  } else {
+                    console.error(
+                      "❌ Failed to store biomarkers:",
+                      storageResult.error
+                    );
+                    setProcessingStep(
+                      `Found ${ocrData.biomarkers.length} biomarkers in ${file.name} (storage failed)`
+                    );
+                  }
+                } catch (storageError) {
+                  console.error(
+                    "❌ Error calling biomarker storage API:",
+                    storageError
+                  );
+                  setProcessingStep(
+                    `Found ${ocrData.biomarkers.length} biomarkers in ${file.name} (storage error)`
+                  );
+                }
+              } else {
+                setProcessingStep(
+                  `Analyzed ${file.name} (no biomarkers found)`
+                );
+              }
             } else {
               console.warn("OCR processing failed for:", file.name);
               setProcessingStep(`Uploaded ${file.name} (OCR failed)`);
@@ -358,7 +422,15 @@ export default function FileUpload({
           </div>
           <Progress value={uploadProgress} className="w-full" />
           {processingStep && (
-            <p className="text-sm text-gray-600 mt-2">{processingStep}</p>
+            <div className="flex items-center space-x-2 mt-2">
+              {uploadStatus === "storing" && (
+                <Database className="h-4 w-4 animate-pulse text-blue-600" />
+              )}
+              {uploadStatus === "processing" && (
+                <Brain className="h-4 w-4 animate-pulse text-purple-600" />
+              )}
+              <p className="text-sm text-gray-600">{processingStep}</p>
+            </div>
           )}
         </div>
       )}
