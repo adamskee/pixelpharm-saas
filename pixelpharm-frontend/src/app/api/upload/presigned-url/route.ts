@@ -1,6 +1,4 @@
 ﻿// src/app/api/upload/presigned-url/route.ts
-// FIXED VERSION - Remove all optional parameters causing signature issues
-
 import { NextRequest, NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -15,39 +13,34 @@ const s3Client = new S3Client({
 
 export async function POST(request: NextRequest) {
   try {
-    const { fileName, fileType, uploadType } = await request.json();
+    const { fileName, fileType, uploadType, userId } = await request.json();
 
     console.log("🔍 API: Generating pre-signed URL for:", {
       fileName,
       fileType,
       uploadType,
+      userId,
     });
 
-    // Create a clean file key
     const timestamp = Date.now();
     const cleanFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const fileKey = `uploads/test-user-123/${uploadType}/${timestamp}-${cleanFileName}`;
+    const fileKey = `uploads/${userId || "anonymous"}/${
+      uploadType || "general"
+    }/${timestamp}-${cleanFileName}`;
 
     console.log("📁 API: File key:", fileKey);
 
-    // Create the S3 command with MINIMAL parameters
-    // Remove ALL optional parameters that cause signature issues
     const command = new PutObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET_NAME!,
       Key: fileKey,
       ContentType: fileType,
-      // REMOVED ALL OF THESE - they cause signature mismatches:
-      // - ServerSideEncryption
-      // - Metadata
-      // - ChecksumAlgorithm
-      // - Any other optional parameters
     });
 
     console.log("🔧 API: S3 command created with minimal parameters");
 
-    // Generate pre-signed URL with shorter expiration
+    // Generate pre-signed URL
     const uploadUrl = await getSignedUrl(s3Client, command, {
-      expiresIn: 900, // 15 minutes instead of 1 hour
+      expiresIn: 900, // 15 minutes
     });
 
     console.log("✅ API: Pre-signed URL generated successfully");
@@ -58,9 +51,13 @@ export async function POST(request: NextRequest) {
     const signedHeaders = urlParams.get("X-Amz-SignedHeaders");
     console.log("📝 API: Signed headers:", signedHeaders);
 
+    // Generate upload ID
+    const uploadId = `upload_${timestamp}_${userId || "anonymous"}`;
+
     return NextResponse.json({
       uploadUrl,
       fileKey,
+      uploadId,
     });
   } catch (error) {
     console.error("❌ API: Pre-signed URL generation failed:", error);

@@ -8,15 +8,15 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import {
-  FileText,
-  Image,
-  CheckCircle,
-  AlertCircle,
+import { 
+  FileText, 
+  Image, 
+  CheckCircle, 
+  AlertCircle, 
   Clock,
   Zap,
   DollarSign,
-  TrendingDown,
+  TrendingDown
 } from "lucide-react";
 
 interface ConversionStats {
@@ -35,13 +35,7 @@ interface ProcessingResult {
   processingTime: number;
 }
 
-type UploadStatus =
-  | "idle"
-  | "uploading"
-  | "converting"
-  | "processing"
-  | "success"
-  | "error";
+type UploadStatus = "idle" | "uploading" | "converting" | "processing" | "success" | "error";
 
 interface OptimizedFileUploadProps {
   onUploadComplete?: (results: ProcessingResult[]) => void;
@@ -65,14 +59,10 @@ export default function OptimizedFileUpload({
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
-      "image/jpeg": [".jpg", ".jpeg"],
-      "image/png": [".png"],
-      "image/webp": [".webp"],
-      "image/gif": [".gif"],
       "application/pdf": [".pdf"],
+      "image/png": [".png"],
+      "image/jpeg": [".jpg", ".jpeg"],
     },
-    maxSize: 25 * 1024 * 1024, // 25MB
-    multiple: true,
     maxFiles,
     onDrop: useCallback((acceptedFiles: File[]) => {
       setFiles(acceptedFiles);
@@ -83,42 +73,29 @@ export default function OptimizedFileUpload({
     }, []),
   });
 
-  const processFile = async (
-    file: File,
-    index: number
-  ): Promise<ProcessingResult> => {
+  const processFile = async (file: File, index: number): Promise<ProcessingResult> => {
     const startTime = Date.now();
-
+    
     try {
       // Step 1: Upload to S3
       setProcessingStep(`Uploading ${file.name}...`);
       setUploadProgress(20);
 
-      const presignedResponse = await fetch("/api/upload/presigned-url", {
+      const presignedResponse = await fetch("/api/uploads/presigned-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fileName: file.name,
           fileType: file.type,
-          userId: user?.userId, // Send the actual user ID
+          userId: user?.id,
         }),
       });
 
-      console.log("🔍 Presigned URL Response:", {
-        status: presignedResponse.status,
-        statusText: presignedResponse.statusText,
-        ok: presignedResponse.ok,
-      });
-
       if (!presignedResponse.ok) {
-        const errorText = await presignedResponse.text();
-        console.log("❌ Presigned URL Error:", errorText);
-        throw new Error(
-          `Failed to get presigned URL: ${presignedResponse.status} - ${errorText}`
-        );
+        throw new Error("Failed to get presigned URL");
       }
-      const { uploadUrl, fileKey, uploadId } = await presignedResponse.json();
-      console.log("🆔 Upload ID received:", uploadId); // Add this debug line
+
+      const { uploadUrl, fileKey } = await presignedResponse.json();
 
       // Upload file to S3
       const uploadResponse = await fetch(uploadUrl, {
@@ -146,7 +123,7 @@ export default function OptimizedFileUpload({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             fileKey,
-            userId: user?.userId,
+            userId: user?.id,
           }),
         });
 
@@ -154,35 +131,23 @@ export default function OptimizedFileUpload({
           const conversionResult = await conversionResponse.json();
           if (conversionResult.success) {
             processingKey = conversionResult.pngKey;
-
+            
             // Calculate cost savings
             const originalTokens = Math.ceil(file.size / 1000) * 1.5; // Rough estimate
-            const optimizedTokens = Math.ceil(
-              (file.size * (1 - conversionResult.fileSizeReduction / 100)) /
-                1000
-            );
+            const optimizedTokens = Math.ceil(file.size * (1 - conversionResult.fileSizeReduction / 100) / 1000);
             const tokensSaved = originalTokens - optimizedTokens;
             const costSavings = tokensSaved * 0.003; // $0.003 per 1K tokens (Claude pricing)
 
             conversionStats = {
               originalSize: file.size,
-              optimizedSize:
-                file.size * (1 - conversionResult.fileSizeReduction / 100),
+              optimizedSize: file.size * (1 - conversionResult.fileSizeReduction / 100),
               sizeReduction: conversionResult.fileSizeReduction,
               tokensEstimated: tokensSaved,
               costSavings,
             };
 
-            console.log(
-              `💰 Conversion savings: ${conversionResult.fileSizeReduction.toFixed(
-                1
-              )}% size reduction`
-            );
-            console.log(
-              `🪙 Estimated token savings: ${tokensSaved.toFixed(
-                0
-              )} tokens ($${costSavings.toFixed(4)})`
-            );
+            console.log(`💰 Conversion savings: ${conversionResult.fileSizeReduction.toFixed(1)}% size reduction`);
+            console.log(`🪙 Estimated token savings: ${tokensSaved.toFixed(0)} tokens ($${costSavings.toFixed(4)})`);
           }
         } else {
           console.warn("PDF conversion failed, proceeding with original file");
@@ -199,7 +164,7 @@ export default function OptimizedFileUpload({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fileKey: processingKey,
-          userId: user?.userId,
+          userId: user?.id,
           originalFormat: file.type === "application/pdf" ? "pdf" : "image",
         }),
       });
@@ -218,17 +183,14 @@ export default function OptimizedFileUpload({
 
       // Step 4: Store biomarkers in database
       if (ocrResult.biomarkers?.length > 0) {
-        setProcessingStep(
-          `Storing ${ocrResult.biomarkers.length} biomarkers...`
-        );
+        setProcessingStep(`Storing ${ocrResult.biomarkers.length} biomarkers...`);
 
         const storeResponse = await fetch("/api/ai/store-results", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            userId: user?.userId,
+            userId: user?.id,
             fileKey: processingKey,
-            uploadId: uploadId,
             biomarkers: ocrResult.biomarkers,
             testInfo: ocrResult.testInfo,
             uploadType: "blood_tests",
@@ -251,6 +213,7 @@ export default function OptimizedFileUpload({
         conversionStats,
         processingTime,
       };
+
     } catch (error) {
       console.error(`❌ Processing failed for ${file.name}:`, error);
       throw error;
@@ -258,7 +221,7 @@ export default function OptimizedFileUpload({
   };
 
   const handleUpload = async () => {
-    if (!user?.userId) {
+    if (!user?.id) {
       setErrorMessage("Please sign in to upload files");
       return;
     }
@@ -274,13 +237,11 @@ export default function OptimizedFileUpload({
 
     try {
       const processedResults: ProcessingResult[] = [];
-      const totalSavings = { size: 0, tokens: 0, cost: 0 };
+      let totalSavings = { size: 0, tokens: 0, cost: 0 };
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        setProcessingStep(
-          `Processing ${file.name} (${i + 1}/${files.length})...`
-        );
+        setProcessingStep(`Processing ${file.name} (${i + 1}/${files.length})...`);
 
         const result = await processFile(file, i);
         processedResults.push(result);
@@ -324,6 +285,7 @@ export default function OptimizedFileUpload({
         setProcessingStep("");
         setUploadStatus("idle");
       }, 3000);
+
     } catch (error) {
       console.error("❌ Upload failed:", error);
       setUploadStatus("error");
@@ -375,7 +337,7 @@ export default function OptimizedFileUpload({
         }`}
       >
         <input {...getInputProps()} />
-
+        
         <div className="flex items-center justify-center mb-4">
           {getStatusIcon()}
           <FileText className="h-8 w-8 text-gray-400 ml-2" />
@@ -396,13 +358,11 @@ export default function OptimizedFileUpload({
       </div>
 
       {/* Cost Optimization Notice */}
-      {files.some((f) => f.type === "application/pdf") && (
+      {files.some(f => f.type === "application/pdf") && (
         <Alert className="mt-4 border-green-200 bg-green-50">
           <Zap className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">
-            <strong>Smart Optimization:</strong> PDF files will be converted to
-            300 DPI PNG for optimal Claude OCR accuracy and reduced processing
-            costs.
+            <strong>Smart Optimization:</strong> PDF files will be converted to 300 DPI PNG for optimal Claude OCR accuracy and reduced processing costs.
           </AlertDescription>
         </Alert>
       )}
@@ -429,7 +389,6 @@ export default function OptimizedFileUpload({
                       {(file.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
-                </div>
                 <div className="flex items-center space-x-2">
                   {file.type === "application/pdf" && (
                     <Badge variant="outline" className="text-xs">
@@ -457,9 +416,7 @@ export default function OptimizedFileUpload({
         <div className="mt-6">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium">Processing Progress</span>
-            <span className="text-sm text-gray-500">
-              {uploadProgress.toFixed(0)}%
-            </span>
+            <span className="text-sm text-gray-500">{uploadProgress.toFixed(0)}%</span>
           </div>
           <Progress value={uploadProgress} className="w-full" />
           {processingStep && (
@@ -483,15 +440,11 @@ export default function OptimizedFileUpload({
               </div>
               <div>
                 <div className="font-medium text-green-800">Tokens Saved</div>
-                <div className="text-green-600">
-                  ~{costSavings.tokensEstimated.toFixed(0)} tokens
-                </div>
+                <div className="text-green-600">~{costSavings.tokensEstimated.toFixed(0)} tokens</div>
               </div>
               <div>
                 <div className="font-medium text-green-800">Cost Savings</div>
-                <div className="text-green-600">
-                  ${costSavings.costSavings.toFixed(4)}
-                </div>
+                <div className="text-green-600">${costSavings.costSavings.toFixed(4)}</div>
               </div>
             </div>
           </AlertDescription>
@@ -504,29 +457,24 @@ export default function OptimizedFileUpload({
           <h3 className="text-lg font-medium mb-3">Processing Results</h3>
           <div className="space-y-3">
             {results.map((result, index) => (
-              <div
-                key={index}
-                className="p-4 bg-green-50 border border-green-200 rounded-lg"
-              >
+              <div key={index} className="p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-green-800">
                       File {index + 1} processed successfully
                     </p>
                     <p className="text-sm text-green-600">
-                      Found {result.biomarkers.length} biomarkers • Processed in{" "}
-                      {(result.processingTime / 1000).toFixed(1)}s
+                      Found {result.biomarkers.length} biomarkers • 
+                      Processed in {(result.processingTime / 1000).toFixed(1)}s
                       {result.pngKey && " • Optimized to PNG"}
                     </p>
                   </div>
                   <CheckCircle className="h-5 w-5 text-green-500" />
                 </div>
-
+                
                 {result.biomarkers.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-xs text-green-600 mb-1">
-                      Extracted biomarkers:
-                    </p>
+                    <p className="text-xs text-green-600 mb-1">Extracted biomarkers:</p>
                     <div className="flex flex-wrap gap-1">
                       {result.biomarkers.slice(0, 5).map((biomarker, i) => (
                         <Badge key={i} variant="secondary" className="text-xs">
@@ -559,17 +507,14 @@ export default function OptimizedFileUpload({
       <div className="mt-6 flex justify-center">
         <Button
           onClick={handleUpload}
-          disabled={
-            files.length === 0 || uploadStatus !== "idle" || !user?.userId
-          }
-          className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+          disabled={files.length === 0 || uploadStatus !== "idle" || !user?.id}
+          className="px-8 py-2"
           size="lg"
         >
           {uploadStatus === "uploading" && "Uploading..."}
           {uploadStatus === "converting" && "Converting..."}
           {uploadStatus === "processing" && "Processing..."}
-          {uploadStatus === "idle" &&
-            `Process ${files.length} File${files.length !== 1 ? "s" : ""}`}
+          {uploadStatus === "idle" && `Process ${files.length} File${files.length !== 1 ? 's' : ''}`}
           {uploadStatus === "success" && "Complete!"}
           {uploadStatus === "error" && "Retry Upload"}
         </Button>
@@ -577,9 +522,7 @@ export default function OptimizedFileUpload({
 
       {/* Processing Pipeline Info */}
       <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-        <h4 className="font-medium text-gray-800 mb-2">
-          Optimized Processing Pipeline
-        </h4>
+        <h4 className="font-medium text-gray-800 mb-2">Optimized Processing Pipeline</h4>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
           <div className="flex items-center">
             <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
@@ -601,4 +544,4 @@ export default function OptimizedFileUpload({
       </div>
     </div>
   );
-}
+}</div>
