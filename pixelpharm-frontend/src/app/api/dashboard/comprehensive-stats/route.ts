@@ -53,18 +53,44 @@ export async function GET(request: Request) {
       // Get file uploads using correct field names from your schema
       const fileUploads = await prisma.fileUpload.findMany({
         where: { userId },
-        orderBy: { createdAt: "desc" }, // Use createdAt instead of uploadedAt
+        orderBy: { createdAt: "desc" },
         take: 10,
       });
 
-      // Get biomarker values if the table exists
+      // Get ALL biomarker values (not limited to 20)
       let biomarkerValues = [];
+      let totalBiomarkerCount = 0;
+      let uniqueBiomarkerNames = [];
+
       try {
+        // Get total count of ALL biomarker records
+        totalBiomarkerCount = await prisma.biomarkerValue.count({
+          where: { userId },
+        });
+
+        // Get unique biomarker names
+        const uniqueMarkers = await prisma.biomarkerValue.findMany({
+          where: { userId },
+          select: { biomarkerName: true },
+          distinct: ["biomarkerName"],
+        });
+        uniqueBiomarkerNames = uniqueMarkers.map((m) => m.biomarkerName);
+
+        // Get sample biomarker values for statistics
         biomarkerValues = await prisma.biomarkerValue.findMany({
           where: { userId },
-          orderBy: { createdAt: "desc" }, // Use createdAt instead of testDate
-          take: 20,
+          orderBy: { createdAt: "desc" },
+          take: 50, // Get more for better statistics
         });
+
+        console.log(`📊 Found ${totalBiomarkerCount} total biomarker records`);
+        console.log(
+          `📊 Found ${uniqueBiomarkerNames.length} unique biomarker types`
+        );
+        console.log(
+          `📊 Sample biomarkers:`,
+          biomarkerValues.slice(0, 5).map((b) => b.biomarkerName)
+        );
       } catch (biomarkerError) {
         console.log(
           "⚠️ biomarkerValue table not accessible:",
@@ -72,56 +98,92 @@ export async function GET(request: Request) {
         );
       }
 
+      // Get blood test results count
+      let bloodTestResults = [];
+      try {
+        bloodTestResults = await prisma.bloodTestResult.findMany({
+          where: { userId },
+          orderBy: { testDate: "desc" },
+        });
+      } catch (error) {
+        console.log("⚠️ bloodTestResult table not accessible:", error.message);
+      }
+
       console.log(
-        `📊 Found ${fileUploads.length} file uploads and ${biomarkerValues.length} biomarker values`
+        `📊 Found ${fileUploads.length} file uploads and ${totalBiomarkerCount} biomarker records`
       );
 
       // If we have real data, return real stats
-      if (fileUploads.length > 0) {
+      if (fileUploads.length > 0 || totalBiomarkerCount > 0) {
         console.log("✅ Returning REAL user stats based on database data");
 
         // Calculate real statistics
         const bloodTestUploads = fileUploads.filter(
           (f) => f.uploadType === "BLOOD_TESTS"
         ).length;
+
         const bodyCompositionUploads = fileUploads.filter(
           (f) => f.uploadType === "BODY_COMPOSITION"
         ).length;
+
         const abnormalBiomarkers = biomarkerValues.filter(
           (b) => b.isAbnormal
         ).length;
-        const criticalBiomarkers = biomarkerValues.filter(
-          (b) => b.urgencyLevel === "CRITICAL"
-        ).length;
-        const normalBiomarkers =
-          biomarkerValues.length - abnormalBiomarkers - criticalBiomarkers;
+
+        // For critical, check for high-risk biomarker values
+        const criticalBiomarkers = biomarkerValues.filter((b) => {
+          if (!b.isAbnormal) return false;
+
+          // Define critical thresholds based on biomarker name and value
+          const name = b.biomarkerName.toLowerCase();
+          const value = parseFloat(b.value.toString());
+
+          if (name.includes("cholesterol") && value > 7.0) return true;
+          if (name.includes("glucose") && value > 11.0) return true;
+          if (name.includes("creatinine") && value > 150) return true;
+
+          return false;
+        }).length;
+
+        const normalBiomarkers = totalBiomarkerCount - abnormalBiomarkers;
 
         // Calculate health score based on real data
         let healthScore = 100;
-        if (abnormalBiomarkers > 0) healthScore -= abnormalBiomarkers * 10;
-        if (criticalBiomarkers > 0) healthScore -= criticalBiomarkers * 20;
-        healthScore = Math.max(0, Math.min(100, healthScore));
+        if (abnormalBiomarkers > 0)
+          healthScore -= Math.min(abnormalBiomarkers * 5, 50);
+        if (criticalBiomarkers > 0) healthScore -= criticalBiomarkers * 15;
+        healthScore = Math.max(20, Math.min(100, healthScore));
 
         // Determine risk level
         let riskLevel = "LOW";
         if (criticalBiomarkers > 0) riskLevel = "CRITICAL";
-        else if (abnormalBiomarkers > 2) riskLevel = "HIGH";
-        else if (abnormalBiomarkers > 0) riskLevel = "MODERATE";
+        else if (abnormalBiomarkers > 3) riskLevel = "HIGH";
+        else if (abnormalBiomarkers > 1) riskLevel = "MODERATE";
+
+        // Calculate data completeness
+        const expectedBiomarkers = 25; // Standard comprehensive panel
+        const dataCompleteness = Math.min(
+          100,
+          Math.round((uniqueBiomarkerNames.length / expectedBiomarkers) * 100)
+        );
 
         const realStats = {
           user,
           healthMetrics: {
-            totalReports: fileUploads.length,
+            totalReports: bloodTestResults.length || bloodTestUploads,
             latestHealthScore: healthScore,
             riskLevel,
             lastAnalysisDate: fileUploads[0]?.createdAt?.toISOString() || null,
           },
           biomarkers: {
-            totalBiomarkers: biomarkerValues.length,
+            // FIXED: Show total biomarker records, not just sample
+            totalBiomarkers: totalBiomarkerCount, // This is the key fix!
+            uniqueBiomarkers: uniqueBiomarkerNames.length,
             abnormalCount: abnormalBiomarkers,
             criticalCount: criticalBiomarkers,
             normalCount: normalBiomarkers,
             lastTestDate:
+              bloodTestResults[0]?.testDate?.toISOString() ||
               biomarkerValues[0]?.createdAt?.toISOString() ||
               fileUploads[0]?.createdAt?.toISOString() ||
               null,
@@ -137,32 +199,43 @@ export async function GET(request: Request) {
                 ?.createdAt?.toISOString() || null,
           },
           trends: {
-            healthScoreTrend: "stable",
+            healthScoreTrend:
+              healthScore >= 75
+                ? "positive"
+                : healthScore >= 50
+                ? "stable"
+                : "concerning",
             weightTrend: "stable",
             cholesterolTrend: abnormalBiomarkers > 0 ? "concerning" : "stable",
             overallTrend: riskLevel === "LOW" ? "positive" : "concerning",
           },
           recentActivity: fileUploads.slice(0, 5).map((upload) => ({
-            type: upload.uploadType.toLowerCase().replace("_", "_"),
+            type:
+              upload.uploadType?.toLowerCase().replace("_", "_") || "general",
             date: upload.createdAt.toISOString(),
-            description: `${upload.uploadType
-              .replace("_", " ")
-              .toLowerCase()} uploaded: ${upload.originalFilename}`,
+            description: `${
+              upload.uploadType?.replace("_", " ").toLowerCase() || "file"
+            } uploaded: ${upload.originalFilename}`,
             status: "completed",
           })),
           recommendations: {
-            activeCount: Math.max(1, abnormalBiomarkers * 2),
+            activeCount: Math.max(1, abnormalBiomarkers),
             highPriorityCount:
               criticalBiomarkers + Math.floor(abnormalBiomarkers / 2),
             completedCount: 0,
-            categories: ["lifestyle", "monitoring"],
+            categories:
+              criticalBiomarkers > 0
+                ? ["medical", "monitoring"]
+                : ["lifestyle", "monitoring"],
           },
           dataQuality: {
-            completeness: Math.min(
-              100,
-              Math.max(50, (biomarkerValues.length / 15) * 100)
-            ),
-            reliability: fileUploads.length > 2 ? "HIGH" : "MEDIUM",
+            completeness: dataCompleteness,
+            reliability:
+              totalBiomarkerCount > 10
+                ? "HIGH"
+                : fileUploads.length > 2
+                ? "MEDIUM"
+                : "LOW",
             lastUpdated: new Date().toISOString(),
           },
           performance: {
@@ -171,20 +244,23 @@ export async function GET(request: Request) {
             dataSource: "database",
             generatedAt: new Date().toISOString(),
           },
-          // Debug info
+          // Enhanced debug info
           _debug: {
             fileUploadsFound: fileUploads.length,
-            biomarkerValuesFound: biomarkerValues.length,
+            totalBiomarkerRecords: totalBiomarkerCount, // Total count
+            uniqueBiomarkerTypes: uniqueBiomarkerNames.length, // Unique types
+            bloodTestResults: bloodTestResults.length,
             userId: userId,
             mostRecentUpload: fileUploads[0]?.originalFilename || "None",
             mostRecentUploadDate:
               fileUploads[0]?.createdAt?.toISOString() || "None",
+            sampleBiomarkers: uniqueBiomarkerNames.slice(0, 10), // Show sample names
           },
         };
 
         return NextResponse.json(realStats);
       } else {
-        console.log("📊 No file uploads found for user:", userId);
+        console.log("📊 No file uploads or biomarkers found for user:", userId);
       }
     } catch (fetchError) {
       console.error("❌ Error fetching real user data:", fetchError);
@@ -208,6 +284,7 @@ export async function GET(request: Request) {
       },
       biomarkers: {
         totalBiomarkers: 12,
+        uniqueBiomarkers: 12,
         abnormalCount: 3,
         criticalCount: 0,
         normalCount: 9,
@@ -256,7 +333,7 @@ export async function GET(request: Request) {
         generatedAt: new Date().toISOString(),
       },
       _debug: {
-        reason: "No file uploads found",
+        reason: "No file uploads or biomarkers found",
         userId: userId,
       },
     };
