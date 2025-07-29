@@ -27,8 +27,11 @@ export async function GET() {
       firstName: user.firstName,
       lastName: user.lastName,
       dateOfBirth: user.dateOfBirth,
-      gender: user.gender,
+      gender: user.gender?.toLowerCase(), // Convert enum to lowercase for frontend
       timezone: user.timezone,
+      height: user.height ? parseFloat(user.height.toString()) : null,
+      weight: user.weight ? parseFloat(user.weight.toString()) : null,
+      bio: user.bio,
       image: user.image,
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
@@ -52,18 +55,43 @@ export async function PUT(request: Request) {
     }
 
     const data = await request.json();
-    const { firstName, lastName, dateOfBirth, gender, timezone } = data;
+    const { firstName, lastName, dateOfBirth, gender, timezone, height, weight, bio } = data;
 
-    const updatedUser = await updateUserProfile(session.user.id, {
+    console.log("🔄 Updating user profile:", {
+      userId: session.user.id,
       firstName,
       lastName,
-      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+      dateOfBirth,
       gender,
       timezone,
+      height,
+      weight,
+      bio,
     });
+
+    // Convert gender string to enum value
+    const genderEnum = gender === "male" ? "MALE" : 
+                     gender === "female" ? "FEMALE" : 
+                     gender?.toUpperCase() === "MALE" ? "MALE" :
+                     gender?.toUpperCase() === "FEMALE" ? "FEMALE" : 
+                     undefined;
+
+    const updatedUser = await updateUserProfile(session.user.id, {
+      firstName: firstName || undefined,
+      lastName: lastName || undefined,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+      gender: genderEnum,
+      timezone: timezone || undefined,
+      height: height ? parseFloat(height) : undefined,
+      weight: weight ? parseFloat(weight) : undefined,
+      bio: bio || undefined,
+    });
+
+    console.log("✅ User profile updated successfully:", updatedUser.userId);
 
     return NextResponse.json({
       success: true,
+      message: "Profile updated successfully",
       user: {
         userId: updatedUser.userId,
         firstName: updatedUser.firstName,
@@ -71,10 +99,13 @@ export async function PUT(request: Request) {
         dateOfBirth: updatedUser.dateOfBirth,
         gender: updatedUser.gender,
         timezone: updatedUser.timezone,
+        height: updatedUser.height ? parseFloat(updatedUser.height.toString()) : null,
+        weight: updatedUser.weight ? parseFloat(updatedUser.weight.toString()) : null,
+        bio: updatedUser.bio,
       },
     });
   } catch (error) {
-    console.error("Error updating user profile:", error);
+    console.error("❌ Error updating user profile:", error);
     return NextResponse.json(
       { error: "Failed to update user profile" },
       { status: 500 }

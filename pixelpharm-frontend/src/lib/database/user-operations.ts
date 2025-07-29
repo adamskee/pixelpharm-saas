@@ -18,6 +18,9 @@ export interface UpdateUserProfileData {
   dateOfBirth?: Date;
   gender?: "MALE" | "FEMALE";
   timezone?: string;
+  height?: number;
+  weight?: number;
+  bio?: string;
 }
 
 // Get user with all health data

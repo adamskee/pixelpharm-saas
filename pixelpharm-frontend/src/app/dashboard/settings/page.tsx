@@ -106,27 +106,88 @@ export default function UserSettingsPage() {
     shareWithDoctor: false,
   });
 
-  useEffect(() => {
-    if (user) {
+  const fetchUserProfile = async () => {
+    try {
+      console.log("🔍 Fetching user profile data...");
+      
+      const response = await fetch('/api/user/profile');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch profile');
+      }
+
+      const userData = await response.json();
+      console.log("📋 User profile loaded:", userData);
+      
       setProfileData(prev => ({
         ...prev,
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
-        email: user.email || "",
-        timezone: prev.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        firstName: userData.firstName || "",
+        lastName: userData.lastName || "",
+        email: userData.email || "",
+        dateOfBirth: userData.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().split('T')[0] : "",
+        gender: userData.gender || "",
+        height: userData.height ? userData.height.toString() : "",
+        weight: userData.weight ? userData.weight.toString() : "",
+        bio: userData.bio || "",
+        timezone: userData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
       }));
+    } catch (error) {
+      console.error("❌ Error fetching user profile:", error);
+      // Fall back to using auth context data
+      if (user) {
+        setProfileData(prev => ({
+          ...prev,
+          firstName: user.firstName || "",
+          lastName: user.lastName || "",
+          email: user.email || "",
+          timezone: prev.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        }));
+      }
     }
-  }, [user?.userId, user?.firstName, user?.lastName, user?.email]);
+  };
+
+  useEffect(() => {
+    if (user?.userId) {
+      fetchUserProfile();
+    }
+  }, [user?.userId]);
 
   const handleSaveProfile = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log("💾 Saving profile data:", profileData);
+      
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: profileData.firstName,
+          lastName: profileData.lastName,
+          dateOfBirth: profileData.dateOfBirth || null,
+          gender: profileData.gender || null,
+          timezone: profileData.timezone || null,
+          height: profileData.height || null,
+          weight: profileData.weight || null,
+          bio: profileData.bio || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update profile');
+      }
+
+      const result = await response.json();
+      console.log("✅ Profile updated successfully:", result);
+      
       setSaveMessage("Profile updated successfully!");
       setTimeout(() => setSaveMessage(""), 3000);
-    } catch (error) {
-      setSaveMessage("Failed to update profile. Please try again.");
+    } catch (error: any) {
+      console.error("❌ Error updating profile:", error);
+      setSaveMessage(error.message || "Failed to update profile. Please try again.");
+      setTimeout(() => setSaveMessage(""), 5000);
     } finally {
       setLoading(false);
     }

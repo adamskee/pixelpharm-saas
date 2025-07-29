@@ -18,6 +18,11 @@ model User {
   gender        Gender?
   timezone      String?   @default("UTC")
   
+  // Physical characteristics
+  height        Decimal?  @map("height") @db.Decimal(5, 2) // Height in cm (e.g., 175.50)
+  weight        Decimal?  @map("weight") @db.Decimal(5, 2) // Weight in kg (e.g., 70.25)
+  bio           String?   @map("bio") @db.Text // Personal notes/bio
+  
   // NextAuth.js fields (need to add these to database)
   name          String?
   image         String?
