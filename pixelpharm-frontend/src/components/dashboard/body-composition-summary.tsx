@@ -229,34 +229,69 @@ export function BodyCompositionSummary({
         {/* Additional Metrics Display */}
         {bodyData.rawData?.bodyComposition && (
           <div className="mt-4 pt-4 border-t">
-            <p className="text-xs text-gray-500 mb-2">
-              Additional Metrics Available
+            <p className="text-sm font-medium text-gray-700 mb-3">
+              Additional Body Composition Metrics
             </p>
-            <div className="flex gap-1 flex-wrap">
-              {Object.keys(bodyData.rawData.bodyComposition)
-                .slice(0, 6)
-                .map((key) => (
-                  <Badge key={key} variant="secondary" className="text-xs">
-                    {key.replace(/([A-Z])/g, " $1").trim()}
-                  </Badge>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {Object.entries(bodyData.rawData.bodyComposition)
+                .filter(([key, value]) => {
+                  // Filter out already displayed metrics and null/undefined values
+                  const mainMetrics = ['bodyFatPercentage', 'skeletalMuscleMass', 'totalWeight', 'bmr', 'visceralFatLevel'];
+                  return !mainMetrics.includes(key) && value !== null && value !== undefined && typeof value !== 'object';
+                })
+                .slice(0, 12) // Show up to 12 additional metrics
+                .map(([key, value]) => (
+                  <div key={key} className="text-center p-2 bg-gray-50 rounded-lg border border-gray-100">
+                    <div className="text-lg font-semibold text-gray-700">
+                      {typeof value === 'number' ? value.toFixed(1) : String(value)}
+                      {key.toLowerCase().includes('percentage') || key.toLowerCase().includes('fat') ? '%' : 
+                       key.toLowerCase().includes('weight') || key.toLowerCase().includes('mass') ? ' kg' :
+                       key.toLowerCase().includes('bmr') ? ' kcal' : ''}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                    </div>
+                  </div>
                 ))}
-              {Object.keys(bodyData.rawData.bodyComposition).length > 6 && (
-                <Badge variant="secondary" className="text-xs">
-                  +{Object.keys(bodyData.rawData.bodyComposition).length - 6}{" "}
-                  more
-                </Badge>
-              )}
             </div>
-          </div>
-        )}
-
-        {/* Debug Info (only in development) */}
-        {process.env.NODE_ENV === "development" && bodyData && (
-          <div className="mt-4 pt-4 border-t">
-            <p className="text-xs text-gray-400 mb-1">Debug Info:</p>
-            <pre className="text-xs text-gray-400 bg-gray-50 p-2 rounded overflow-auto max-h-32">
-              {JSON.stringify(bodyData, null, 2)}
-            </pre>
+            
+            {/* Nested Objects Display (muscle, fat, water, metabolic data) */}
+            {bodyData.rawData?.bodyComposition && Object.entries(bodyData.rawData.bodyComposition)
+              .filter(([key, value]) => typeof value === 'object' && value !== null)
+              .map(([category, data]) => (
+                <div key={category} className="mt-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2 capitalize">
+                    {category.replace(/([A-Z])/g, ' $1').trim()} Distribution
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {Object.entries(data as Record<string, any>).map(([subKey, subValue]) => (
+                      <div key={subKey} className={`text-center p-2 rounded-lg border ${
+                        category === 'muscle' ? 'bg-blue-50 border-blue-100' :
+                        category === 'fat' ? 'bg-red-50 border-red-100' :
+                        category === 'water' ? 'bg-cyan-50 border-cyan-100' :
+                        category === 'metabolic' ? 'bg-green-50 border-green-100' :
+                        'bg-gray-50 border-gray-100'
+                      }`}>
+                        <div className={`text-sm font-semibold ${
+                          category === 'muscle' ? 'text-blue-700' :
+                          category === 'fat' ? 'text-red-700' :
+                          category === 'water' ? 'text-cyan-700' :
+                          category === 'metabolic' ? 'text-green-700' :
+                          'text-gray-700'
+                        }`}>
+                          {typeof subValue === 'number' ? subValue.toFixed(1) : String(subValue)}
+                          {subKey.toLowerCase().includes('percentage') || subKey.toLowerCase().includes('fat') ? '%' : 
+                           subKey.toLowerCase().includes('water') ? ' L' :
+                           subKey.toLowerCase().includes('bmr') ? ' kcal' : ' kg'}
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          {subKey.replace(/([A-Z])/g, ' $1').trim()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
           </div>
         )}
       </CardContent>

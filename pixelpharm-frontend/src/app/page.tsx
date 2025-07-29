@@ -111,13 +111,13 @@ export default function PixelPharmHomepage() {
       icon: <Upload className="h-8 w-8 text-blue-600" />,
       title: "Smart Document Analysis",
       description:
-        "Upload any blood test PDF or image. Our AI extracts and analyzes 50+ biomarkers instantly.",
+        "Simply upload any blood test as a jpg, gif or webp. Our AI instantly extracts and processes your biomarker data. Our AI extracts and analyzes 206+ biomarkers.",
     },
     {
       icon: <Brain className="h-8 w-8 text-purple-600" />,
       title: "AI-Powered Insights",
       description:
-        "Advanced medical analysis using Claude 3 AI provides evidence-based recommendations tailored to you.",
+        "Advanced medical analysis using Pixelpharm's Multi Medical Model AI  provides evidence-based recommendations tailored to you.",
     },
     {
       icon: <BarChart3 className="h-8 w-8 text-green-600" />,
@@ -218,7 +218,7 @@ export default function PixelPharmHomepage() {
           <div className="text-center">
             <Badge className="mb-6 bg-blue-100 text-blue-800 border-blue-200">
               <Zap className="h-4 w-4 mr-2" />
-              AI-Powered Health Analytics
+              Multi Medical Model AI Powered Health Analytics
             </Badge>
             <h1 className="text-5xl md:text-7xl font-bold mb-6">
               <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent">
@@ -232,9 +232,9 @@ export default function PixelPharmHomepage() {
               </span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Upload any blood test and get instant AI-powered analysis with
-              personalized recommendations. Professional-grade health insights
-              made simple and accessible.
+              Upload any blood test and get instant Multi Medical Model AI
+              analysis with personalized recommendations. Professional-grade
+              health insights made simple and accessible.
             </p>
 
             {/* Health Goals Selection */}
@@ -283,7 +283,7 @@ export default function PixelPharmHomepage() {
             <div className="flex flex-wrap justify-center items-center gap-8 text-gray-500 text-sm">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
-                <span>10,000+ Users</span>
+                <span>1000+ Users</span>
               </div>
               <div className="flex items-center gap-2">
                 <Star className="h-4 w-4 text-yellow-500" />
@@ -310,9 +310,9 @@ export default function PixelPharmHomepage() {
               Understanding Your Health Starts With Your Biomarkers
             </h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Our AI analyzes 50+ key health indicators to provide comprehensive
-              insights into your cardiovascular, metabolic, and overall
-              wellness.
+              Pixelpharm's Multi Medical Model AI analyzes 206+ key health
+              indicators to provide comprehensive insights into your
+              cardiovascular, metabolic, and overall wellness.
             </p>
           </div>
 
@@ -350,9 +350,9 @@ export default function PixelPharmHomepage() {
               Professional Health Analytics, Simplified
             </h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Advanced AI technology meets clinical expertise to deliver
-              insights that were previously only available to healthcare
-              professionals.
+              Pixelpharm's Multi Medical Model AI technology meets clinical
+              expertise to deliver insights that were previously only available
+              to healthcare professionals.
             </p>
           </div>
 
@@ -402,8 +402,9 @@ export default function PixelPharmHomepage() {
                 Upload Your Results
               </h3>
               <p className="text-gray-600">
-                Simply upload any blood test PDF, image, or lab report. Our AI
-                instantly extracts and processes your biomarker data.
+                Simply upload any blood test as a jpg, gif or webp. Our AI
+                instantly extracts and processes your biomarker data. Our AI
+                extracts and analyzes 206+ biomarkers.
               </p>
             </div>
 
@@ -413,8 +414,9 @@ export default function PixelPharmHomepage() {
               </div>
               <h3 className="text-xl font-semibold mb-4">AI Analysis</h3>
               <p className="text-gray-600">
-                Advanced AI powered by Claude 3 analyzes your data using
-                clinical-grade medical frameworks and evidence-based guidelines.
+                Advanced AI powered by Pixelpharm's Multi Medical Model AI that
+                analyzes your data using clinical-grade medical frameworks and
+                evidence-based guidelines.
               </p>
             </div>
 
@@ -594,8 +596,8 @@ export default function PixelPharmHomepage() {
               </div>
               <p className="text-gray-400 max-w-md leading-relaxed">
                 Empowering individuals with professional-grade health analytics
-                through advanced AI technology. Transform your lab results into
-                actionable health insights.
+                through advanced Multi Medical Model technology. Transform your
+                lab results into actionable health insights.
               </p>
             </div>
 
@@ -663,8 +665,8 @@ export default function PixelPharmHomepage() {
 
           <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
             <p>
-              &copy; 2025 PixelPharm. All rights reserved. | HIPAA Compliant |
-              Clinical-Grade Analytics
+              &copy; 2025 PixelPharm Health. All rights reserved. | HIPAA
+              Compliant | Clinical-Grade Analytics
             </p>
           </div>
         </div>

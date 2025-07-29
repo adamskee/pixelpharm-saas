@@ -316,6 +316,9 @@ export default function DashboardPage() {
   const lastAnalysisDate = stats.healthMetrics?.lastAnalysisDate || stats.lastAnalysisDate;
   const lastTestDate = stats.biomarkers?.lastTestDate || stats.lastUploadDate;
 
+  // Check if this is a new user with no data
+  const isNewUser = stats._debug?.isNewUser || (totalReports === 0 && totalBiomarkers === 0 && totalScans === 0);
+
   // Safe risk assessment access
   const cardiovascularRisk = stats.riskAssessments?.cardiovascular || "LOW";
   const metabolicRisk = stats.riskAssessments?.metabolic || "LOW";
@@ -368,7 +371,7 @@ export default function DashboardPage() {
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {totalReports > 0 ? `Based on ${totalReports} report${totalReports !== 1 ? 's' : ''}` : 'No reports yet'}
+              {isNewUser ? 'Upload blood test to calculate' : totalReports > 0 ? `Based on ${totalReports} report${totalReports !== 1 ? 's' : ''}` : 'No reports yet'}
             </p>
           </CardContent>
         </Card>
@@ -399,7 +402,7 @@ export default function DashboardPage() {
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Last test: {getDaysAgo(lastTestDate) || 'Never'}
+              {isNewUser ? 'Upload blood test to track biomarkers' : `Last test: ${getDaysAgo(lastTestDate) || 'Never'}`}
             </p>
           </CardContent>
         </Card>
@@ -414,7 +417,7 @@ export default function DashboardPage() {
             <div className="text-2xl font-bold">{dataCompleteness}%</div>
             <Progress value={dataCompleteness} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-2">
-              {dataCompleteness >= 80 ? 'Excellent' : dataCompleteness >= 60 ? 'Good' : 'Needs improvement'}
+              {isNewUser ? 'Upload tests to improve completeness' : dataCompleteness >= 80 ? 'Excellent' : dataCompleteness >= 60 ? 'Good' : 'Needs improvement'}
             </p>
           </CardContent>
         </Card>
@@ -433,22 +436,34 @@ export default function DashboardPage() {
               </Badge>
             )}
             <p className="text-xs text-muted-foreground mt-2">
-              Based on recent analysis
+              {isNewUser ? 'Get recommendations from blood tests' : 'Based on recent analysis'}
             </p>
           </CardContent>
         </Card>
       </div>
 
-<div className="mt-6 flex justify-start">
-  <Link href="/dashboard/health-analytics">
-    <Button 
-      size="lg" 
-      className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-    >
-      <BarChart3 className="w-5 h-5 mr-2" />
-      View Detailed Analysis
-    </Button>
-  </Link>
+<div className="mt-6 flex justify-start space-x-4">
+  {isNewUser ? (
+    <Link href="/upload">
+      <Button 
+        size="lg" 
+        className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+      >
+        <Upload className="w-5 h-5 mr-2" />
+        Upload your Blood Test to Get Started
+      </Button>
+    </Link>
+  ) : (
+    <Link href="/dashboard/health-analytics">
+      <Button 
+        size="lg" 
+        className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+      >
+        <BarChart3 className="w-5 h-5 mr-2" />
+        View Detailed Analysis
+      </Button>
+    </Link>
+  )}
 </div>
 
 

@@ -1,7 +1,7 @@
 // src/lib/auth/auth-context.tsx
 "use client";
 
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useMemo } from "react";
 import { SessionProvider, useSession, signIn, signOut } from "next-auth/react";
 import { Session } from "next-auth";
 
@@ -47,22 +47,35 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
     provider: session?.user?.provider,
   });
 
-  // Convert session user to our User type
-  const user: User | null = session?.user
-    ? {
-        userId: session.user.id || session.user.userId,
-        email: session.user.email!,
-        name: session.user.name || undefined,
-        image: session.user.image || undefined,
-        firstName: session.user.firstName || session.user.name?.split(" ")[0],
-        lastName:
-          session.user.lastName ||
-          session.user.name?.split(" ").slice(1).join(" "),
-        provider: session.user.provider || "unknown",
-        dateOfBirth: session.user.dateOfBirth || undefined,
-        gender: session.user.gender || undefined,
-      }
-    : null;
+  // Convert session user to our User type - memoized to prevent infinite re-renders
+  const user: User | null = useMemo(() => {
+    return session?.user
+      ? {
+          userId: session.user.id || session.user.userId,
+          email: session.user.email!,
+          name: session.user.name || undefined,
+          image: session.user.image || undefined,
+          firstName: session.user.firstName || session.user.name?.split(" ")[0],
+          lastName:
+            session.user.lastName ||
+            session.user.name?.split(" ").slice(1).join(" "),
+          provider: session.user.provider || "unknown",
+          dateOfBirth: session.user.dateOfBirth || undefined,
+          gender: session.user.gender || undefined,
+        }
+      : null;
+  }, [
+    session?.user?.id,
+    session?.user?.userId,
+    session?.user?.email,
+    session?.user?.name,
+    session?.user?.image,
+    session?.user?.firstName,
+    session?.user?.lastName,
+    session?.user?.provider,
+    session?.user?.dateOfBirth,
+    session?.user?.gender
+  ]);
 
   const handleGoogleSignIn = async () => {
     console.log("🔑 Initiating Google sign in...");

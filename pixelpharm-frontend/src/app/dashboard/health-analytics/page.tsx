@@ -388,6 +388,182 @@ export default function EnhancedHealthAnalyticsDashboard() {
     }
   };
 
+  // Generate clinical review paragraph
+  const generateClinicalReview = (medicalReview: MedicalReview): string => {
+    const userName = medicalReview.user?.firstName || "there";
+    const totalBiomarkers = medicalReview.biomarkers.totalBiomarkers;
+    const criticalCount = medicalReview.biomarkers.criticalCount;
+    const abnormalCount = medicalReview.biomarkers.abnormalCount;
+    const normalCount = medicalReview.biomarkers.normalCount;
+    const healthScore = medicalReview.healthMetrics.latestHealthScore;
+    const riskLevel = safeString(
+      medicalReview.healthMetrics.riskLevel
+    ).toUpperCase();
+    const lastTestDate = medicalReview.biomarkers.lastTestDate
+      ? safeDate(medicalReview.biomarkers.lastTestDate).toLocaleDateString()
+      : "recently";
+
+    // Body composition data
+    const bodyComposition = medicalReview.bodyComposition;
+    const hasBodyData =
+      bodyComposition &&
+      (bodyComposition.totalScans > 0 ||
+        bodyComposition.bodyFatPercentage ||
+        bodyComposition.muscleMass);
+
+    if (totalBiomarkers === 0) {
+      let reviewText = `Hello ${userName}, let's discuss your current health status. Currently, there are no recent laboratory results available for analysis. To provide you with the most comprehensive health assessment and personalized recommendations, regular blood testing is essential. `;
+
+      if (hasBodyData) {
+        reviewText += `\n\nFrom your body composition analysis, `;
+        if (bodyComposition?.bodyFatPercentage) {
+          reviewText += `your body fat percentage is ${bodyComposition.bodyFatPercentage}%, `;
+        }
+        if (bodyComposition?.muscleMass) {
+          reviewText += `muscle mass is ${bodyComposition.muscleMass}kg, `;
+        }
+        if (bodyComposition?.latestBMI) {
+          reviewText += `and your BMI is ${bodyComposition.latestBMI}. `;
+        } else {
+          reviewText += `which provides valuable insights into your physical composition. `;
+        }
+        reviewText += `This body composition data is an excellent complement to blood work, as it helps paint a complete picture of your metabolic health. `;
+      }
+
+      reviewText += `\n\nI recommend establishing a baseline with a comprehensive metabolic panel and lipid profile. These tests will help identify your current metabolic status and any areas that may need attention. For the best ongoing health recommendations, blood tests should be done regularly - typically every 6-12 months for preventive screening, or more frequently if specific health concerns arise.`;
+
+      return reviewText;
+    }
+
+    let reviewText = `Hello ${userName}, here's a comprehensive review of your recent health data from ${lastTestDate}. `;
+
+    // Overall assessment
+    if (criticalCount > 0) {
+      reviewText += `Your test results show ${criticalCount} critical value${
+        criticalCount > 1 ? "s" : ""
+      } that require immediate attention and intervention. `;
+    } else if (abnormalCount > 0) {
+      reviewText += `Your results show ${abnormalCount} biomarker${
+        abnormalCount > 1 ? "s" : ""
+      } outside the normal range that should be addressed. `;
+    } else {
+      reviewText += `Excellent news - your laboratory values are within normal ranges, indicating good overall metabolic health. `;
+    }
+
+    // Health score context
+    if (healthScore > 75) {
+      reviewText += `Your overall health score of ${healthScore} reflects excellent metabolic health. `;
+    } else if (healthScore > 50) {
+      reviewText += `Your health score of ${healthScore} indicates moderate health status with room for improvement. `;
+    } else if (healthScore > 0) {
+      reviewText += `Your health score of ${healthScore} suggests several areas where focused attention can significantly improve your health outcomes. `;
+    }
+
+    // Body composition analysis
+    if (hasBodyData) {
+      reviewText += `\n\nYour body composition analysis provides additional valuable insights. `;
+
+      if (bodyComposition?.bodyFatPercentage) {
+        const fatPercent = bodyComposition.bodyFatPercentage;
+        if (fatPercent < 15) {
+          reviewText += `Your body fat percentage of ${fatPercent}% is in the lean athletic range. `;
+        } else if (fatPercent < 25) {
+          reviewText += `Your body fat percentage of ${fatPercent}% is within a healthy range. `;
+        } else if (fatPercent < 35) {
+          reviewText += `Your body fat percentage of ${fatPercent}% indicates room for improvement through diet and exercise. `;
+        } else {
+          reviewText += `Your body fat percentage of ${fatPercent}% suggests that body composition optimization should be a priority. `;
+        }
+      }
+
+      if (bodyComposition?.muscleMass) {
+        reviewText += `Your muscle mass of ${bodyComposition.muscleMass}kg is ${
+          bodyComposition.muscleMass > 30
+            ? "excellent and"
+            : bodyComposition.muscleMass > 25
+            ? "good and"
+            : ""
+        } important for metabolic health, as muscle tissue helps regulate blood sugar and supports overall metabolism. `;
+      }
+
+      if (bodyComposition?.latestBMI) {
+        const bmi = bodyComposition.latestBMI;
+        if (bmi < 18.5) {
+          reviewText += `Your BMI of ${bmi} indicates you may be underweight. `;
+        } else if (bmi < 25) {
+          reviewText += `Your BMI of ${bmi} is within the healthy weight range. `;
+        } else if (bmi < 30) {
+          reviewText += `Your BMI of ${bmi} suggests you're in the overweight category. `;
+        } else {
+          reviewText += `Your BMI of ${bmi} indicates obesity, which can impact many of the biomarkers we're tracking. `;
+        }
+      }
+
+      reviewText += `The combination of your blood work and body composition data provides a comprehensive view of your metabolic health status. `;
+    }
+
+    // Short-term recommendations
+    reviewText += `\n\nFor the next 3-6 months, focus on `;
+
+    if (criticalCount > 0 || abnormalCount > 2) {
+      reviewText += `immediate lifestyle modifications including a heart-healthy diet rich in omega-3 fatty acids, regular moderate exercise (30 minutes daily), stress management techniques, and ensuring adequate sleep (7-9 hours nightly). `;
+      if (
+        hasBodyData &&
+        bodyComposition?.bodyFatPercentage &&
+        bodyComposition.bodyFatPercentage > 25
+      ) {
+        reviewText += `Given your body composition, incorporating both cardiovascular exercise and strength training will be particularly beneficial for improving both your biomarkers and body composition. `;
+      }
+    } else if (abnormalCount > 0) {
+      reviewText += `targeted dietary adjustments, incorporating regular physical activity into your routine, and monitoring your progress with simple lifestyle tracking. `;
+      if (hasBodyData) {
+        reviewText += `Your body composition data suggests maintaining or building lean muscle mass while optimizing your overall body composition. `;
+      }
+    } else {
+      reviewText += `maintaining your current healthy lifestyle patterns while fine-tuning your nutrition and exercise routine for optimal wellness. `;
+      if (
+        hasBodyData &&
+        bodyComposition?.muscleMass &&
+        bodyComposition.muscleMass > 30
+      ) {
+        reviewText += `Your excellent muscle mass indicates you're doing great with your fitness routine - keep it up! `;
+      }
+    }
+
+    // Long-term recommendations
+    reviewText += `Looking ahead over the next year, `;
+
+    if (riskLevel === "CRITICAL" || riskLevel === "HIGH") {
+      reviewText += `the goal is to significantly reduce your cardiovascular and metabolic risk through sustained lifestyle changes and establishing a strong foundation for long-term health. `;
+      if (
+        hasBodyData &&
+        bodyComposition?.bodyFatPercentage &&
+        bodyComposition.bodyFatPercentage > 30
+      ) {
+        reviewText += `Body composition optimization will play a crucial role in improving your overall health metrics. `;
+      }
+    } else if (riskLevel === "MODERATE") {
+      reviewText += `focus on optimizing your biomarker levels through consistent healthy habits, regular exercise, and nutritional support to prevent progression to higher risk categories. `;
+    } else {
+      reviewText += `continue maintaining your healthy status through preventive care, regular screenings, and supporting your body's natural ability to maintain optimal function. `;
+    }
+
+    // Regular testing recommendations
+    reviewText += `\n\nFor the best ongoing health recommendations, blood tests should be done regularly. `;
+
+    if (criticalCount > 0) {
+      reviewText += `Given your critical values, consider retesting key biomarkers in 4-6 weeks, then transitioning to quarterly monitoring until values normalize. `;
+    } else if (abnormalCount > 0) {
+      reviewText += `With some abnormal values present, plan for retesting in 8-12 weeks, then every 3-6 months depending on progress. `;
+    } else {
+      reviewText += `With your excellent current results, annual comprehensive testing is appropriate for continued health monitoring. `;
+    }
+
+    reviewText += `Regular monitoring helps track progress, catch changes early, and adjust recommendations as needed. This data-driven approach, combined with body composition tracking when available, provides the most comprehensive picture of your health journey.`;
+
+    return reviewText;
+  };
+
   // Check if this is real data or demo data
   const isRealData = medicalReview.performance?.dataSource === "database";
   const dataSourceBadge = isRealData ? "Real Data" : "Demo Data";
@@ -406,8 +582,8 @@ export default function EnhancedHealthAnalyticsDashboard() {
                 Enhanced Health Analytics
               </h1>
               <p className="text-gray-600">
-                Welcome {user?.firstName || user?.email}! • AI-powered health
-                assessment • Last updated{" "}
+                Welcome {user?.firstName || user?.email}! • Multi Medical Model
+                AI health assessment • Last updated{" "}
                 {medicalReview.healthMetrics.lastAnalysisDate
                   ? safeDate(
                       medicalReview.healthMetrics.lastAnalysisDate
@@ -416,9 +592,7 @@ export default function EnhancedHealthAnalyticsDashboard() {
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              <Badge className={dataSourceColor}>
-                User: {user?.userId}
-              </Badge>
+              <Badge className={dataSourceColor}>User: {user?.userId}</Badge>
               <Button
                 onClick={triggerNewAnalysis}
                 disabled={isAnalyzing}
@@ -481,7 +655,7 @@ export default function EnhancedHealthAnalyticsDashboard() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Health Score */}
               <Card>
                 <CardHeader>
@@ -550,8 +724,6 @@ export default function EnhancedHealthAnalyticsDashboard() {
                   </div>
                 </CardContent>
               </Card>
-
-              <BodyCompositionSummary userId={user?.userId || ""} />
             </div>
 
             {/* Biomarker Overview Section - Moved up from bottom */}
@@ -559,6 +731,9 @@ export default function EnhancedHealthAnalyticsDashboard() {
               medicalReview={medicalReview}
               user={user}
             />
+
+            {/* Body Composition - Full width below Biomarkers */}
+            <BodyCompositionSummary userId={user?.userId || ""} />
 
             {/* Debug Information - Hidden from frontend */}
             {false && medicalReview._debug && (
@@ -635,14 +810,45 @@ export default function EnhancedHealthAnalyticsDashboard() {
 
           {/* Clinical Tab */}
           <TabsContent value="clinical" className="space-y-6">
+            {/* Clinical Review */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Heart className="h-5 w-5 text-red-500" />
-                  <span>Clinical Summary</span>
+                  <span>Clinical Review</span>
                 </CardTitle>
                 <CardDescription>
-                  Based on your uploaded health data
+                  Professional assessment of your health results
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-gray max-w-none">
+                  <div className="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-r-lg">
+                    <div className="flex items-start space-x-3">
+                      <Heart className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
+                      <div>
+                        <h4 className="text-lg font-semibold text-blue-900 mb-3">
+                          Clinical Assessment
+                        </h4>
+                        <div className="text-gray-800 leading-relaxed whitespace-pre-line text-sm">
+                          {generateClinicalReview(medicalReview)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Clinical Summary Statistics */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <BarChart3 className="h-5 w-5 text-blue-500" />
+                  <span>Laboratory Results Summary</span>
+                </CardTitle>
+                <CardDescription>
+                  Quantitative breakdown of your test results
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -652,25 +858,53 @@ export default function EnhancedHealthAnalyticsDashboard() {
                       {medicalReview.biomarkers.criticalCount}
                     </div>
                     <div className="text-sm text-gray-600">Critical Values</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Require immediate attention
+                    </div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-yellow-600 mb-1">
                       {medicalReview.biomarkers.abnormalCount}
                     </div>
                     <div className="text-sm text-gray-600">Abnormal Values</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Outside normal range
+                    </div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600 mb-1">
                       {medicalReview.biomarkers.normalCount}
                     </div>
                     <div className="text-sm text-gray-600">Normal Values</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Within healthy range
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Overall Health Score:</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-2xl font-bold">
+                        {medicalReview.healthMetrics.latestHealthScore}
+                      </span>
+                      <Badge
+                        className={getRiskBadgeColor(
+                          medicalReview.healthMetrics.riskLevel
+                        )}
+                      >
+                        {safeString(medicalReview.healthMetrics.riskLevel)} RISK
+                      </Badge>
+                    </div>
                   </div>
                 </div>
 
                 {medicalReview.biomarkers.totalBiomarkers === 0 && (
                   <div className="mt-6 text-center">
                     <p className="text-gray-600 mb-4">
-                      No biomarker data available yet.
+                      No biomarker data available yet. Upload your laboratory
+                      results to receive a comprehensive clinical review.
                     </p>
                     <Link href="/upload">
                       <Button>
@@ -1033,7 +1267,7 @@ export default function EnhancedHealthAnalyticsDashboard() {
                         </h4>
                         <p className="text-sm text-blue-700">
                           Upload your blood test results to get personalized
-                          AI-powered health insights.
+                          Multi Medical Model AI powered health insights.
                         </p>
                       </div>
                       <Link href="/upload">

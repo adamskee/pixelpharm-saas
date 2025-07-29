@@ -71,6 +71,8 @@ pids/
 # AWS
 .aws/
 
+pixelpharm-frontend/CLAUDE.md
+
 # Temporary files
 *.tmp
 *.temp

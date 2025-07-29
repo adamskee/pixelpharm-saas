@@ -74,9 +74,11 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               <Button variant="ghost" size="sm">
                 <Bell className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="sm">
-                <Settings className="h-4 w-4" />
-              </Button>
+              <Link href="/dashboard/settings">
+                <Button variant="ghost" size="sm">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </Link>
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
                   {userInitials}
@@ -104,6 +106,95 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">{children}</main>
+      
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white mt-16">
+        <div className="container mx-auto px-4 py-12 max-w-7xl">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* Brand */}
+            <div className="md:col-span-2">
+              <div className="flex items-center space-x-2 mb-4">
+                <Activity className="h-8 w-8 text-blue-400" />
+                <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  PixelPharm
+                </span>
+              </div>
+              <p className="text-gray-300 mb-4 max-w-md">
+                Empowering individuals with professional-grade health analytics through advanced Multi Medical Model technology. Transform your lab results into actionable health insights.
+              </p>
+            </div>
+
+            {/* Product Links */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Product</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link href="/upload" className="text-gray-300 hover:text-white transition-colors">
+                    Upload Results
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/dashboard" className="text-gray-300 hover:text-white transition-colors">
+                    Dashboard
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/dashboard/health-analytics" className="text-gray-300 hover:text-white transition-colors">
+                    Analytics
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/pricing" className="text-gray-300 hover:text-white transition-colors">
+                    Pricing
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Company Links */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Company</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link href="/about" className="text-gray-300 hover:text-white transition-colors">
+                    About
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/privacy" className="text-gray-300 hover:text-white transition-colors">
+                    Privacy
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms" className="text-gray-300 hover:text-white transition-colors">
+                    Terms
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/support" className="text-gray-300 hover:text-white transition-colors">
+                    Support
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <p className="text-gray-400 text-sm">
+              © 2024 PixelPharm. All rights reserved.
+            </p>
+            <div className="flex space-x-6 mt-4 md:mt-0">
+              <Link href="/privacy" className="text-gray-400 hover:text-white text-sm transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="text-gray-400 hover:text-white text-sm transition-colors">
+                Terms of Service
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

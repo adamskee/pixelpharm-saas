@@ -266,79 +266,69 @@ export async function GET(request: Request) {
       console.error("❌ Error fetching real user data:", fetchError);
     }
 
-    // Fall back to demo data only if no real data exists
-    console.log("📊 No real data found, returning demo stats");
+    // Return empty stats for new users (no demo data)
+    console.log("📊 No real data found, returning empty stats for new user");
 
-    const demoStats = {
+    const emptyStats = {
       user: user || {
         userId,
         email: `${userId}@demo.com`,
-        firstName: "Demo",
+        firstName: "New",
         lastName: "User",
       },
       healthMetrics: {
-        totalReports: 3,
-        latestHealthScore: 65,
-        riskLevel: "MODERATE",
-        lastAnalysisDate: new Date().toISOString(),
+        totalReports: 0,
+        latestHealthScore: 0,
+        riskLevel: "UNKNOWN",
+        lastAnalysisDate: null,
       },
       biomarkers: {
-        totalBiomarkers: 12,
-        uniqueBiomarkers: 12,
-        abnormalCount: 3,
+        totalBiomarkers: 0,
+        uniqueBiomarkers: 0,
+        abnormalCount: 0,
         criticalCount: 0,
-        normalCount: 9,
-        lastTestDate: new Date(
-          Date.now() - 7 * 24 * 60 * 60 * 1000
-        ).toISOString(),
+        normalCount: 0,
+        lastTestDate: null,
       },
       bodyComposition: {
-        totalScans: 1,
-        latestBMI: 24.5,
-        bodyFatPercentage: 18.2,
-        muscleMass: 65.4,
-        lastScanDate: new Date(
-          Date.now() - 14 * 24 * 60 * 60 * 1000
-        ).toISOString(),
+        totalScans: 0,
+        latestBMI: null,
+        bodyFatPercentage: null,
+        muscleMass: null,
+        lastScanDate: null,
       },
       trends: {
-        healthScoreTrend: "stable",
-        weightTrend: "decreasing",
-        cholesterolTrend: "improving",
-        overallTrend: "positive",
+        healthScoreTrend: "unknown",
+        weightTrend: "unknown",
+        cholesterolTrend: "unknown",
+        overallTrend: "unknown",
       },
-      recentActivity: [
-        {
-          type: "biomarker_analysis",
-          date: new Date().toISOString(),
-          description: "Demo: Comprehensive blood panel analysis",
-          status: "completed",
-        },
-      ],
+      recentActivity: [],
       recommendations: {
-        activeCount: 6,
-        highPriorityCount: 2,
-        completedCount: 8,
-        categories: ["lifestyle", "nutrition", "exercise", "monitoring"],
+        activeCount: 0,
+        highPriorityCount: 0,
+        completedCount: 0,
+        categories: [],
       },
       dataQuality: {
-        completeness: 85,
-        reliability: "HIGH",
+        completeness: 0,
+        reliability: "NONE",
         lastUpdated: new Date().toISOString(),
       },
       performance: {
-        processingTime: 1250,
+        processingTime: 150,
         cacheHit: false,
-        dataSource: "demo",
+        dataSource: "empty",
         generatedAt: new Date().toISOString(),
       },
       _debug: {
-        reason: "No file uploads or biomarkers found",
+        reason: "New user - no health data uploaded yet",
         userId: userId,
+        isNewUser: true,
       },
     };
 
-    return NextResponse.json(demoStats);
+    return NextResponse.json(emptyStats);
   } catch (error) {
     console.error("❌ Comprehensive stats API error:", error);
 
