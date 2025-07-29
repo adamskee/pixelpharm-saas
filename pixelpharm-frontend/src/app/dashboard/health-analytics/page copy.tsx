@@ -13,11 +13,10 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BodyCompositionSummary } from "@/components/dashboard/body-composition-summary";
+import { BiomarkerOverviewSection } from "@/components/dashboard/biomarker-overview";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BiomarkerOverviewSection } from "@/components/dashboard/biomarker-overview";
-import { DetailedRecommendations } from "@/components/dashboard/detailed-recommendations";
 import { Progress } from "@/components/ui/progress";
 import {
   TrendingUp,
@@ -417,7 +416,7 @@ export default function EnhancedHealthAnalyticsDashboard() {
             </div>
             <div className="flex items-center space-x-4">
               <Badge className={dataSourceColor}>
-                User: {user?.userId}
+                {dataSourceBadge} • User: {user?.userId}
               </Badge>
               <Button
                 onClick={triggerNewAnalysis}
@@ -552,16 +551,46 @@ export default function EnhancedHealthAnalyticsDashboard() {
               </Card>
 
               <BodyCompositionSummary userId={user?.userId || ""} />
+
+              {/* Data Quality */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Database className="h-5 w-5 text-green-500" />
+                    <span>Data Quality</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>Completeness</span>
+                        <span>{medicalReview.dataQuality.completeness}%</span>
+                      </div>
+                      <Progress
+                        value={medicalReview.dataQuality.completeness}
+                        className="h-2"
+                      />
+                    </div>
+                    <div className="text-center">
+                      <Badge
+                        className={
+                          medicalReview.dataQuality.reliability === "HIGH"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }
+                      >
+                        {safeString(medicalReview.dataQuality.reliability)}{" "}
+                        Reliability
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Biomarker Overview Section - Moved up from bottom */}
-            <BiomarkerOverviewSection
-              medicalReview={medicalReview}
-              user={user}
-            />
-
-            {/* Debug Information - Hidden from frontend */}
-            {false && medicalReview._debug && (
+            {/* Debug Information */}
+            {medicalReview._debug && (
               <Card>
                 <CardHeader>
                   <CardTitle>Debug Information</CardTitle>
@@ -595,42 +624,6 @@ export default function EnhancedHealthAnalyticsDashboard() {
                 </CardContent>
               </Card>
             )}
-
-            {/* Data Quality - Moved to bottom */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Database className="h-5 w-5 text-green-500" />
-                  <span>Data Quality</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Completeness</span>
-                      <span>{medicalReview.dataQuality.completeness}%</span>
-                    </div>
-                    <Progress
-                      value={medicalReview.dataQuality.completeness}
-                      className="h-2"
-                    />
-                  </div>
-                  <div className="text-center">
-                    <Badge
-                      className={
-                        medicalReview.dataQuality.reliability === "HIGH"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }
-                    >
-                      {safeString(medicalReview.dataQuality.reliability)}{" "}
-                      Reliability
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Clinical Tab */}
@@ -750,7 +743,58 @@ export default function EnhancedHealthAnalyticsDashboard() {
 
           {/* Actions Tab */}
           <TabsContent value="actions" className="space-y-6">
-            <DetailedRecommendations userId={user?.userId || ""} />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Target className="h-5 w-5 text-blue-500" />
+                  <span>Recommended Actions</span>
+                </CardTitle>
+                <CardDescription>
+                  Personalized recommendations based on your data
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600 mb-1">
+                      {medicalReview.recommendations.activeCount}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Active Recommendations
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600 mb-1">
+                      {medicalReview.recommendations.highPriorityCount}
+                    </div>
+                    <div className="text-sm text-gray-600">High Priority</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600 mb-1">
+                      {medicalReview.recommendations.completedCount}
+                    </div>
+                    <div className="text-sm text-gray-600">Completed</div>
+                  </div>
+                </div>
+
+                {medicalReview.recommendations.categories.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-2">
+                      Recommendation Categories:
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {medicalReview.recommendations.categories.map(
+                        (category, index) => (
+                          <Badge key={index} variant="outline">
+                            {category}
+                          </Badge>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Trends Tab */}
@@ -801,35 +845,6 @@ export default function EnhancedHealthAnalyticsDashboard() {
                     </p>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Biomarkers Tracked
-                </CardTitle>
-                <Activity className="h-4 w-4 text-blue-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {medicalReview.biomarkers.totalBiomarkers}
-                </div>
-                <div className="flex gap-1 mt-1">
-                  <Badge variant="destructive" className="text-xs">
-                    {medicalReview.biomarkers.abnormalCount} Abnormal
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {medicalReview.biomarkers.normalCount} Normal
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Last test:{" "}
-                  {medicalReview.biomarkers.lastTestDate
-                    ? safeDate(
-                        medicalReview.biomarkers.lastTestDate
-                      ).toLocaleDateString()
-                    : "Never"}
-                </p>
               </CardContent>
             </Card>
           </TabsContent>

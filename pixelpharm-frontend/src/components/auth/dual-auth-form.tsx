@@ -118,16 +118,6 @@ export default function DualAuthForm() {
     }));
   };
 
-  const fillDemoCredentials = () => {
-    setFormData({
-      email: "demo@pixelpharm.com",
-      password: "demo123",
-      firstName: "Demo",
-      lastName: "User",
-    });
-    setError("");
-    setSuccess("");
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
@@ -286,15 +276,6 @@ export default function DualAuthForm() {
             </Button>
           </form>
 
-          {/* Demo Credentials Button */}
-          <Button
-            onClick={fillDemoCredentials}
-            variant="outline"
-            className="w-full border-dashed"
-            disabled={loading || googleLoading}
-          >
-            Use Demo Credentials
-          </Button>
 
           {/* Mode Toggle */}
           <div className="text-center">

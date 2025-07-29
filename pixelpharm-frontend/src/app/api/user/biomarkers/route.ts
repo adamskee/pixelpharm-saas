@@ -5,13 +5,24 @@ import { getUserBiomarkers } from "@/lib/database/user-operations";
 
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const userIdParam = searchParams.get("userId");
+    
+    // Try to get session first
     const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    
+    // Use session user ID if available, otherwise fall back to URL parameter
+    let userId = session?.user?.id || userIdParam;
+    
+    if (!userId) {
+      return NextResponse.json({ error: "User ID required" }, { status: 400 });
     }
 
-    const { searchParams } = new URL(request.url);
+    // If using URL parameter without session, log for debugging
+    if (!session && userIdParam) {
+      console.log("🔬 Fetching biomarkers for userId from parameter:", userIdParam);
+    }
+
     const limit = parseInt(searchParams.get("limit") || "50");
     const biomarkerNames = searchParams.get("biomarkers")?.split(",");
     const dateFrom = searchParams.get("dateFrom")
@@ -21,7 +32,7 @@ export async function GET(request: Request) {
       ? new Date(searchParams.get("dateTo")!)
       : undefined;
 
-    const biomarkers = await getUserBiomarkers(session.user.id, {
+    const biomarkers = await getUserBiomarkers(userId, {
       limit,
       biomarkerNames,
       dateFrom,
@@ -31,7 +42,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       biomarkers,
       count: biomarkers.length,
-      userId: session.user.id,
+      userId: userId,
     });
   } catch (error) {
     console.error("Error fetching user biomarkers:", error);

@@ -1,25 +1,15 @@
 // File: src/app/api/ai/extract-body-composition/route.ts
-// Fixed to use AWS SDK v3 and match your existing setup
+// Updated to use Claude API instead of Textract OCR (matching blood test pipeline)
 
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth/auth-config";
+import { NextRequest, NextResponse } from "next/server";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import {
-  TextractClient,
-  DetectDocumentTextCommand,
-} from "@aws-sdk/client-textract";
+import Anthropic from "@anthropic-ai/sdk";
 
-// Configure AWS clients (matching your existing setup)
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || "us-east-1",
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
 });
 
-const textractClient = new TextractClient({
+const s3Client = new S3Client({
   region: process.env.AWS_REGION || "us-east-1",
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
@@ -65,14 +55,17 @@ interface BodyCompositionData {
   deviceModel?: string;
 }
 
-export async function POST(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export async function POST(request: NextRequest) {
+  const startTime = Date.now();
 
-    const { fileKey, uploadType } = await request.json();
+  try {
+    console.log("🏋️ Claude Body Composition API called");
+    console.log("🔐 Environment check:");
+    console.log("- ANTHROPIC_API_KEY exists:", !!process.env.ANTHROPIC_API_KEY);
+    console.log("- AWS_S3_BUCKET_NAME exists:", !!process.env.AWS_S3_BUCKET_NAME);
+
+    const { fileKey, uploadType = "BODY_COMPOSITION" } = await request.json();
+    console.log("🎯 Processing body composition scan:", { fileKey, uploadType });
 
     if (!fileKey) {
       return NextResponse.json(
@@ -81,121 +74,230 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log(`🏋️ Starting body composition extraction for: ${fileKey}`);
-    console.log(`📁 Retrieving file from S3...`);
+    console.log("🧠 Starting Claude analysis for body composition:", fileKey);
 
-    // Get file from S3 using AWS SDK v3
-    try {
-      const s3Response = await s3Client.send(
-        new GetObjectCommand({
-          Bucket: process.env.AWS_S3_BUCKET_NAME!,
-          Key: fileKey,
-        })
-      );
+    // Get image from S3
+    console.log("📁 Retrieving image from S3...");
+    const getObjectCommand = new GetObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET_NAME!,
+      Key: fileKey,
+    });
 
-      if (!s3Response.Body) {
-        throw new Error("File not found in S3");
-      }
-
-      console.log(`🔍 Starting Textract OCR for body composition...`);
-
-      // Extract text using Textract
-      const textractResponse = await textractClient.send(
-        new DetectDocumentTextCommand({
-          Document: {
-            S3Object: {
-              Bucket: process.env.AWS_S3_BUCKET_NAME!,
-              Name: fileKey,
-            },
-          },
-        })
-      );
-
-      if (!textractResponse.Blocks) {
-        throw new Error("No text detected in document");
-      }
-
-      // Extract text content
-      const extractedText = textractResponse.Blocks.filter(
-        (block) => block.BlockType === "LINE"
-      )
-        .map((block) => block.Text || "")
-        .join("\n");
-
-      console.log(
-        `📝 Extracted text length: ${extractedText.length} characters`
-      );
-
-      // Process body composition data
-      const bodyCompositionData = extractBodyCompositionData(extractedText);
-
-      console.log(
-        `🎯 Found body composition metrics:`,
-        Object.keys(bodyCompositionData)
-      );
-
-      // Calculate confidence score
-      const confidence = calculateConfidence(
-        bodyCompositionData,
-        extractedText
-      );
-
-      const result = {
-        success: true,
-        confidence:
-          confidence >= 0.7 ? "high" : confidence >= 0.4 ? "medium" : "low",
-        confidenceScore: confidence,
-        extractedText: extractedText.substring(0, 1000), // First 1000 chars for debugging
-        bodyComposition: bodyCompositionData,
-        processingInfo: {
-          fileKey,
-          uploadType,
-          extractionDate: new Date().toISOString(),
-          detectedDevice: detectDevice(extractedText),
-          textLength: extractedText.length,
-          metricsFound: Object.keys(bodyCompositionData).length,
-        },
-      };
-
-      console.log(
-        `✅ Body composition extraction completed with ${confidence.toFixed(
-          2
-        )} confidence`
-      );
-
-      return NextResponse.json(result);
-    } catch (awsError: any) {
-      console.error("❌ AWS service error:", awsError);
-
-      // If AWS services fail, provide a fallback response
-      return NextResponse.json(
-        {
-          success: false,
-          error: "AWS processing failed",
-          details: awsError.message,
-          fallback: true,
-          message:
-            "File uploaded successfully but AI analysis is temporarily unavailable",
-        },
-        { status: 503 }
-      ); // Service Unavailable
+    const s3Response = await s3Client.send(getObjectCommand);
+    if (!s3Response.Body) {
+      throw new Error("Failed to retrieve image from S3");
     }
-  } catch (error: any) {
-    console.error("❌ Body composition extraction error:", error);
+
+    // Convert to base64 for Claude
+    const imageBuffer = await streamToBuffer(s3Response.Body as any);
+    const base64Image = imageBuffer.toString("base64");
+    const mimeType = fileKey.endsWith(".pdf")
+      ? "application/pdf"
+      : fileKey.endsWith(".png")
+      ? "image/png"
+      : "image/jpeg";
+
+    console.log(
+      `📊 Image size: ${(imageBuffer.length / 1024 / 1024).toFixed(2)} MB`
+    );
+
+    // Enhanced Claude prompt for body composition analysis
+    const claudePrompt = `You are an expert body composition analysis AI. Please analyze this body composition scan image and extract ALL metrics with extreme precision.
+
+EXTRACTION REQUIREMENTS:
+1. Extract every numerical value with its corresponding metric name
+2. Include units (kg, %, L, kcal, etc.)
+3. Identify the device type (InBody 570/770/970, DEXA, Bod Pod, etc.)
+4. Extract test date and any facility information
+5. Categorize measurements into muscle, fat, water, mineral, and metabolic data
+6. Calculate derived metrics if possible
+
+CRITICAL ACCURACY FACTORS:
+- OCR this image with 100% accuracy for all numerical values
+- Pay special attention to decimal points and units
+- Distinguish between similar numbers (e.g., 6 vs 8, 1 vs I)
+- Capture both raw measurements and percentages
+- Include segmental analysis data (arms, legs, trunk) if present
+- Look for InBody-specific metrics like ECW/TBW ratios
+
+COMMON BODY COMPOSITION METRICS TO EXTRACT:
+- Total Weight, Body Fat %, Skeletal Muscle Mass
+- Visceral Fat Level, BMR (Basal Metabolic Rate)
+- Total Body Water, Protein Mass, Mineral Mass
+- Dry Lean Mass, Body Fat Mass
+- Segmental muscle/fat distribution
+- Phase Angle, ECW/TBW ratio (for InBody scans)
+
+FORMAT RESPONSE AS JSON:
+{
+  "bodyComposition": {
+    "totalWeight": 75.2,
+    "bodyFatPercentage": 18.5,
+    "skeletalMuscleMass": 32.1,
+    "visceralFatLevel": 8,
+    "bmr": 1650,
+    "muscle": {
+      "dryLeanMass": 14.2,
+      "bodyMuscleMass": 32.1,
+      "rightArm": 3.2,
+      "leftArm": 3.1,
+      "trunk": 19.8,
+      "rightLeg": 8.9,
+      "leftLeg": 8.7
+    },
+    "fat": {
+      "bodyFatMass": 14.1,
+      "percentBodyFat": 18.5,
+      "visceralFatLevel": 8
+    },
+    "water": {
+      "totalBodyWater": 43.2,
+      "intracellularWater": 28.1,
+      "extracellularWater": 15.1
+    },
+    "mineral": {
+      "boneMineralContent": 3.1
+    },
+    "metabolic": {
+      "bmr": 1650,
+      "proteinMass": 11.2,
+      "mineralMass": 3.8
+    }
+  },
+  "deviceInfo": {
+    "deviceModel": "InBody 570",
+    "testDate": "2024-07-25",
+    "facilityName": "HealthCenter ABC"
+  },
+  "extractedText": "full text content from scan...",
+  "confidence": "high"
+}
+
+Please analyze this body composition scan now:`;
+
+    // Call Claude Vision API
+    console.log("🧠 Sending image to Claude for body composition analysis...");
+
+    const claudeResponse = await anthropic.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 4000,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: claudePrompt,
+            },
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: mimeType,
+                data: base64Image,
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const responseContent = claudeResponse.content[0];
+    if (responseContent.type !== "text") {
+      throw new Error("Unexpected response type from Claude");
+    }
+
+    // Parse Claude's JSON response
+    let parsedData;
+    try {
+      // Extract JSON from Claude's response (may be wrapped in markdown)
+      const jsonMatch = responseContent.text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error("No JSON found in Claude response");
+      }
+      parsedData = JSON.parse(jsonMatch[0]);
+    } catch (parseError) {
+      console.error("Failed to parse Claude JSON response:", parseError);
+      // Fallback: create structured data from text response
+      parsedData = {
+        bodyComposition: extractBodyCompositionFromText(responseContent.text),
+        deviceInfo: {},
+        extractedText: responseContent.text,
+        confidence: "medium",
+      };
+    }
+
+    // Process and enhance the body composition data
+    const bodyCompositionData = {
+      totalWeight: parsedData.bodyComposition?.totalWeight,
+      bodyFatPercentage: parsedData.bodyComposition?.bodyFatPercentage,
+      skeletalMuscleMass: parsedData.bodyComposition?.skeletalMuscleMass,
+      visceralFatLevel: parsedData.bodyComposition?.visceralFatLevel,
+      bmr: parsedData.bodyComposition?.bmr,
+      testDate: parsedData.deviceInfo?.testDate,
+      labName: parsedData.deviceInfo?.facilityName,
+      deviceModel: parsedData.deviceInfo?.deviceModel,
+      ...parsedData.bodyComposition, // Include all extracted data
+    };
+
+    // Calculate confidence score
+    const confidence = calculateConfidence(bodyCompositionData, responseContent.text);
+    const processingTime = Date.now() - startTime;
+
+    console.log(`✅ Claude body composition analysis completed in ${processingTime}ms`);
+    console.log(`🏋️ Extracted metrics:`, Object.keys(bodyCompositionData));
+
+    const result = {
+      success: true,
+      confidence: confidence >= 0.7 ? "high" : confidence >= 0.4 ? "medium" : "low",
+      confidenceScore: confidence,
+      extractedText: parsedData.extractedText || responseContent.text,
+      bodyComposition: bodyCompositionData,
+      processingInfo: {
+        fileKey,
+        uploadType,
+        extractionDate: new Date().toISOString(),
+        detectedDevice: parsedData.deviceInfo?.deviceModel || detectDevice(responseContent.text),
+        textLength: responseContent.text.length,
+        metricsFound: Object.keys(bodyCompositionData).filter(key => 
+          bodyCompositionData[key as keyof typeof bodyCompositionData] !== undefined
+        ).length,
+        processingTime,
+        aiModel: "claude-3-5-sonnet-20241022",
+      },
+    };
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("❌ Claude body composition analysis failed:", error);
+
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to extract body composition data",
-        details: error.message,
+        error: "Claude body composition analysis failed",
+        details: error instanceof Error ? error.message : "Unknown error",
+        processingTime: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
 }
 
-function extractBodyCompositionData(text: string): BodyCompositionData {
+// Helper function to convert stream to buffer
+async function streamToBuffer(stream: any): Promise<Buffer> {
+  const chunks: Uint8Array[] = [];
+
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+
+  return Buffer.concat(chunks);
+}
+
+// Fallback body composition extraction for non-JSON responses
+function extractBodyCompositionFromText(text: string): BodyCompositionData {
   const data: BodyCompositionData = {};
-  const lines = text.toLowerCase().split("\n");
+  const lowerText = text.toLowerCase();
 
   // Weight patterns
   const weightPatterns = [
@@ -234,7 +336,7 @@ function extractBodyCompositionData(text: string): BodyCompositionData {
     /metabolic\s*rate[:\s]*(\d+\.?\d*)\s*(?:kcal|cal)?/i,
   ];
 
-  // Extract weight
+  // Extract measurements using patterns
   for (const pattern of weightPatterns) {
     const match = text.match(pattern);
     if (match) {
@@ -243,7 +345,6 @@ function extractBodyCompositionData(text: string): BodyCompositionData {
     }
   }
 
-  // Extract body fat percentage
   for (const pattern of bodyFatPatterns) {
     const match = text.match(pattern);
     if (match) {
@@ -252,7 +353,6 @@ function extractBodyCompositionData(text: string): BodyCompositionData {
     }
   }
 
-  // Extract muscle mass
   for (const pattern of musclePatterns) {
     const match = text.match(pattern);
     if (match) {
@@ -261,7 +361,6 @@ function extractBodyCompositionData(text: string): BodyCompositionData {
     }
   }
 
-  // Extract visceral fat
   for (const pattern of visceralPatterns) {
     const match = text.match(pattern);
     if (match) {
@@ -270,7 +369,6 @@ function extractBodyCompositionData(text: string): BodyCompositionData {
     }
   }
 
-  // Extract BMR
   for (const pattern of bmrPatterns) {
     const match = text.match(pattern);
     if (match) {
@@ -290,39 +388,6 @@ function extractBodyCompositionData(text: string): BodyCompositionData {
     if (match) {
       data.testDate = match[1];
       break;
-    }
-  }
-
-  // Extract additional metrics for InBody scans
-  if (text.toLowerCase().includes("inbody")) {
-    // Total Body Water
-    const tbwMatch = text.match(
-      /total\s*body\s*water[:\s]*(\d+\.?\d*)\s*(?:l|liters?)/i
-    );
-    if (tbwMatch) {
-      data.water = { totalBodyWater: parseFloat(tbwMatch[1]) };
-    }
-
-    // Protein Mass
-    const proteinMatch = text.match(
-      /protein[:\s]*(\d+\.?\d*)\s*(?:kg|lb|lbs)/i
-    );
-    if (proteinMatch) {
-      data.metabolic = {
-        ...data.metabolic,
-        proteinMass: parseFloat(proteinMatch[1]),
-      };
-    }
-
-    // Mineral Mass
-    const mineralMatch = text.match(
-      /mineral[:\s]*(\d+\.?\d*)\s*(?:kg|lb|lbs)/i
-    );
-    if (mineralMatch) {
-      data.metabolic = {
-        ...data.metabolic,
-        mineralMass: parseFloat(mineralMatch[1]),
-      };
     }
   }
 
@@ -378,16 +443,16 @@ function calculateConfidence(data: BodyCompositionData, text: string): number {
   maxScore += 10;
 
   if (data.testDate) {
-    score += 10;
+    score += 5;
   }
-  maxScore += 10;
+  maxScore += 5;
 
   // Device detection bonus
   const device = detectDevice(text);
   if (device !== "Unknown Device") {
-    score += 10;
-    maxScore += 10;
+    score += 5;
   }
+  maxScore += 5;
 
   return maxScore > 0 ? score / maxScore : 0;
 }

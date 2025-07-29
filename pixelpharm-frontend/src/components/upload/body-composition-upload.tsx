@@ -145,9 +145,9 @@ export default function BodyCompositionUpload({
 
         setUploadProgress(50);
 
-        // Step 4: AI Processing for body composition
+        // Step 4: Claude AI Processing for body composition
         setUploadStatus("processing");
-        setProcessingStep("Analyzing body composition data with AI...");
+        setProcessingStep("Analyzing body composition scan with Claude AI...");
 
         let aiData = null; // Use local variable instead of state
 
@@ -167,17 +167,17 @@ export default function BodyCompositionUpload({
             const metricsCount = Object.keys(
               aiData.bodyComposition || {}
             ).length;
-            setProcessingStep(`Found ${metricsCount} body composition metrics`);
-            console.log("🎯 Body composition AI processing completed:", aiData);
+            setProcessingStep(`Claude AI extracted ${metricsCount} body composition metrics`);
+            console.log("🎯 Claude body composition analysis completed:", aiData);
           } else {
             console.warn(
-              "Body composition AI processing failed, but upload succeeded"
+              "Claude AI analysis failed, but upload succeeded"
             );
-            setProcessingStep("Scan uploaded (AI analysis unavailable)");
+            setProcessingStep("Scan uploaded (Claude AI analysis unavailable)");
           }
         } catch (aiError) {
-          console.warn("Body composition AI processing error:", aiError);
-          setProcessingStep("Scan uploaded (AI analysis failed)");
+          console.warn("Claude AI processing error:", aiError);
+          setProcessingStep("Scan uploaded (Claude AI analysis failed)");
         }
 
         setUploadProgress(75);
@@ -288,7 +288,7 @@ export default function BodyCompositionUpload({
       case "uploading":
         return "Uploading...";
       case "processing":
-        return "AI Analysis...";
+        return "Claude AI Analysis...";
       case "storing":
         return "Saving to Database...";
       case "success":
@@ -423,12 +423,12 @@ export default function BodyCompositionUpload({
         <Alert className="border-green-200 bg-green-50">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">
-            Body composition scans uploaded and processed successfully!
+            Body composition scans uploaded and analyzed successfully!
             {bodyCompositionResults &&
               Object.keys(bodyCompositionResults.bodyComposition || {}).length >
                 0 && (
                 <span className="block mt-1">
-                  ✨ AI found{" "}
+                  ✨ Claude AI extracted{" "}
                   {Object.keys(bodyCompositionResults.bodyComposition).length}{" "}
                   body composition metrics
                 </span>
@@ -494,13 +494,16 @@ export default function BodyCompositionUpload({
                 ([key, value]: [string, any]) => {
                   if (value === undefined || value === null) return null;
 
+                  // Skip rendering objects (like nested muscle/fat/water data)
+                  if (typeof value === "object" && value !== null) return null;
+
                   return (
                     <div key={key} className="bg-white p-3 rounded border">
                       <div className="font-medium text-gray-700 capitalize">
                         {key.replace(/([A-Z])/g, " $1").trim()}
                       </div>
                       <div className="text-gray-600">
-                        {typeof value === "number" ? value.toFixed(1) : value}
+                        {typeof value === "number" ? value.toFixed(1) : String(value)}
                         {key.includes("Percentage") || key.includes("Fat")
                           ? "%"
                           : ""}
@@ -515,6 +518,71 @@ export default function BodyCompositionUpload({
                     </div>
                   );
                 }
+              )}
+              
+              {/* Render nested objects separately if they exist */}
+              {bodyCompositionResults.bodyComposition.muscle && (
+                <div className="bg-blue-50 p-3 rounded border col-span-full">
+                  <div className="font-medium text-gray-700 mb-2">Muscle Distribution</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                    {Object.entries(bodyCompositionResults.bodyComposition.muscle).map(
+                      ([musclePart, muscleValue]: [string, any]) => (
+                        <div key={musclePart} className="flex justify-between">
+                          <span className="capitalize">{musclePart.replace(/([A-Z])/g, " $1").trim()}:</span>
+                          <span>{typeof muscleValue === "number" ? muscleValue.toFixed(1) : String(muscleValue)} kg</span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {bodyCompositionResults.bodyComposition.fat && (
+                <div className="bg-red-50 p-3 rounded border col-span-full">
+                  <div className="font-medium text-gray-700 mb-2">Fat Distribution</div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                    {Object.entries(bodyCompositionResults.bodyComposition.fat).map(
+                      ([fatPart, fatValue]: [string, any]) => (
+                        <div key={fatPart} className="flex justify-between">
+                          <span className="capitalize">{fatPart.replace(/([A-Z])/g, " $1").trim()}:</span>
+                          <span>{typeof fatValue === "number" ? fatValue.toFixed(1) : String(fatValue)}{fatPart.includes("Percentage") || fatPart.includes("Fat") ? "%" : fatPart.includes("Level") ? "" : " kg"}</span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {bodyCompositionResults.bodyComposition.water && (
+                <div className="bg-cyan-50 p-3 rounded border col-span-full">
+                  <div className="font-medium text-gray-700 mb-2">Water Content</div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                    {Object.entries(bodyCompositionResults.bodyComposition.water).map(
+                      ([waterPart, waterValue]: [string, any]) => (
+                        <div key={waterPart} className="flex justify-between">
+                          <span className="capitalize">{waterPart.replace(/([A-Z])/g, " $1").trim()}:</span>
+                          <span>{typeof waterValue === "number" ? waterValue.toFixed(1) : String(waterValue)} L</span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {bodyCompositionResults.bodyComposition.metabolic && (
+                <div className="bg-green-50 p-3 rounded border col-span-full">
+                  <div className="font-medium text-gray-700 mb-2">Metabolic Data</div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                    {Object.entries(bodyCompositionResults.bodyComposition.metabolic).map(
+                      ([metPart, metValue]: [string, any]) => (
+                        <div key={metPart} className="flex justify-between">
+                          <span className="capitalize">{metPart.replace(/([A-Z])/g, " $1").trim()}:</span>
+                          <span>{typeof metValue === "number" ? metValue.toFixed(1) : String(metValue)}{metPart.includes("bmr") ? " kcal" : " kg"}</span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -557,10 +625,10 @@ export default function BodyCompositionUpload({
           <ul className="text-xs text-blue-700 space-y-1">
             <li>
               • Your body composition scan has been securely uploaded and
-              analyzed
+              analyzed by Claude AI
             </li>
             <li>
-              • AI-extracted metrics are now stored in your health database
+              • Claude AI-extracted metrics are now stored in your health database
             </li>
             <li>
               • Visit your dashboard to see body composition trends and

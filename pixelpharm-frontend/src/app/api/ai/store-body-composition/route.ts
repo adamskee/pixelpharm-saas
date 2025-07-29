@@ -1,4 +1,5 @@
 // File: src/app/api/ai/store-body-composition/route.ts
+// Updated to work with Claude AI-processed body composition data
 
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
@@ -69,8 +70,8 @@ export async function POST(request: Request) {
         data: {
           uploadId,
           userId,
-          processingType: "BODY_COMPOSITION",
-          extractedData: bodyCompositionData,
+          processingType: "HEALTH_ANALYSIS",
+          rawResults: bodyCompositionData,
           confidenceScore: bodyCompositionData.confidenceScore || 0.5,
           processingStatus: "COMPLETED",
         },
