@@ -49,6 +49,30 @@ import {
 } from "recharts";
 import Link from "next/link";
 
+interface AbnormalBiomarker {
+  name: string;
+  value: number;
+  unit: string;
+  referenceRange: string;
+  testDate: string;
+  isAbnormal: boolean;
+  isCritical: boolean;
+  severity: 'ABNORMAL' | 'CRITICAL';
+  category: string;
+  recommendations: string[];
+}
+
+interface AbnormalBiomarkersData {
+  abnormalBiomarkers: AbnormalBiomarker[];
+  criticalBiomarkers: AbnormalBiomarker[];
+  summary: {
+    totalAbnormal: number;
+    totalCritical: number;
+    lastTestDate: string | null;
+  };
+  userId: string;
+}
+
 interface MedicalReview {
   user: {
     userId: string;
@@ -136,6 +160,7 @@ export default function EnhancedHealthAnalyticsDashboard() {
   const [medicalReview, setMedicalReview] = useState<MedicalReview | null>(
     null
   );
+  const [abnormalBiomarkers, setAbnormalBiomarkers] = useState<AbnormalBiomarkersData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -183,6 +208,29 @@ export default function EnhancedHealthAnalyticsDashboard() {
     );
   }
 
+  const fetchAbnormalBiomarkers = async () => {
+    if (!user?.userId) return;
+
+    try {
+      console.log("🔬 Loading abnormal biomarkers for user:", user.userId);
+
+      const response = await fetch(
+        `/api/biomarkers/abnormal?userId=${user.userId}&_timestamp=${Date.now()}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Abnormal biomarkers API request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("📊 Received abnormal biomarkers:", data);
+      setAbnormalBiomarkers(data);
+    } catch (err) {
+      console.error("❌ Error fetching abnormal biomarkers:", err);
+      // Don't set error state here as this is supplementary data
+    }
+  };
+
   const fetchMedicalReview = async (forceRefresh = false) => {
     if (!user?.userId) {
       setError("No user ID available");
@@ -196,18 +244,17 @@ export default function EnhancedHealthAnalyticsDashboard() {
 
       console.log("🏥 Loading comprehensive stats for user:", user.userId);
 
-      // Call the comprehensive stats API that we just fixed
-      const response = await fetch(
-        `/api/dashboard/comprehensive-stats?userId=${
-          user.userId
-        }&_timestamp=${Date.now()}`
-      );
+      // Fetch both comprehensive stats and abnormal biomarkers in parallel
+      const [statsResponse] = await Promise.all([
+        fetch(`/api/dashboard/comprehensive-stats?userId=${user.userId}&_timestamp=${Date.now()}`),
+        fetchAbnormalBiomarkers()
+      ]);
 
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`);
+      if (!statsResponse.ok) {
+        throw new Error(`API request failed: ${statsResponse.status}`);
       }
 
-      const data = await response.json();
+      const data = await statsResponse.json();
       console.log("📊 Received comprehensive stats:", data);
 
       // Transform the comprehensive stats into medical review format
@@ -839,6 +886,163 @@ export default function EnhancedHealthAnalyticsDashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Abnormal Biomarkers Section */}
+            {abnormalBiomarkers && (abnormalBiomarkers.abnormalBiomarkers.length > 0 || abnormalBiomarkers.criticalBiomarkers.length > 0) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                    <span>Abnormal Test Results - Follow Up Required</span>
+                  </CardTitle>
+                  <CardDescription>
+                    These biomarkers are outside normal ranges and should be discussed with your healthcare provider
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Critical Biomarkers - Highest Priority */}
+                  {abnormalBiomarkers.criticalBiomarkers.length > 0 && (
+                    <div className="mb-8">
+                      <div className="flex items-center space-x-2 mb-4">
+                        <AlertTriangle className="h-5 w-5 text-red-600" />
+                        <h4 className="text-lg font-semibold text-red-900">
+                          Critical Values - Urgent Follow-up Required
+                        </h4>
+                        <Badge variant="destructive">
+                          {abnormalBiomarkers.criticalBiomarkers.length} Critical
+                        </Badge>
+                      </div>
+                      <div className="grid gap-4">
+                        {abnormalBiomarkers.criticalBiomarkers.map((biomarker, index) => (
+                          <div key={index} className="border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-3 mb-2">
+                                  <h5 className="font-semibold text-red-900">{biomarker.name}</h5>
+                                  <Badge variant="destructive" className="text-xs">
+                                    {biomarker.category}
+                                  </Badge>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-3">
+                                  <div>
+                                    <span className="font-medium text-gray-700">Your Result:</span>
+                                    <div className="text-red-700 font-bold text-lg">
+                                      {biomarker.value} {biomarker.unit}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-700">Normal Range:</span>
+                                    <div className="text-gray-600">{biomarker.referenceRange}</div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-700">Test Date:</span>
+                                    <div className="text-gray-600">
+                                      {safeDate(biomarker.testDate).toLocaleDateString()}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="bg-white p-3 rounded border">
+                                  <h6 className="font-medium text-gray-900 mb-2">Recommended Actions:</h6>
+                                  <ul className="text-sm text-gray-700 space-y-1">
+                                    {biomarker.recommendations.map((rec, i) => (
+                                      <li key={i} className="flex items-start space-x-2">
+                                        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                        <span>{rec}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Abnormal Biomarkers - Standard Priority */}
+                  {abnormalBiomarkers.abnormalBiomarkers.length > 0 && (
+                    <div>
+                      <div className="flex items-center space-x-2 mb-4">
+                        <TrendingUp className="h-5 w-5 text-orange-600" />
+                        <h4 className="text-lg font-semibold text-orange-900">
+                          Abnormal Values - Should Be Addressed
+                        </h4>
+                        <Badge variant="secondary">
+                          {abnormalBiomarkers.abnormalBiomarkers.length} Abnormal
+                        </Badge>
+                      </div>
+                      <div className="grid gap-4">
+                        {abnormalBiomarkers.abnormalBiomarkers
+                          .filter(b => !b.isCritical) // Exclude critical ones already shown above
+                          .map((biomarker, index) => (
+                          <div key={index} className="border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-3 mb-2">
+                                  <h5 className="font-semibold text-orange-900">{biomarker.name}</h5>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {biomarker.category}
+                                  </Badge>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-3">
+                                  <div>
+                                    <span className="font-medium text-gray-700">Your Result:</span>
+                                    <div className="text-orange-700 font-bold text-lg">
+                                      {biomarker.value} {biomarker.unit}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-700">Normal Range:</span>
+                                    <div className="text-gray-600">{biomarker.referenceRange}</div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-700">Test Date:</span>
+                                    <div className="text-gray-600">
+                                      {safeDate(biomarker.testDate).toLocaleDateString()}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="bg-white p-3 rounded border">
+                                  <h6 className="font-medium text-gray-900 mb-2">Recommended Actions:</h6>
+                                  <ul className="text-sm text-gray-700 space-y-1">
+                                    {biomarker.recommendations.map((rec, i) => (
+                                      <li key={i} className="flex items-start space-x-2">
+                                        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                        <span>{rec}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Summary Call to Action */}
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start space-x-3">
+                      <Calendar className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-blue-900 mb-2">Next Steps</h4>
+                        <p className="text-sm text-blue-800 mb-3">
+                          {abnormalBiomarkers.criticalBiomarkers.length > 0 
+                            ? "Schedule an urgent appointment with your healthcare provider to discuss these critical results."
+                            : "Schedule a routine follow-up appointment with your healthcare provider to discuss these abnormal results and develop a management plan."
+                          }
+                        </p>
+                        <div className="text-xs text-blue-700">
+                          Print or screenshot this section to bring to your appointment for targeted follow-up testing.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Clinical Summary Statistics */}
             <Card>

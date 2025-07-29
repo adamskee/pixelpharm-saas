@@ -27,7 +27,12 @@ export default withAuth(
           pathname.startsWith("/auth/") ||
           pathname.startsWith("/api/auth/") ||
           pathname.startsWith("/_next/") ||
-          pathname.startsWith("/favicon")
+          pathname.startsWith("/favicon") ||
+          pathname.startsWith("/about") ||
+          pathname.startsWith("/pricing") ||
+          pathname.startsWith("/support") ||
+          pathname.startsWith("/privacy") ||
+          pathname.startsWith("/terms")
         ) {
           return true;
         }
@@ -59,8 +64,7 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public files (public folder)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|public).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico).*)"
   ],
 };
