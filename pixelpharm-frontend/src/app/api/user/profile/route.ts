@@ -76,14 +76,32 @@ export async function PUT(request: Request) {
                      gender?.toUpperCase() === "FEMALE" ? "FEMALE" : 
                      undefined;
 
+    // Validate and convert numeric fields
+    let heightNum: number | undefined = undefined;
+    let weightNum: number | undefined = undefined;
+
+    if (height && typeof height === 'string' && height.trim() !== '') {
+      const parsed = parseFloat(height.trim());
+      if (!isNaN(parsed) && parsed > 0) {
+        heightNum = parsed;
+      }
+    }
+
+    if (weight && typeof weight === 'string' && weight.trim() !== '') {
+      const parsed = parseFloat(weight.trim());
+      if (!isNaN(parsed) && parsed > 0) {
+        weightNum = parsed;
+      }
+    }
+
     const updatedUser = await updateUserProfile(session.user.id, {
       firstName: firstName || undefined,
       lastName: lastName || undefined,
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
       gender: genderEnum,
       timezone: timezone || undefined,
-      height: height ? parseFloat(height) : undefined,
-      weight: weight ? parseFloat(weight) : undefined,
+      height: heightNum,
+      weight: weightNum,
       bio: bio || undefined,
     });
 
@@ -104,10 +122,15 @@ export async function PUT(request: Request) {
         bio: updatedUser.bio,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Error updating user profile:", error);
+    console.error("❌ Error details:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
     return NextResponse.json(
-      { error: "Failed to update user profile" },
+      { error: `Failed to update user profile: ${error.message}` },
       { status: 500 }
     );
   }

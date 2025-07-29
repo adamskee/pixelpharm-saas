@@ -71,9 +71,14 @@ export async function updateUserProfile(
 
     console.log("✅ User profile updated:", userId);
     return updatedUser;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating user profile:", error);
-    throw new Error("Failed to update user profile");
+    console.error("Error details:", {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+    });
+    throw error; // Re-throw the original error to preserve error details
   }
 }
 
