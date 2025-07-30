@@ -26,6 +26,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   User,
   Bell,
   Shield,
@@ -69,24 +77,18 @@ export default function UserSettingsPage() {
 
   // Notification Settings
   const [notificationSettings, setNotificationSettings] = useState({
-    emailNotifications: true,
-    pushNotifications: true,
-    smsNotifications: false,
-    healthAlerts: true,
     weeklyReports: true,
-    abnormalResults: true,
     reminderNotifications: true,
-    marketingEmails: false,
   });
 
   // Privacy Settings
   const [privacySettings, setPrivacySettings] = useState({
-    dataSharing: false,
-    anonymousAnalytics: true,
-    thirdPartySharing: false,
-    profileVisibility: "private",
     dataRetention: "5years",
   });
+
+  // Delete Data Confirmation
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
 
   // Security Settings
   const [securityData, setSecurityData] = useState({
@@ -146,9 +148,32 @@ export default function UserSettingsPage() {
     }
   };
 
+  const fetchNotificationPreferences = async () => {
+    try {
+      console.log("🔔 Fetching notification preferences...");
+      
+      const response = await fetch('/api/user/notifications');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch notification preferences');
+      }
+
+      const data = await response.json();
+      console.log("📋 Notification preferences loaded:", data.preferences);
+      
+      if (data.preferences) {
+        setNotificationSettings(data.preferences);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching notification preferences:", error);
+      // Keep default values if fetch fails
+    }
+  };
+
   useEffect(() => {
     if (user?.userId) {
       fetchUserProfile();
+      fetchNotificationPreferences();
     }
   }, [user?.userId]);
 
@@ -196,11 +221,33 @@ export default function UserSettingsPage() {
   const handleSaveNotifications = async () => {
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSaveMessage("Notification preferences updated!");
+      console.log("💾 Saving notification preferences:", notificationSettings);
+      
+      const response = await fetch('/api/user/notifications', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          weeklyReports: notificationSettings.weeklyReports,
+          reminderNotifications: notificationSettings.reminderNotifications,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update notification preferences');
+      }
+
+      const result = await response.json();
+      console.log("✅ Notification preferences updated successfully:", result);
+      
+      setSaveMessage("Notification preferences updated successfully!");
       setTimeout(() => setSaveMessage(""), 3000);
-    } catch (error) {
-      setSaveMessage("Failed to update notifications. Please try again.");
+    } catch (error: any) {
+      console.error("❌ Error updating notification preferences:", error);
+      setSaveMessage(error.message || "Failed to update notifications. Please try again.");
+      setTimeout(() => setSaveMessage(""), 5000);
     } finally {
       setLoading(false);
     }
@@ -238,6 +285,49 @@ export default function UserSettingsPage() {
       setTimeout(() => setSaveMessage(""), 5000);
     } catch (error) {
       setSaveMessage("Failed to export data. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteMyData = () => {
+    setShowDeleteConfirmation(true);
+  };
+
+  const confirmDeleteMyData = async () => {
+    if (deleteConfirmationText !== "DELETE MY DATA") {
+      setSaveMessage("Please type 'DELETE MY DATA' exactly to confirm deletion.");
+      setTimeout(() => setSaveMessage(""), 3000);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      console.log("🗑️ Initiating data deletion for user:", user?.userId);
+      
+      const response = await fetch('/api/user/delete-data', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete data');
+      }
+
+      const result = await response.json();
+      console.log("✅ Data deletion completed:", result);
+      
+      setSaveMessage("All your data has been permanently deleted from our servers. This action cannot be undone.");
+      setShowDeleteConfirmation(false);
+      setDeleteConfirmationText("");
+      setTimeout(() => setSaveMessage(""), 10000);
+    } catch (error: any) {
+      console.error("❌ Error deleting data:", error);
+      setSaveMessage(error.message || "Failed to delete data. Please try again.");
+      setTimeout(() => setSaveMessage(""), 5000);
     } finally {
       setLoading(false);
     }
@@ -458,163 +548,49 @@ export default function UserSettingsPage() {
                 <span>Notification Preferences</span>
               </CardTitle>
               <CardDescription>
-                Choose how you want to be notified about your health data
+                Manage your health report and reminder preferences
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-6">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-4">Communication Methods</h4>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <Mail className="h-4 w-4 text-gray-500" />
-                        <div>
-                          <Label htmlFor="emailNotifications" className="text-sm font-medium">
-                            Email Notifications
-                          </Label>
-                          <p className="text-xs text-gray-500">Receive notifications via email</p>
-                        </div>
-                      </div>
-                      <Switch
-                        id="emailNotifications"
-                        checked={notificationSettings.emailNotifications}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({ ...notificationSettings, emailNotifications: checked })
-                        }
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <Smartphone className="h-4 w-4 text-gray-500" />
-                        <div>
-                          <Label htmlFor="pushNotifications" className="text-sm font-medium">
-                            Push Notifications
-                          </Label>
-                          <p className="text-xs text-gray-500">Receive push notifications on your devices</p>
-                        </div>
-                      </div>
-                      <Switch
-                        id="pushNotifications"
-                        checked={notificationSettings.pushNotifications}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({ ...notificationSettings, pushNotifications: checked })
-                        }
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <Smartphone className="h-4 w-4 text-gray-500" />
-                        <div>
-                          <Label htmlFor="smsNotifications" className="text-sm font-medium">
-                            SMS Notifications
-                          </Label>
-                          <p className="text-xs text-gray-500">Receive text message notifications</p>
-                        </div>
-                      </div>
-                      <Switch
-                        id="smsNotifications"
-                        checked={notificationSettings.smsNotifications}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({ ...notificationSettings, smsNotifications: checked })
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div>
                   <h4 className="text-sm font-medium text-gray-900 mb-4">Health Notifications</h4>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="healthAlerts" className="text-sm font-medium">
-                          Critical Health Alerts
-                        </Label>
-                        <p className="text-xs text-gray-500">Get notified about critical health values</p>
-                      </div>
-                      <Switch
-                        id="healthAlerts"
-                        checked={notificationSettings.healthAlerts}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({ ...notificationSettings, healthAlerts: checked })
-                        }
-                      />
-                    </div>
 
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="abnormalResults" className="text-sm font-medium">
-                          Abnormal Test Results
-                        </Label>
-                        <p className="text-xs text-gray-500">Notifications for abnormal biomarker values</p>
-                      </div>
-                      <Switch
-                        id="abnormalResults"
-                        checked={notificationSettings.abnormalResults}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({ ...notificationSettings, abnormalResults: checked })
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        id="weeklyReports"
+                        checked={notificationSettings.weeklyReports}
+                        onChange={(e) => 
+                          setNotificationSettings({ ...notificationSettings, weeklyReports: e.target.checked })
                         }
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
-                    </div>
-
-                    <div className="flex items-center justify-between">
                       <div>
-                        <Label htmlFor="weeklyReports" className="text-sm font-medium">
+                        <Label htmlFor="weeklyReports" className="text-sm font-medium cursor-pointer">
                           Weekly Health Reports
                         </Label>
                         <p className="text-xs text-gray-500">Weekly summary of your health data</p>
                       </div>
-                      <Switch
-                        id="weeklyReports"
-                        checked={notificationSettings.weeklyReports}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({ ...notificationSettings, weeklyReports: checked })
-                        }
-                      />
                     </div>
 
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        id="reminderNotifications"
+                        checked={notificationSettings.reminderNotifications}
+                        onChange={(e) => 
+                          setNotificationSettings({ ...notificationSettings, reminderNotifications: e.target.checked })
+                        }
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
                       <div>
-                        <Label htmlFor="reminderNotifications" className="text-sm font-medium">
+                        <Label htmlFor="reminderNotifications" className="text-sm font-medium cursor-pointer">
                           Test Reminders
                         </Label>
                         <p className="text-xs text-gray-500">Reminders to take blood tests</p>
                       </div>
-                      <Switch
-                        id="reminderNotifications"
-                        checked={notificationSettings.reminderNotifications}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({ ...notificationSettings, reminderNotifications: checked })
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-4">Marketing & Updates</h4>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="marketingEmails" className="text-sm font-medium">
-                          Marketing Emails
-                        </Label>
-                        <p className="text-xs text-gray-500">Product updates and health tips</p>
-                      </div>
-                      <Switch
-                        id="marketingEmails"
-                        checked={notificationSettings.marketingEmails}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings({ ...notificationSettings, marketingEmails: checked })
-                        }
-                      />
                     </div>
                   </div>
                 </div>
@@ -642,70 +618,6 @@ export default function UserSettingsPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="dataSharing" className="text-sm font-medium">
-                      Data Sharing for Research
-                    </Label>
-                    <p className="text-xs text-gray-500">Allow anonymized data to be used for medical research</p>
-                  </div>
-                  <Switch
-                    id="dataSharing"
-                    checked={privacySettings.dataSharing}
-                    onCheckedChange={(checked) => 
-                      setPrivacySettings({ ...privacySettings, dataSharing: checked })
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="anonymousAnalytics" className="text-sm font-medium">
-                      Anonymous Analytics
-                    </Label>
-                    <p className="text-xs text-gray-500">Help improve our service with anonymous usage data</p>
-                  </div>
-                  <Switch
-                    id="anonymousAnalytics"
-                    checked={privacySettings.anonymousAnalytics}
-                    onCheckedChange={(checked) => 
-                      setPrivacySettings({ ...privacySettings, anonymousAnalytics: checked })
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="thirdPartySharing" className="text-sm font-medium">
-                      Third-Party Sharing
-                    </Label>
-                    <p className="text-xs text-gray-500">Allow sharing data with trusted healthcare partners</p>
-                  </div>
-                  <Switch
-                    id="thirdPartySharing"
-                    checked={privacySettings.thirdPartySharing}
-                    onCheckedChange={(checked) => 
-                      setPrivacySettings({ ...privacySettings, thirdPartySharing: checked })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="profileVisibility">Profile Visibility</Label>
-                  <Select
-                    value={privacySettings.profileVisibility}
-                    onValueChange={(value) => setPrivacySettings({ ...privacySettings, profileVisibility: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select visibility" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="private">Private - Only you can see your profile</SelectItem>
-                      <SelectItem value="healthcare">Healthcare providers only</SelectItem>
-                      <SelectItem value="public">Public - Anonymous health insights</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="dataRetention">Data Retention Period</Label>
@@ -732,12 +644,29 @@ export default function UserSettingsPage() {
               <div className="space-y-4">
                 <h4 className="text-sm font-medium text-gray-900">Data Management</h4>
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <Button onClick={handleExportData} disabled={loading} variant="outline">
+                  <Button 
+                    onClick={handleExportData} 
+                    disabled={loading} 
+                    variant="outline"
+                    className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Export My Data
                   </Button>
-                  <Button onClick={handleDeleteAccount} disabled={loading} variant="destructive">
+                  <Button 
+                    onClick={handleDeleteMyData} 
+                    disabled={loading} 
+                    className="bg-red-600 text-white hover:bg-red-700 border-red-600"
+                  >
                     <Trash2 className="h-4 w-4 mr-2" />
+                    Delete My Data
+                  </Button>
+                  <Button 
+                    onClick={handleDeleteAccount} 
+                    disabled={loading} 
+                    className="bg-red-800 text-white hover:bg-red-900 border-red-800"
+                  >
+                    <Database className="h-4 w-4 mr-2" />
                     Delete Account
                   </Button>
                 </div>
@@ -1016,6 +945,68 @@ export default function UserSettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Data Confirmation Dialog */}
+      <Dialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              <span>Delete All My Data</span>
+            </DialogTitle>
+            <DialogDescription className="space-y-3">
+              <div className="text-sm text-gray-600">
+                <div className="font-semibold text-red-600 mb-2">⚠️ WARNING: This action cannot be undone!</div>
+                <div className="mb-2">
+                  This will permanently delete ALL of your data from our servers, including:
+                </div>
+                <ul className="list-disc list-inside space-y-1 ml-4 text-xs">
+                  <li>All uploaded blood test results and medical reports</li>
+                  <li>Health analytics and AI-generated insights</li>
+                  <li>Body composition and fitness data</li>
+                  <li>All files stored in our secure cloud storage (S3)</li>
+                  <li>Historical biomarker trends and progress tracking</li>
+                </ul>
+                <div className="mt-3 font-semibold text-red-600">
+                  Once deleted, this data cannot be recovered by you or our support team.
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmDelete" className="text-sm font-medium">
+                  Type "DELETE MY DATA" to confirm (case sensitive):
+                </Label>
+                <Input
+                  id="confirmDelete"
+                  value={deleteConfirmationText}
+                  onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                  placeholder="DELETE MY DATA"
+                  className="font-mono"
+                />
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteConfirmation(false);
+                setDeleteConfirmationText("");
+              }}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteMyData}
+              disabled={loading || deleteConfirmationText !== "DELETE MY DATA"}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {loading ? "Deleting..." : "Permanently Delete My Data"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

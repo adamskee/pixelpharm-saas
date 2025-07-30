@@ -389,7 +389,7 @@ export default function OptimizedFileUpload({
               Drag & drop blood test files here, or click to select
             </p>
             <p className="text-sm text-gray-500">
-              Supports PDF, PNG, JPG • PDFs will be optimized for better OCR
+              Supports PNG, JPG, GIF, WebP and TIFF Image types.
             </p>
           </div>
         )}
@@ -400,9 +400,8 @@ export default function OptimizedFileUpload({
         <Alert className="mt-4 border-green-200 bg-green-50">
           <Zap className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">
-            <strong>Smart Optimization:</strong> PDF files will be converted to
-            300 DPI PNG for optimal Claude OCR accuracy and reduced processing
-            costs.
+            <strong>Smart Optimization:</strong> Files will be converted to 300
+            DPI PNG for optimal MMM OCR accuracy.
           </AlertDescription>
         </Alert>
       )}
@@ -468,7 +467,9 @@ export default function OptimizedFileUpload({
         </div>
       )}
 
-      {/* Cost Savings Summary */}
+      {/* 
+     
+     Cost Savings Summary 
       {costSavings && (
         <Alert className="mt-6 border-green-200 bg-green-50">
           <DollarSign className="h-4 w-4 text-green-600" />
@@ -497,6 +498,8 @@ export default function OptimizedFileUpload({
           </AlertDescription>
         </Alert>
       )}
+      
+      */}
 
       {/* Results Summary */}
       {results.length > 0 && (
@@ -587,11 +590,11 @@ export default function OptimizedFileUpload({
           </div>
           <div className="flex items-center">
             <div className="w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
-            <span>PDF→PNG (300 DPI)</span>
+            <span>UPLOAD→PNG (300 DPI)</span>
           </div>
           <div className="flex items-center">
             <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
-            <span>Claude OCR (100% accuracy)</span>
+            <span>Multi-Medical Moodel OCR</span>
           </div>
           <div className="flex items-center">
             <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
