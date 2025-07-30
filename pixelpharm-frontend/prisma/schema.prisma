@@ -26,6 +26,14 @@ model User {
   bio                    String?                 @map("bio")
   height                 Decimal?                @map("height") @db.Decimal(5, 2)
   weight                 Decimal?                @map("weight") @db.Decimal(5, 2)
+  
+  // Stripe subscription fields
+  stripeCustomerId       String?                 @unique @map("stripe_customer_id")
+  stripeSubscriptionId   String?                 @unique @map("stripe_subscription_id")
+  subscriptionStatus     String?                 @map("subscription_status") // active, canceled, past_due, etc.
+  subscriptionPlan       String?                 @map("subscription_plan") // basic, pro
+  subscriptionExpiresAt  DateTime?               @map("subscription_expires_at")
+  
   accounts               Account[]
   aiProcessingResults    AiProcessingResult[]
   biomarkerValues        BiomarkerValue[]

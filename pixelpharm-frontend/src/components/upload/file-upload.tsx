@@ -51,7 +51,7 @@ interface OptimizedFileUploadProps {
 
 export default function OptimizedFileUpload({
   onUploadComplete,
-  acceptedTypes = [".pdf", ".png", ".jpg", ".jpeg"],
+  acceptedTypes = [".png", ".jpg", ".jpeg", ".webp", ".tiff"],
   maxFiles = 5,
 }: OptimizedFileUploadProps) {
   const { user } = useAuth();
@@ -68,8 +68,7 @@ export default function OptimizedFileUpload({
       "image/jpeg": [".jpg", ".jpeg"],
       "image/png": [".png"],
       "image/webp": [".webp"],
-      "image/gif": [".gif"],
-      "application/pdf": [".pdf"],
+      "image/tiff": [".tiff", ".tif"],
     },
     maxSize: 25 * 1024 * 1024, // 25MB
     multiple: true,
@@ -131,65 +130,10 @@ export default function OptimizedFileUpload({
         throw new Error("Failed to upload file");
       }
 
-      setUploadProgress(40);
-
-      // Step 2: Convert PDF to PNG (if needed)
-      let processingKey = fileKey;
-      let conversionStats: ConversionStats | undefined;
-
-      if (file.type === "application/pdf") {
-        setProcessingStep(`Converting ${file.name} to optimized PNG...`);
-        setUploadProgress(50);
-
-        const conversionResponse = await fetch("/api/ai/convert-pdf-to-png", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fileKey,
-            userId: user?.userId,
-          }),
-        });
-
-        if (conversionResponse.ok) {
-          const conversionResult = await conversionResponse.json();
-          if (conversionResult.success) {
-            processingKey = conversionResult.pngKey;
-
-            // Calculate cost savings
-            const originalTokens = Math.ceil(file.size / 1000) * 1.5; // Rough estimate
-            const optimizedTokens = Math.ceil(
-              (file.size * (1 - conversionResult.fileSizeReduction / 100)) /
-                1000
-            );
-            const tokensSaved = originalTokens - optimizedTokens;
-            const costSavings = tokensSaved * 0.003; // $0.003 per 1K tokens (Claude pricing)
-
-            conversionStats = {
-              originalSize: file.size,
-              optimizedSize:
-                file.size * (1 - conversionResult.fileSizeReduction / 100),
-              sizeReduction: conversionResult.fileSizeReduction,
-              tokensEstimated: tokensSaved,
-              costSavings,
-            };
-
-            console.log(
-              `💰 Conversion savings: ${conversionResult.fileSizeReduction.toFixed(
-                1
-              )}% size reduction`
-            );
-            console.log(
-              `🪙 Estimated token savings: ${tokensSaved.toFixed(
-                0
-              )} tokens ($${costSavings.toFixed(4)})`
-            );
-          }
-        } else {
-          console.warn("PDF conversion failed, proceeding with original file");
-        }
-      }
-
       setUploadProgress(70);
+
+      // Process image file directly
+      let processingKey = fileKey;
 
       // Step 3: Claude OCR Processing
       setProcessingStep(`Analyzing ${file.name} with Claude AI...`);
@@ -200,7 +144,7 @@ export default function OptimizedFileUpload({
         body: JSON.stringify({
           fileKey: processingKey,
           userId: user?.userId,
-          originalFormat: file.type === "application/pdf" ? "pdf" : "image",
+          originalFormat: "image",
         }),
       });
 
@@ -246,7 +190,6 @@ export default function OptimizedFileUpload({
 
       return {
         fileKey,
-        pngKey: processingKey !== fileKey ? processingKey : undefined,
         biomarkers: ocrResult.biomarkers || [],
         conversionStats,
         processingTime,
@@ -395,16 +338,6 @@ export default function OptimizedFileUpload({
         )}
       </div>
 
-      {/* Cost Optimization Notice */}
-      {files.some((f) => f.type === "application/pdf") && (
-        <Alert className="mt-4 border-green-200 bg-green-50">
-          <Zap className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">
-            <strong>Smart Optimization:</strong> Files will be converted to 300
-            DPI PNG for optimal MMM OCR accuracy.
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* File List */}
       {files.length > 0 && (
@@ -578,30 +511,6 @@ export default function OptimizedFileUpload({
         </Button>
       </div>
 
-      {/* Processing Pipeline Info */}
-      <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-        <h4 className="font-medium text-gray-800 mb-2">
-          Optimized Processing Pipeline
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
-          <div className="flex items-center">
-            <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-            <span>Upload to S3</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
-            <span>UPLOAD→PNG (300 DPI)</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
-            <span>Multi-Medical Moodel OCR</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-            <span>Store biomarkers</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

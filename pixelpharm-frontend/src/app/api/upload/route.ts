@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUploadRecord } from "@/lib/database/uploads";
+import { canUserUpload } from "@/lib/subscription/upload-limits";
 import { UploadType } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
@@ -24,6 +25,20 @@ export async function POST(request: NextRequest) {
         { error: "Missing required fields: userId, fileKey, originalFilename" },
         { status: 400 }
       );
+    }
+
+    // Check upload limits for blood tests
+    if (uploadType === 'BLOOD_TESTS') {
+      const canUpload = await canUserUpload(userId);
+      if (!canUpload) {
+        return NextResponse.json(
+          { 
+            error: "Upload limit exceeded. Please upgrade your plan or wait for limit reset.",
+            code: "UPLOAD_LIMIT_EXCEEDED"
+          },
+          { status: 403 }
+        );
+      }
     }
 
     // Convert upload type to enum

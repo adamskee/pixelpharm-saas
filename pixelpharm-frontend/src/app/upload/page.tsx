@@ -1,7 +1,9 @@
 "use client";
-import { useAuth } from "@/lib/auth/auth-context";
-import LoginForm from "@/components/auth/login-form";
+import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import FileUpload from "@/components/upload/file-upload";
+import { UploadLimitBanner } from "@/components/dashboard/UploadLimitBanner";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,11 +12,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, CheckCircle, BarChart3 } from "lucide-react";
 import Link from "next/link";
 
 export default function UploadPage() {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [uploadComplete, setUploadComplete] = useState(false);
+
+  const loading = status === "loading";
+  const isAuthenticated = !!session;
 
   // Show loading spinner while checking authentication
   if (loading) {
@@ -25,13 +32,19 @@ export default function UploadPage() {
     );
   }
 
-  // Show auth forms if not authenticated
+  // Redirect to sign in if not authenticated
   if (!isAuthenticated) {
-    return <LoginForm />;
+    router.push("/auth/signin");
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   const handleUploadComplete = (fileKey: string) => {
     console.log("File uploaded:", fileKey);
+    setUploadComplete(true);
     // TODO: Store file reference in database
     // TODO: Trigger AI analysis pipeline
   };
@@ -57,6 +70,9 @@ export default function UploadPage() {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Upload Limit Banner */}
+        <UploadLimitBanner />
+        
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -65,60 +81,43 @@ export default function UploadPage() {
             </CardTitle>
             <CardDescription>
               Upload your blood test reports for AI-powered analysis and
-              personalized health insights. Supported formats: PDF, JPEG, PNG,
+              personalized health insights. Supported formats: JPEG, PNG,
               TIFF, WebP (max 25MB each).
             </CardDescription>
           </CardHeader>
           <CardContent>
             <FileUpload onUploadComplete={handleUploadComplete} />
-          </CardContent>
-        </Card>
-
-        {/* Information Section */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>What happens after upload?</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-semibold text-blue-600">1</span>
+            
+            {/* Success Message with Health Analytics Link */}
+            {uploadComplete && (
+              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center space-x-3 mb-3">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                  <div>
+                    <h3 className="font-semibold text-green-900">Upload Successful!</h3>
+                    <p className="text-sm text-green-700">
+                      Your blood test has been uploaded and is being processed by our AI.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-semibold">OCR Processing</h4>
-                  <p className="text-sm text-gray-600">
-                    Our AI extracts biomarker values from your test documents
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-semibold text-blue-600">2</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold">Multi-LLM Analysis</h4>
-                  <p className="text-sm text-gray-600">
-                    Multiple AI models analyze your results for comprehensive
-                    insights
-                  </p>
+                
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link href="/dashboard/health-analytics">
+                    <Button className="bg-green-600 hover:bg-green-700 text-white">
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      View Health Analytics
+                    </Button>
+                  </Link>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setUploadComplete(false)}
+                    className="border-green-300 text-green-700 hover:bg-green-50"
+                  >
+                    Upload Another Test
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-semibold text-blue-600">3</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold">
-                    Personalized Recommendations
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    Get tailored supplement, lifestyle, and follow-up
-                    recommendations
-                  </p>
-                </div>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </main>

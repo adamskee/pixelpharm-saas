@@ -1,7 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,34 +28,84 @@ import {
   FileText,
   Target,
   Sparkles,
+  Loader2,
 } from "lucide-react";
+import { PRICING_PLANS, PlanType } from "@/lib/stripe/config";
 
 export default function PricingPage() {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [loading, setLoading] = useState<PlanType | null>(null);
+
+  const handlePurchase = async (planType: PlanType) => {
+    if (!session) {
+      router.push("/auth/signin");
+      return;
+    }
+
+    setLoading(planType);
+
+    try {
+      const response = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ planType }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401 && data.redirect) {
+          // Redirect to sign in page
+          router.push(data.redirect);
+          return;
+        }
+        throw new Error(data.error || "Failed to create checkout session");
+      }
+
+      // Redirect to Stripe checkout
+      window.location.href = data.url;
+    } catch (error: any) {
+      console.error("Checkout error:", error);
+      alert(`Payment failed: ${error.message}`);
+    } finally {
+      setLoading(null);
+    }
+  };
   const plans = [
     {
-      name: "Basic",
+      name: "Elite Athlete",
       price: "$24.95",
       period: "per month",
-      description: "Perfect for individuals starting their health journey",
+      description:
+        "Created for elite athletes, coaches, and dedicated health optimizers who demand clinical-grade insights",
       features: [
         "Up to 5 blood test uploads per month",
-        "Basic AI health analysis",
+        "Advanced AI health analysis",
         "Health score tracking",
         "Standard biomarker insights",
+        "Comprehensive health reports",
+        "Trend analysis & predictions",
+        "Risk assessment reports",
         "Email support",
-        "Mobile app access",
+        "Performance optimization recommendations based on hormonal profiles",
+        "Recovery protocol suggestions using HRV & inflammatory markers",
+        "Sports nutritionist-grade supplement timing & dosage recommendations",
       ],
       popular: false,
       cta: "Start Now!",
+      planType: "basic" as PlanType,
     },
     {
       name: "Pro",
       price: "$49.95",
       period: "30 days access",
       description:
-        "Single purchase for complete health analytics and dashboard access",
+        "One-time purchase for lifetime access to professional-grade health insights from your blood tests",
       features: [
-        "Unlimited blood test uploads",
+        "20 blood test uploads",
         "Advanced AI health analysis",
         "Comprehensive health reports",
         "Trend analysis & predictions",
@@ -65,14 +117,15 @@ export default function PricingPage() {
         "Complete insights & analytics",
       ],
       popular: true,
-      cta: "Get 30-Day Access",
+      cta: "Start Your 30-Day Access Now",
+      planType: "pro" as PlanType,
     },
     {
       name: "Enterprise",
       price: "Custom",
       period: "contact us",
       description:
-        "Tailored solutions for healthcare providers and organizations",
+        "Enterprise-grade AI health analytics platform for healthcare systems, clinics, and corporate wellness programs",
       features: [
         "Everything in Pro",
         "White-label solutions",
@@ -85,6 +138,7 @@ export default function PricingPage() {
       ],
       popular: false,
       cta: "Contact Sales",
+      planType: null,
     },
   ];
 
@@ -145,9 +199,8 @@ export default function PricingPage() {
               </span>
             </h1>
             <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
-              Transform your lab results into actionable insights with our
-              AI-powered health analytics platform. Start with a free trial and
-              upgrade as your needs grow.
+              Transform your lab results into actionable insights with our Multi
+              Medical Model AI-powered health analytics platform.
             </p>
           </div>
         </section>
@@ -201,9 +254,25 @@ export default function PricingPage() {
                         plan.popular ? "bg-blue-600 hover:bg-blue-700" : ""
                       }`}
                       variant={plan.popular ? "default" : "outline"}
+                      onClick={() =>
+                        plan.planType ? handlePurchase(plan.planType) : null
+                      }
+                      disabled={
+                        loading === plan.planType ||
+                        (!plan.planType && plan.name !== "Enterprise")
+                      }
                     >
-                      {plan.cta}
-                      <ArrowRight className="h-4 w-4 ml-2" />
+                      {loading === plan.planType ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          {plan.cta}
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </>
+                      )}
                     </Button>
                   </CardContent>
                 </Card>
@@ -220,7 +289,8 @@ export default function PricingPage() {
                 Why Choose PixelPharm?
               </h2>
               <p className="text-xl text-gray-600">
-                Advanced health analytics powered by cutting-edge AI technology
+                Advanced health analytics powered by cutting-edge Multi Medical
+                Model Technology
               </p>
             </div>
 
