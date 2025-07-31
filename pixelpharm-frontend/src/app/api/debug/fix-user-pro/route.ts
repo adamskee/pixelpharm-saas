@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await request.json();
+    const { userId, firstName } = await request.json();
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
@@ -16,14 +16,21 @@ export async function POST(request: Request) {
 
     console.log('🔧 Fixing Pro subscription for user:', userId);
 
+    const updateData: any = {
+      subscriptionStatus: 'active',
+      subscriptionPlan: 'pro',
+      subscriptionExpiresAt: expiresAt,
+      updatedAt: new Date(),
+    };
+
+    // Add firstName if provided
+    if (firstName) {
+      updateData.firstName = firstName;
+    }
+
     const updatedUser = await prisma.user.update({
       where: { userId },
-      data: {
-        subscriptionStatus: 'active',
-        subscriptionPlan: 'pro',
-        subscriptionExpiresAt: expiresAt,
-        updatedAt: new Date(),
-      },
+      data: updateData,
     });
 
     console.log('✅ User subscription updated successfully:', {

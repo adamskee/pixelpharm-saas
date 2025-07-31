@@ -437,7 +437,7 @@ export default function EnhancedHealthAnalyticsDashboard() {
 
   // Generate clinical review paragraph
   const generateClinicalReview = (medicalReview: MedicalReview): string => {
-    const userName = medicalReview.user?.firstName || "there";
+    const userName = medicalReview.user?.firstName || user?.firstName || user?.name || "there";
     const totalBiomarkers = medicalReview.biomarkers.totalBiomarkers;
     const criticalCount = medicalReview.biomarkers.criticalCount;
     const abnormalCount = medicalReview.biomarkers.abnormalCount;

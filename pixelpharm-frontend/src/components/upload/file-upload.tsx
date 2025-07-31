@@ -191,7 +191,6 @@ export default function OptimizedFileUpload({
       return {
         fileKey,
         biomarkers: ocrResult.biomarkers || [],
-        conversionStats,
         processingTime,
       };
     } catch (error) {
@@ -332,7 +331,7 @@ export default function OptimizedFileUpload({
               Drag & drop blood test files here, or click to select
             </p>
             <p className="text-sm text-gray-500">
-              Supports PNG, JPG, GIF, WebP and TIFF Image types.
+              Supports PNG, JPG, WebP and TIFF Image types.
             </p>
           </div>
         )}

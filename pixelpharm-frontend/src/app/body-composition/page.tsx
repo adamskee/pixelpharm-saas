@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/auth/auth-context";
 import BodyCompositionUpload from "@/components/upload/body-composition-upload";
+import { UploadLimitBanner } from "@/components/dashboard/UploadLimitBanner";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -41,6 +42,9 @@ export default function BodyCompositionPage() {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Upload Limit Banner */}
+        <UploadLimitBanner />
+        
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -50,7 +54,7 @@ export default function BodyCompositionPage() {
             <CardDescription>
               Upload your InBody 570, DEXA scan, or other body composition
               reports for AI-powered analysis and trend tracking. Supported
-              formats: PDF, JPEG, PNG, TIFF, WebP (max 25MB each).
+              formats: JPEG, PNG, TIFF, WebP (max 25MB each).
             </CardDescription>
           </CardHeader>
           <CardContent>

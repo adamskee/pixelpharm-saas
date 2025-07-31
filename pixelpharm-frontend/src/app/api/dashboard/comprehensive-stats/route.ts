@@ -17,9 +17,34 @@ export async function GET(request: Request) {
 
     console.log(`📊 Fetching comprehensive stats for user: ${userId}`);
 
-    // Check if user exists
+    // Check if user exists - get all user profile data
     let user = await prisma.user.findUnique({
       where: { userId },
+      select: {
+        userId: true,
+        cognitoSub: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        dateOfBirth: true,
+        gender: true,
+        height: true,
+        weight: true,
+        timezone: true,
+        name: true,
+        image: true,
+        emailVerified: true,
+        passwordHash: true,
+        provider: true,
+        createdAt: true,
+        updatedAt: true,
+        bio: true,
+        stripeCustomerId: true,
+        stripeSubscriptionId: true,
+        subscriptionStatus: true,
+        subscriptionPlan: true,
+        subscriptionExpiresAt: true,
+      }
     });
 
     if (!user) {
@@ -109,6 +134,13 @@ export async function GET(request: Request) {
         console.log("⚠️ bloodTestResult table not accessible:", error.message);
       }
 
+      console.log(`👤 User profile data:`, {
+        age: user?.dateOfBirth ? Math.floor((Date.now() - new Date(user.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null,
+        gender: user?.gender,
+        height: user?.height?.toString(),
+        weight: user?.weight?.toString(),
+      });
+
       console.log(
         `📊 Found ${fileUploads.length} file uploads and ${totalBiomarkerCount} biomarker records`
       );
@@ -122,9 +154,37 @@ export async function GET(request: Request) {
           (f) => f.uploadType === "BLOOD_TESTS"
         ).length;
 
+        console.log(`📁 File uploads debug:`, fileUploads.map(f => ({
+          uploadType: f.uploadType,
+          filename: f.originalFilename,
+          createdAt: f.createdAt
+        })));
+
         const bodyCompositionUploads = fileUploads.filter(
           (f) => f.uploadType === "BODY_COMPOSITION"
         ).length;
+        
+        console.log(`🏋️ Body composition uploads found:`, bodyCompositionUploads);
+
+        // Get body composition data
+        let latestBodyComposition = null;
+        try {
+          latestBodyComposition = await prisma.bodyCompositionResult.findFirst({
+            where: { userId },
+            orderBy: { testDate: "desc" },
+          });
+          console.log(`🏋️ Body composition data found:`, latestBodyComposition ? 'Yes' : 'No');
+          if (latestBodyComposition) {
+            console.log(`🏋️ Body composition values:`, {
+              weight: latestBodyComposition.totalWeight?.toString(),
+              bodyFat: latestBodyComposition.bodyFatPercentage?.toString(),
+              muscleMass: latestBodyComposition.skeletalMuscleMass?.toString(),
+              testDate: latestBodyComposition.testDate
+            });
+          }
+        } catch (error) {
+          console.log("⚠️ bodyCompositionResult table not accessible:", error.message);
+        }
 
         const abnormalBiomarkers = biomarkerValues.filter(
           (b) => b.isAbnormal
@@ -190,10 +250,21 @@ export async function GET(request: Request) {
           },
           bodyComposition: {
             totalScans: bodyCompositionUploads,
-            latestBMI: null,
-            bodyFatPercentage: null,
-            muscleMass: null,
-            lastScanDate:
+            // Prioritize user's current weight over body composition scan weight for BMI calculation
+            latestBMI: user?.weight && user?.height 
+              ? parseFloat((parseFloat(user.weight.toString()) / 
+                  Math.pow(parseFloat(user.height.toString()) / 100, 2)).toFixed(1))
+              : latestBodyComposition?.totalWeight && user?.height 
+                ? parseFloat((parseFloat(latestBodyComposition.totalWeight.toString()) / 
+                    Math.pow(parseFloat(user.height.toString()) / 100, 2)).toFixed(1))
+                : null,
+            bodyFatPercentage: latestBodyComposition?.bodyFatPercentage 
+              ? parseFloat(latestBodyComposition.bodyFatPercentage.toString())
+              : null,
+            muscleMass: latestBodyComposition?.skeletalMuscleMass 
+              ? parseFloat(latestBodyComposition.skeletalMuscleMass.toString())
+              : null,
+            lastScanDate: latestBodyComposition?.testDate?.toISOString() ||
               fileUploads
                 .find((f) => f.uploadType === "BODY_COMPOSITION")
                 ?.createdAt?.toISOString() || null,

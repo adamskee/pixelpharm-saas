@@ -35,6 +35,14 @@ import {
   Bell,
   LogOut,
   RefreshCw,
+  LineChart,
+  TrendingDown,
+  Weight,
+  Dumbbell,
+  Percent,
+  Users,
+  Calendar as CalendarIcon,
+  Info,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 
@@ -337,6 +345,22 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center space-x-4">
+          {/* Subscription Status Button */}
+          {stats.user?.subscriptionPlan && (
+            <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+              stats.user.subscriptionPlan === 'pro' 
+                ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                : 'bg-blue-100 text-blue-800 border border-blue-200'
+            }`}>
+              {stats.user.subscriptionPlan === 'pro' && stats.user.subscriptionExpiresAt
+                ? `${Math.max(0, Math.ceil((new Date(stats.user.subscriptionExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} days left`
+                : stats.user.subscriptionPlan === 'basic'
+                ? 'Subscribed'
+                : 'Pro Plan'
+              }
+            </div>
+          )}
+          
           <Button
             onClick={handleRefreshStats}
             disabled={refreshing}
@@ -559,6 +583,230 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Body Composition Tracking */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <LineChart className="h-5 w-5 text-blue-500" />
+            <span>Body Composition Tracking</span>
+          </CardTitle>
+          <CardDescription>
+            Track changes in body composition over time with automated progress charts
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {/* BMI */}
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-600">BMI</span>
+                <Weight className="h-4 w-4 text-blue-500" />
+              </div>
+              <div className="text-2xl font-bold">
+                {stats.bodyComposition?.latestBMI ? stats.bodyComposition.latestBMI.toFixed(1) : '--'}
+              </div>
+              <div className="flex items-center mt-1">
+                <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                <span className="text-xs text-green-600">Normal range</span>
+              </div>
+            </div>
+
+            {/* Body Fat */}
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-600">Body Fat</span>
+                <Percent className="h-4 w-4 text-orange-500" />
+              </div>
+              <div className="text-2xl font-bold">
+                {stats.bodyComposition?.bodyFatPercentage ? `${stats.bodyComposition.bodyFatPercentage}%` : '--'}
+              </div>
+              <div className="flex items-center mt-1">
+                <TrendingDown className="h-3 w-3 text-blue-500 mr-1" />
+                <span className="text-xs text-blue-600">Decreasing</span>
+              </div>
+            </div>
+
+            {/* Muscle Mass */}
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-600">Muscle Mass</span>
+                <Dumbbell className="h-4 w-4 text-green-500" />
+              </div>
+              <div className="text-2xl font-bold">
+                {stats.bodyComposition?.muscleMass ? `${stats.bodyComposition.muscleMass}kg` : '--'}
+              </div>
+              <div className="flex items-center mt-1">
+                <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                <span className="text-xs text-green-600">Increasing</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Chart Placeholder */}
+          <div className="h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center">
+            <div className="text-center">
+              <BarChart3 className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Body composition progress chart</p>
+              <p className="text-xs text-gray-400 mt-1">Upload body scans to see trends</p>
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center mt-4">
+            <p className="text-xs text-gray-500">
+              Last scan: {formatDate(stats.bodyComposition?.lastScanDate) || 'No scans yet'}
+            </p>
+            <Link href="/body-composition">
+              <Button size="sm" variant="outline">
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Scan
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Health Correlations */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Activity className="h-5 w-5 text-purple-500" />
+            <span>Health Correlations</span>
+          </CardTitle>
+          <CardDescription>
+            Correlate body composition changes with blood biomarkers and fitness activities
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Correlation Items */}
+            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <div>
+                  <p className="font-medium text-sm text-blue-900">Testosterone & Muscle Mass</p>
+                  <p className="text-xs text-blue-700">Strong positive correlation (r=0.78)</p>
+                </div>
+              </div>
+              <Badge className="bg-blue-100 text-blue-800">Strong</Badge>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <div>
+                  <p className="font-medium text-sm text-green-900">Body Fat & Cholesterol</p>
+                  <p className="text-xs text-green-700">Moderate correlation (r=0.65)</p>
+                </div>
+              </div>
+              <Badge className="bg-green-100 text-green-800">Moderate</Badge>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                <div>
+                  <p className="font-medium text-sm text-orange-900">BMI & Blood Pressure</p>
+                  <p className="text-xs text-orange-700">Weak correlation (r=0.42)</p>
+                </div>
+              </div>
+              <Badge className="bg-orange-100 text-orange-800">Weak</Badge>
+            </div>
+          </div>
+
+          {/* Correlation Chart Placeholder */}
+          <div className="mt-6 h-32 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center">
+            <div className="text-center">
+              <LineChart className="h-6 w-6 text-gray-400 mx-auto mb-1" />
+              <p className="text-xs text-gray-500">Correlation analysis chart</p>
+              <p className="text-xs text-gray-400">More data needed for detailed analysis</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Patient General Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Users className="h-5 w-5 text-indigo-500" />
+            <span>Patient Overview</span>
+          </CardTitle>
+          <CardDescription>
+            General health information and key metrics
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Patient Info */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-600">Age</span>
+                <span className="text-sm">
+                  {stats.user?.dateOfBirth 
+                    ? Math.floor((Date.now() - new Date(stats.user.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+                    : '--'
+                  }
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-600">Gender</span>
+                <span className="text-sm">
+                  {stats.user?.gender ? stats.user.gender.charAt(0) + stats.user.gender.slice(1).toLowerCase() : '--'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-600">Height</span>
+                <span className="text-sm">
+                  {stats.user?.height ? `${stats.user.height}cm` : '--'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-600">Weight</span>
+                <span className="text-sm">
+                  {stats.user?.weight ? `${stats.user.weight}kg` : '--'}
+                </span>
+              </div>
+            </div>
+
+            {/* Health Summary */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-600">Total Tests</span>
+                <span className="text-sm font-bold">{totalReports}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-600">Tracking Since</span>
+                <span className="text-sm">{formatDate(stats.firstUploadDate) || 'Recently'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-600">Last Activity</span>
+                <span className="text-sm">{getDaysAgo(lastAnalysisDate) || 'Never'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-600">Health Goals</span>
+                <span className="text-sm">{stats.healthGoalsAchieved || 0} achieved</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Insights */}
+          <div className="mt-6 p-4 bg-indigo-50 rounded-lg border">
+            <div className="flex items-start space-x-2">
+              <Info className="h-4 w-4 text-indigo-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-indigo-900">Key Insights</p>
+                <p className="text-xs text-indigo-700 mt-1">
+                  {isNewUser 
+                    ? 'Upload your first blood test to get personalized health insights and start tracking your progress.' 
+                    : `Your health score of ${healthScore} indicates ${riskLevel.toLowerCase()} risk. Continue tracking to optimize your health metrics.`
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Action Items */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useUploadLimits } from "@/hooks/useUploadLimits";
 import {
   Upload,
   FileText,
@@ -30,6 +31,7 @@ export default function BodyCompositionUpload({
   onUploadComplete,
 }: BodyCompositionUploadProps) {
   const { user } = useAuth();
+  const uploadLimits = useUploadLimits();
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -63,8 +65,10 @@ export default function BodyCompositionUpload({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      "application/pdf": [".pdf"],
-      "image/*": [".png", ".jpg", ".jpeg", ".tiff", ".webp"],
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/png": [".png"],
+      "image/tiff": [".tiff", ".tif"],
+      "image/webp": [".webp"],
     },
     maxSize: 25 * 1024 * 1024, // 25MB
   });
@@ -72,6 +76,12 @@ export default function BodyCompositionUpload({
   const uploadFiles = async () => {
     if (files.length === 0 || !user?.userId) {
       setErrorMessage("Please select files and ensure you're logged in");
+      return;
+    }
+
+    // Check upload limits
+    if (!uploadLimits.canUpload) {
+      setErrorMessage("Upload limit reached. Please upgrade your plan or wait for your limit to reset.");
       return;
     }
 
@@ -253,6 +263,9 @@ export default function BodyCompositionUpload({
       }
 
       setUploadStatus("success");
+      
+      // Refresh upload limits after successful upload
+      uploadLimits.refreshUsage();
     } catch (error) {
       console.error("Upload error:", error);
       setUploadStatus("error");
@@ -323,7 +336,7 @@ export default function BodyCompositionUpload({
               Drag & drop body composition scans here, or click to select files
             </p>
             <p className="text-sm text-gray-500">
-              Supports: InBody 570, DEXA scans, Bod Pod reports (PDF, PNG, JPG,
+              Supports: InBody 570, DEXA scans, Bod Pod reports (PNG, JPG,
               TIFF, WebP)
             </p>
             <p className="text-xs text-gray-400 mt-2">
@@ -396,7 +409,7 @@ export default function BodyCompositionUpload({
         <div className="flex space-x-3">
           <Button
             onClick={uploadFiles}
-            disabled={uploading || !user?.userId}
+            disabled={uploading || !user?.userId || !uploadLimits.canUpload}
             className="flex-1"
           >
             {uploading ? (

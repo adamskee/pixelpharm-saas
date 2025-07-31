@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    console.log("🔍 Claude OCR API called");
+    console.log("🔍 PixelPharm's OCR API called");
     console.log("🔐 Environment check:");
     console.log("- ANTHROPIC_API_KEY exists:", !!process.env.ANTHROPIC_API_KEY);
     console.log(
@@ -138,7 +138,9 @@ FORMAT RESPONSE AS JSON:
 Please analyze this blood test image now:`;
 
     // Call Claude Vision API
-    console.log("🧠 Sending image to Claude for OCR analysis...");
+    console.log(
+      "🧠 Sending image to PixelPharm Multi Medical Model AI for OCR analysis..."
+    );
 
     const claudeResponse = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20241022",
@@ -166,7 +168,7 @@ Please analyze this blood test image now:`;
 
     const responseContent = claudeResponse.content[0];
     if (responseContent.type !== "text") {
-      throw new Error("Unexpected response type from Claude");
+      throw new Error("Unexpected response type from PixelPharm");
     }
 
     // Parse Claude's JSON response
@@ -200,7 +202,7 @@ Please analyze this blood test image now:`;
 
     const processingTime = Date.now() - startTime;
 
-    console.log(`✅ Claude OCR completed in ${processingTime}ms`);
+    console.log(`✅ PixelPharm's OCR completed in ${processingTime}ms`);
     console.log(`🧬 Extracted ${enhancedBiomarkers.length} biomarkers`);
 
     const result: OcrResult = {
@@ -220,12 +222,12 @@ Please analyze this blood test image now:`;
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("❌ Claude OCR failed:", error);
+    console.error("❌ PixelPharm's OCR failed:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: "Claude OCR extraction failed",
+        error: "PixelPharm's OCR extraction failed",
         details: error instanceof Error ? error.message : "Unknown error",
         processingTime: Date.now() - startTime,
       },
