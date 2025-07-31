@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { useSession } from "next-auth/react";
 import GoogleSignIn from "@/components/auth/google-signin";
 import Link from "next/link";
-import { Activity, User, Settings, Bell, LogOut } from "lucide-react";
+import { Heart, User, Settings, Bell, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
@@ -42,7 +42,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link href="/dashboard" className="flex items-center space-x-2">
-                <Activity className="h-8 w-8 text-blue-600" />
+                <Heart className="h-8 w-8 text-blue-600" />
                 <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                   PixelPharm
                 </span>
@@ -114,7 +114,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             {/* Brand */}
             <div className="md:col-span-2">
               <div className="flex items-center space-x-2 mb-4">
-                <Activity className="h-8 w-8 text-blue-400" />
+                <Heart className="h-8 w-8 text-blue-400" />
                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                   PixelPharm
                 </span>

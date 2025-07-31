@@ -45,6 +45,7 @@ import {
   Info,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
+import { MiniPieChart } from "@/components/ui/mini-pie-chart";
 
 interface DashboardStats {
   user?: {
@@ -388,11 +389,21 @@ export default function DashboardPage() {
             <Heart className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{healthScore}</div>
-            <div className="flex items-center space-x-2 mt-1">
-              <Badge className={getRiskBadgeColor(riskLevel)}>
-                {riskLevel} RISK
-              </Badge>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold">{healthScore}</div>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Badge className={getRiskBadgeColor(riskLevel)}>
+                    {riskLevel} RISK
+                  </Badge>
+                </div>
+              </div>
+              <MiniPieChart 
+                percentage={healthScore} 
+                size={48} 
+                color={riskLevel === 'LOW' ? '#10b981' : riskLevel === 'MODERATE' ? '#f59e0b' : '#ef4444'}
+                className="ml-4"
+              />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               {isNewUser ? 'Upload blood test to calculate' : totalReports > 0 ? `Based on ${totalReports} report${totalReports !== 1 ? 's' : ''}` : 'No reports yet'}
@@ -407,23 +418,33 @@ export default function DashboardPage() {
             <Activity className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalBiomarkers}</div>
-            <div className="flex items-center space-x-1 mt-1">
-              {criticalCount > 0 && (
-                <Badge variant="destructive" className="text-xs">
-                  {criticalCount} Critical
-                </Badge>
-              )}
-              {abnormalCount > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {abnormalCount} Abnormal
-                </Badge>
-              )}
-              {normalCount > 0 && (
-                <Badge variant="outline" className="text-xs">
-                  {normalCount} Normal
-                </Badge>
-              )}
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold">{totalBiomarkers}</div>
+                <div className="flex items-center space-x-1 mt-1">
+                  {criticalCount > 0 && (
+                    <Badge variant="destructive" className="text-xs">
+                      {criticalCount} Critical
+                    </Badge>
+                  )}
+                  {abnormalCount > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      {abnormalCount} Abnormal
+                    </Badge>
+                  )}
+                  {normalCount > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      {normalCount} Normal
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <MiniPieChart 
+                percentage={totalBiomarkers > 0 ? Math.min(100, (normalCount / totalBiomarkers) * 100) : 0} 
+                size={48} 
+                color="#3b82f6"
+                className="ml-4"
+              />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               {isNewUser ? 'Upload blood test to track biomarkers' : `Last test: ${getDaysAgo(lastTestDate) || 'Never'}`}
@@ -438,8 +459,18 @@ export default function DashboardPage() {
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dataCompleteness}%</div>
-            <Progress value={dataCompleteness} className="mt-2" />
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold">{dataCompleteness}%</div>
+                <Progress value={dataCompleteness} className="mt-2 w-24" />
+              </div>
+              <MiniPieChart 
+                percentage={dataCompleteness} 
+                size={48} 
+                color="#10b981"
+                className="ml-4"
+              />
+            </div>
             <p className="text-xs text-muted-foreground mt-2">
               {isNewUser ? 'Upload tests to improve completeness' : dataCompleteness >= 80 ? 'Excellent' : dataCompleteness >= 60 ? 'Good' : 'Needs improvement'}
             </p>
@@ -453,12 +484,22 @@ export default function DashboardPage() {
             <Target className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeRecommendations}</div>
-            {highPriorityRecommendations > 0 && (
-              <Badge variant="destructive" className="mt-1">
-                {highPriorityRecommendations} High Priority
-              </Badge>
-            )}
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold">{activeRecommendations}</div>
+                {highPriorityRecommendations > 0 && (
+                  <Badge variant="destructive" className="mt-1">
+                    {highPriorityRecommendations} High Priority
+                  </Badge>
+                )}
+              </div>
+              <MiniPieChart 
+                percentage={activeRecommendations > 0 ? Math.min(100, (activeRecommendations / 10) * 100) : 0} 
+                size={48} 
+                color="#8b5cf6"
+                className="ml-4"
+              />
+            </div>
             <p className="text-xs text-muted-foreground mt-2">
               {isNewUser ? 'Get recommendations from blood tests' : 'Based on recent analysis'}
             </p>
@@ -553,36 +594,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Recent Activity */}
-      {stats.recentActivity && stats.recentActivity.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Clock className="h-5 w-5 text-gray-500" />
-              <span>Recent Activity</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {safeArray(stats.recentActivity).slice(0, 5).map((activity, index) => (
-                <div key={index} className="flex items-center justify-between border-b pb-2 last:border-b-0">
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{safeString(activity.description)}</p>
-                    <p className="text-xs text-gray-500">{formatDate(activity.date)}</p>
-                  </div>
-                  <Badge 
-                    variant={activity.status === 'completed' ? 'default' : 'secondary'}
-                    className="text-xs"
-                  >
-                    {safeString(activity.status)}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Body Composition Tracking */}
       <Card>
@@ -878,6 +889,36 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Recent Activity */}
+      {stats.recentActivity && stats.recentActivity.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Clock className="h-5 w-5 text-gray-500" />
+              <span>Recent Activity</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {safeArray(stats.recentActivity).slice(0, 5).map((activity, index) => (
+                <div key={index} className="flex items-center justify-between border-b pb-2 last:border-b-0">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{safeString(activity.description)}</p>
+                    <p className="text-xs text-gray-500">{formatDate(activity.date)}</p>
+                  </div>
+                  <Badge 
+                    variant={activity.status === 'completed' ? 'default' : 'secondary'}
+                    className="text-xs"
+                  >
+                    {safeString(activity.status)}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

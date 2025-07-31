@@ -11,7 +11,7 @@ export const UPLOAD_LIMITS = {
   },
   pro: {
     perMonth: null, // No monthly limit
-    total: 50, // Total limit for 30-day access
+    total: 20, // Total limit for 30-day access
   },
   inactive: {
     perMonth: 0,

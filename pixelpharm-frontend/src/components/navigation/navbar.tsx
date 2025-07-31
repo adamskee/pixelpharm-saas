@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth/auth-context";
-import { User, LogOut, Settings, Activity } from "lucide-react";
+import { User, LogOut, Settings, Heart } from "lucide-react";
 import Link from "next/link";
 
 export function Navbar() {
@@ -26,7 +26,7 @@ export function Navbar() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center space-x-4">
           <Link href="/dashboard" className="flex items-center space-x-2">
-            <Activity className="h-6 w-6 text-blue-600" />
+            <Heart className="h-6 w-6 text-blue-600" />
             <span className="text-xl font-bold">PixelPharm</span>
           </Link>
         </div>

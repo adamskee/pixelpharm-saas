@@ -38,6 +38,8 @@ export default function SupportPage() {
     category: "general"
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const categories = [
     { id: "general", name: "General Questions", icon: <HelpCircle className="h-5 w-5" /> },
@@ -55,7 +57,7 @@ export default function SupportPage() {
     },
     {
       question: "What file formats can I upload?",
-      answer: "We support PDF lab reports from most major labs, as well as CSV and Excel files. Our AI can process most standard lab report formats automatically.",
+      answer: "We support JPEG, PNG, TIFF, and WebP image formats for blood test and body composition uploads. Our AI can process most standard lab report image formats automatically.",
       category: "technical"
     },
     {
@@ -80,7 +82,7 @@ export default function SupportPage() {
     },
     {
       question: "My upload failed. What should I do?",
-      answer: "First, ensure your file is under 10MB and in a supported format (PDF, CSV, Excel). If issues persist, try refreshing the page or contact our support team with the error message.",
+      answer: "First, ensure your file is under 25MB and in a supported format (JPEG, PNG, TIFF, WebP). If issues persist, try refreshing the page or contact our support team with the error message.",
       category: "technical"
     },
     {
@@ -92,11 +94,41 @@ export default function SupportPage() {
 
   const filteredFAQs = faqs.filter(faq => faq.category === selectedCategory);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate form submission
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 5000);
+    setSubmitting(true);
+    setSubmitError("");
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setSubmitted(true);
+        setFormData({
+          name: "",
+          email: "",
+          subject: "",
+          message: "",
+          category: "general"
+        });
+        setTimeout(() => setSubmitted(false), 10000); // Show success for 10 seconds
+      } else {
+        setSubmitError(result.error || 'Failed to send message. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      setSubmitError('Network error. Please check your connection and try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -147,16 +179,7 @@ export default function SupportPage() {
             </p>
             
             {/* Quick Contact Options */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="pt-6 text-center">
-                  <MessageCircle className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                  <h3 className="font-semibold mb-2">Live Chat</h3>
-                  <p className="text-sm text-gray-600 mb-4">Chat with our support team in real-time</p>
-                  <Button size="sm" className="w-full">Start Chat</Button>
-                </CardContent>
-              </Card>
-              
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 max-w-2xl mx-auto">
               <Card className="hover:shadow-lg transition-shadow">
                 <CardContent className="pt-6 text-center">
                   <Mail className="h-12 w-12 text-green-600 mx-auto mb-4" />
@@ -289,6 +312,15 @@ export default function SupportPage() {
                     </p>
                   </div>
                 ) : (
+                  <div>
+                    {submitError && (
+                      <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-center">
+                          <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+                          <p className="text-red-800 text-sm">{submitError}</p>
+                        </div>
+                      </div>
+                    )}
                   <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -358,11 +390,21 @@ export default function SupportPage() {
                       />
                     </div>
 
-                    <Button type="submit" className="w-full">
-                      <Send className="h-4 w-4 mr-2" />
-                      Send Message
+                    <Button type="submit" className="w-full" disabled={submitting}>
+                      {submitting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Message
+                        </>
+                      )}
                     </Button>
                   </form>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -381,7 +423,7 @@ export default function SupportPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
               <Card className="hover:shadow-lg transition-shadow">
                 <CardContent className="pt-6 text-center">
                   <FileText className="h-12 w-12 text-blue-600 mx-auto mb-4" />
@@ -404,19 +446,6 @@ export default function SupportPage() {
                   </p>
                   <Button size="sm" variant="outline" className="w-full">
                     Watch Videos
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardContent className="pt-6 text-center">
-                  <Users className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-                  <h3 className="font-semibold mb-2">Community Forum</h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Connect with other users and share experiences
-                  </p>
-                  <Button size="sm" variant="outline" className="w-full">
-                    Join Forum
                   </Button>
                 </CardContent>
               </Card>
