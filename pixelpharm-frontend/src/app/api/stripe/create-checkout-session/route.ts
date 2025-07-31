@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       }, { status: 401 });
     }
 
-    const { planType }: { planType: PlanType } = await request.json();
+    const { planType, couponCode }: { planType: PlanType; couponCode?: string } = await request.json();
 
     if (!planType || !PRICING_PLANS[planType]) {
       return NextResponse.json({ error: 'Invalid plan type' }, { status: 400 });
@@ -49,6 +49,7 @@ export async function POST(request: Request) {
       mode,
       successUrl: STRIPE_CONFIG.SUCCESS_URL,
       cancelUrl: STRIPE_CONFIG.CANCEL_URL,
+      couponCode,
     });
 
     console.log('✅ Checkout session created:', {

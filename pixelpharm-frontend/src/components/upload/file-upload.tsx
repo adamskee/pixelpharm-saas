@@ -136,7 +136,7 @@ export default function OptimizedFileUpload({
       let processingKey = fileKey;
 
       // Step 3: Claude OCR Processing
-      setProcessingStep(`Analyzing ${file.name} with Claude AI...`);
+      setProcessingStep(`Analyzing ${file.name} with Multi-Medical Model AI...`);
 
       const ocrResponse = await fetch("/api/ai/claude-ocr", {
         method: "POST",

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -271,7 +272,7 @@ export default function PixelPharmHomepage(): JSX.Element {
             </Badge>
           </div>
 
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-8 leading-tight">
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-8 leading-tight mt-16">
             <span className="text-white block mb-2">Transform Your</span>
             <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent block mb-2">
               Health Data
@@ -298,7 +299,7 @@ export default function PixelPharmHomepage(): JSX.Element {
             <Button
               size="lg"
               variant="outline"
-              onClick={() => router.push("/dashboard")}
+              onClick={() => router.push("/demo")}
               className="border-white/30 text-white hover:bg-white/10 text-lg px-8 py-4 backdrop-blur-sm"
             >
               <Play className="h-5 w-5 mr-2" />
@@ -325,6 +326,21 @@ export default function PixelPharmHomepage(): JSX.Element {
               <span className="font-medium">Clinical Grade</span>
             </div>
           </div>
+
+          {/* Dashboard Preview Image */}
+          <div className="mt-16 max-w-5xl mx-auto mb-16">
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-white/10 backdrop-blur-sm border border-white/20">
+              <Image
+                src="/screenshots/hero1.jpg"
+                alt="PixelPharm Health Dashboard Preview"
+                width={1200}
+                height={800}
+                className="w-full h-auto object-cover"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+            </div>
+          </div>
         </div>
 
         {/* Scroll Indicator */}
@@ -341,9 +357,9 @@ export default function PixelPharmHomepage(): JSX.Element {
               Understanding Your Health Starts Here
             </h2>
             <p className="text-xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
-              Our Multi-MLM analyzes 206+ biomarkers to provide comprehensive
-              insights into your cardiovascular, metabolic, and overall wellness
-              status.
+              PixelPharm's Multi-MLM analyzes 206+ biomarkers to provide
+              comprehensive insights into your cardiovascular, metabolic, and
+              overall wellness status.
             </p>
           </div>
 
@@ -474,6 +490,122 @@ export default function PixelPharmHomepage(): JSX.Element {
         </div>
       </section>
 
+      {/* Purchase Incentive CTA Section */}
+      <section className="py-20 bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 relative overflow-hidden">
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage:
+              'url(\'data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\')',
+          }}
+        ></div>
+
+        <div className="relative max-w-6xl mx-auto px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <Badge className="mb-6 bg-white/20 text-white border-white/30 backdrop-blur-sm text-lg px-4 py-2">
+              <Clock className="h-5 w-5 mr-2" />
+              Limited Time • Start Your Health Journey Today
+            </Badge>
+
+            <h2 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
+              Don't Wait for a Health Crisis
+            </h2>
+
+            <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-4xl mx-auto leading-relaxed">
+              Take control of your health now. Get instant Lab based Multi
+              Medical Language Model AI-powered analysis of your blood work and
+              discover potential issues before they become serious problems.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 text-center">
+              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Zap className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">
+                Instant Results
+              </h3>
+              <p className="text-white/80 text-lg">
+                Get comprehensive health insights in under 2 minutes, not weeks
+              </p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 text-center">
+              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Shield className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">
+                Early Detection
+              </h3>
+              <p className="text-white/80 text-lg">
+                Catch potential health issues before symptoms appear
+              </p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 text-center">
+              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Heart className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">
+                Peace of Mind
+              </h3>
+              <p className="text-white/80 text-lg">
+                Know exactly where you stand with your health metrics
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 md:p-12 border border-white/20 text-center">
+            <div className="mb-8">
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-6 py-3 rounded-full font-bold text-lg mb-4">
+                <Star className="h-5 w-5 fill-current" />
+                Special Launch Pricing
+              </div>
+              <div className="text-6xl md:text-7xl font-bold text-white mb-2">
+                50% OFF
+              </div>
+              <p className="text-2xl text-white/90 mb-6">
+                First 1000 customers only •{" "}
+                <span className="line-through opacity-60">$49</span> Now just
+                $24.99
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+              <Button
+                size="lg"
+                onClick={() => router.push("/checkout?plan=pro")}
+                className="bg-white text-slate-900 hover:bg-gray-100 text-xl px-10 py-6 shadow-2xl font-bold transform hover:scale-105 transition-all duration-200"
+              >
+                <ArrowRight className="h-6 w-6 mr-3" />
+                Claim Your 50% Discount Now
+              </Button>
+
+              <div className="text-white/80 text-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle className="h-4 w-4 text-green-300" />
+                  <span>No subscription required</span>
+                </div>
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle className="h-4 w-4 text-green-300" />
+                  <span>Instant access to results</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-300" />
+                  <span>HIPAA compliant & secure</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-white/60 text-sm mt-6">
+              ⏰ Limited time offer expires in 7 days • Join 1000+ satisfied
+              customers
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Dashboard Preview */}
       <section className="py-20 bg-gradient-to-br from-slate-100 to-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -549,7 +681,7 @@ export default function PixelPharmHomepage(): JSX.Element {
           <div className="text-center mt-12">
             <Button
               size="lg"
-              onClick={() => router.push("/dashboard")}
+              onClick={() => router.push("/demo")}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg px-8 py-4 shadow-xl"
             >
               <BarChart3 className="h-5 w-5 mr-2" />

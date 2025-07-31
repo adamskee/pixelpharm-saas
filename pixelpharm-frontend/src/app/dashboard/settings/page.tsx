@@ -279,12 +279,40 @@ export default function UserSettingsPage() {
   const handleExportData = async () => {
     setLoading(true);
     try {
-      // Simulate data export
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setSaveMessage("Data export started! You'll receive an email when ready.");
+      const response = await fetch('/api/user/export-data', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to export data');
+      }
+
+      // Get the filename from the Content-Disposition header
+      const contentDisposition = response.headers.get('content-disposition');
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+      const filename = filenameMatch?.[1] || 'pixelpharm-data-export.json';
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      setSaveMessage("Data exported successfully!");
       setTimeout(() => setSaveMessage(""), 5000);
     } catch (error) {
+      console.error('Export error:', error);
       setSaveMessage("Failed to export data. Please try again.");
+      setTimeout(() => setSaveMessage(""), 5000);
     } finally {
       setLoading(false);
     }

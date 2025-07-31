@@ -46,30 +46,11 @@ export default function PricingPage() {
     setLoading(planType);
 
     try {
-      const response = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ planType }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 401 && data.redirect) {
-          // Redirect to sign in page
-          router.push(data.redirect);
-          return;
-        }
-        throw new Error(data.error || "Failed to create checkout session");
-      }
-
-      // Redirect to Stripe checkout
-      window.location.href = data.url;
+      // Redirect to checkout page with plan parameter
+      router.push(`/checkout?plan=${planType}`);
     } catch (error: any) {
       console.error("Checkout error:", error);
-      alert(`Payment failed: ${error.message}`);
+      alert(`Navigation failed: ${error.message}`);
     } finally {
       setLoading(null);
     }

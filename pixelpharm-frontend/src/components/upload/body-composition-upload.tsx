@@ -155,9 +155,9 @@ export default function BodyCompositionUpload({
 
         setUploadProgress(50);
 
-        // Step 4: Claude AI Processing for body composition
+        // Step 4: Multi-Medical Model AI Processing for body composition
         setUploadStatus("processing");
-        setProcessingStep("Analyzing body composition scan with Claude AI...");
+        setProcessingStep("Analyzing body composition scan with Multi-Medical Model AI...");
 
         let aiData = null; // Use local variable instead of state
 
@@ -177,17 +177,17 @@ export default function BodyCompositionUpload({
             const metricsCount = Object.keys(
               aiData.bodyComposition || {}
             ).length;
-            setProcessingStep(`Claude AI extracted ${metricsCount} body composition metrics`);
+            setProcessingStep(`Multi-Medical Model AI extracted ${metricsCount} body composition metrics`);
             console.log("🎯 Claude body composition analysis completed:", aiData);
           } else {
             console.warn(
-              "Claude AI analysis failed, but upload succeeded"
+              "Multi-Medical Model AI analysis failed, but upload succeeded"
             );
-            setProcessingStep("Scan uploaded (Claude AI analysis unavailable)");
+            setProcessingStep("Scan uploaded (Multi-Medical Model AI analysis unavailable)");
           }
         } catch (aiError) {
-          console.warn("Claude AI processing error:", aiError);
-          setProcessingStep("Scan uploaded (Claude AI analysis failed)");
+          console.warn("Multi-Medical Model AI processing error:", aiError);
+          setProcessingStep("Scan uploaded (Multi-Medical Model AI analysis failed)");
         }
 
         setUploadProgress(75);
@@ -301,7 +301,7 @@ export default function BodyCompositionUpload({
       case "uploading":
         return "Uploading...";
       case "processing":
-        return "Claude AI Analysis...";
+        return "Multi-Medical Model AI Analysis...";
       case "storing":
         return "Saving to Database...";
       case "success":
@@ -441,7 +441,7 @@ export default function BodyCompositionUpload({
               Object.keys(bodyCompositionResults.bodyComposition || {}).length >
                 0 && (
                 <span className="block mt-1">
-                  ✨ Claude AI extracted{" "}
+                  ✨ Multi-Medical Model AI extracted{" "}
                   {Object.keys(bodyCompositionResults.bodyComposition).length}{" "}
                   body composition metrics
                 </span>
@@ -638,10 +638,10 @@ export default function BodyCompositionUpload({
           <ul className="text-xs text-blue-700 space-y-1">
             <li>
               • Your body composition scan has been securely uploaded and
-              analyzed by Claude AI
+              analyzed by Multi-Medical Model AI
             </li>
             <li>
-              • Claude AI-extracted metrics are now stored in your health database
+              • Multi-Medical Model AI-extracted metrics are now stored in your health database
             </li>
             <li>
               • Visit your dashboard to see body composition trends and

@@ -207,25 +207,136 @@ export async function GET(request: Request) {
 
         const normalBiomarkers = totalBiomarkerCount - abnormalBiomarkers;
 
-        // Calculate health score based on real data
+        // Calculate health score based on real data (biomarkers + body composition)
         let healthScore = 100;
+        
+        // Biomarker-based scoring
         if (abnormalBiomarkers > 0)
           healthScore -= Math.min(abnormalBiomarkers * 5, 50);
         if (criticalBiomarkers > 0) healthScore -= criticalBiomarkers * 15;
+        
+        // Body composition-based scoring
+        if (latestBodyComposition) {
+          console.log('🏋️ Including body composition in health score calculation');
+          
+          // BMI scoring (if we have height from user profile)
+          if (user?.height && latestBodyComposition.totalWeight) {
+            const height = parseFloat(user.height.toString()) / 100; // convert cm to m
+            const weight = parseFloat(latestBodyComposition.totalWeight.toString());
+            const bmi = weight / (height * height);
+            
+            console.log(`🏋️ BMI calculation: ${bmi.toFixed(1)}`);
+            
+            // BMI scoring: optimal range 18.5-24.9
+            if (bmi < 18.5) healthScore -= 10; // underweight
+            else if (bmi > 30) healthScore -= 20; // obese
+            else if (bmi > 25) healthScore -= 10; // overweight
+            else healthScore += 5; // healthy BMI bonus
+          }
+          
+          // Body fat percentage scoring
+          if (latestBodyComposition.bodyFatPercentage && user?.gender) {
+            const bodyFat = parseFloat(latestBodyComposition.bodyFatPercentage.toString());
+            const gender = user.gender.toLowerCase();
+            
+            console.log(`🏋️ Body fat: ${bodyFat}% (${gender})`);
+            
+            // Gender-specific healthy body fat ranges
+            let isHealthyBodyFat = false;
+            if (gender === 'male') {
+              isHealthyBodyFat = bodyFat >= 10 && bodyFat <= 20;
+              if (bodyFat > 25) healthScore -= 15;
+              else if (bodyFat > 22) healthScore -= 8;
+              else if (isHealthyBodyFat) healthScore += 5;
+            } else if (gender === 'female') {
+              isHealthyBodyFat = bodyFat >= 16 && bodyFat <= 30;
+              if (bodyFat > 35) healthScore -= 15;
+              else if (bodyFat > 32) healthScore -= 8;
+              else if (isHealthyBodyFat) healthScore += 5;
+            }
+          }
+          
+          // Muscle mass scoring (if available)
+          if (latestBodyComposition.skeletalMuscleMass) {
+            const muscleMass = parseFloat(latestBodyComposition.skeletalMuscleMass.toString());
+            console.log(`🏋️ Muscle mass: ${muscleMass}kg`);
+            
+            // Higher muscle mass is generally positive for health
+            if (muscleMass > 30) healthScore += 5; // good muscle mass
+            else if (muscleMass < 20) healthScore -= 5; // low muscle mass concern
+          }
+          
+          console.log(`🏋️ Health score after body composition: ${healthScore}`);
+        }
+        
         healthScore = Math.max(20, Math.min(100, healthScore));
 
-        // Determine risk level
+        // Determine risk level (biomarkers + body composition)
         let riskLevel = "LOW";
-        if (criticalBiomarkers > 0) riskLevel = "CRITICAL";
-        else if (abnormalBiomarkers > 3) riskLevel = "HIGH";
-        else if (abnormalBiomarkers > 1) riskLevel = "MODERATE";
+        let bodyCompositionRiskFactors = 0;
+        
+        // Check body composition risk factors
+        if (latestBodyComposition && user?.height) {
+          const weight = latestBodyComposition.totalWeight ? parseFloat(latestBodyComposition.totalWeight.toString()) : null;
+          const bodyFat = latestBodyComposition.bodyFatPercentage ? parseFloat(latestBodyComposition.bodyFatPercentage.toString()) : null;
+          
+          if (weight) {
+            const height = parseFloat(user.height.toString()) / 100;
+            const bmi = weight / (height * height);
+            
+            if (bmi > 35) bodyCompositionRiskFactors += 2; // severe obesity
+            else if (bmi > 30) bodyCompositionRiskFactors += 1; // obesity
+            else if (bmi < 18.5) bodyCompositionRiskFactors += 1; // underweight
+          }
+          
+          if (bodyFat && user?.gender) {
+            const gender = user.gender.toLowerCase();
+            if ((gender === 'male' && bodyFat > 25) || (gender === 'female' && bodyFat > 35)) {
+              bodyCompositionRiskFactors += 1; // high body fat
+            }
+          }
+        }
+        
+        // Combined risk assessment
+        if (criticalBiomarkers > 0 || bodyCompositionRiskFactors >= 2) riskLevel = "CRITICAL";
+        else if (abnormalBiomarkers > 3 || (abnormalBiomarkers > 1 && bodyCompositionRiskFactors >= 1)) riskLevel = "HIGH";
+        else if (abnormalBiomarkers > 1 || bodyCompositionRiskFactors >= 1) riskLevel = "MODERATE";
+        
+        console.log(`🏋️ Risk assessment: biomarkers(${abnormalBiomarkers}), body composition factors(${bodyCompositionRiskFactors}), final risk: ${riskLevel}`);
 
-        // Calculate data completeness
-        const expectedBiomarkers = 25; // Standard comprehensive panel
-        const dataCompleteness = Math.min(
-          100,
-          Math.round((uniqueBiomarkerNames.length / expectedBiomarkers) * 100)
-        );
+        // Calculate data completeness (biomarkers + body composition + user profile)
+        let completenessScore = 0;
+        const maxCompleteness = 100;
+        
+        // Biomarker completeness (60% of total score)
+        const expectedBiomarkers = 25;
+        const biomarkerCompleteness = Math.min(60, (uniqueBiomarkerNames.length / expectedBiomarkers) * 60);
+        completenessScore += biomarkerCompleteness;
+        
+        // Body composition completeness (25% of total score)
+        if (latestBodyComposition) {
+          let bodyCompositionFields = 0;
+          if (latestBodyComposition.totalWeight) bodyCompositionFields++;
+          if (latestBodyComposition.bodyFatPercentage) bodyCompositionFields++;
+          if (latestBodyComposition.skeletalMuscleMass) bodyCompositionFields++;
+          
+          const bodyCompleteness = (bodyCompositionFields / 3) * 25;
+          completenessScore += bodyCompleteness;
+          console.log(`🏋️ Body composition completeness: ${bodyCompleteness}% (${bodyCompositionFields}/3 fields)`);
+        }
+        
+        // User profile completeness (15% of total score)
+        let profileFields = 0;
+        if (user?.height) profileFields++;
+        if (user?.weight) profileFields++;
+        if (user?.dateOfBirth) profileFields++;
+        if (user?.gender) profileFields++;
+        
+        const profileCompleteness = (profileFields / 4) * 15;
+        completenessScore += profileCompleteness;
+        
+        const dataCompleteness = Math.min(100, Math.round(completenessScore));
+        console.log(`🏋️ Data completeness: ${dataCompleteness}% (biomarkers: ${biomarkerCompleteness}%, body: ${latestBodyComposition ? (completenessScore - biomarkerCompleteness - profileCompleteness) : 0}%, profile: ${profileCompleteness}%)`);
 
         const realStats = {
           user,

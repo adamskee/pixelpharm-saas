@@ -24,18 +24,47 @@ export const STRIPE_CONFIG = {
 // Price information for display
 export const PRICING_PLANS = {
   basic: {
-    name: 'Basic',
+    name: 'Elite Athlete',
     price: 24.95,
+    period: 'per month',
     priceId: STRIPE_CONFIG.BASIC_PRICE_ID,
     type: 'subscription' as const,
     interval: 'month' as const,
+    description: 'Created for elite athletes, coaches, and dedicated health optimizers who demand clinical-grade insights',
+    features: [
+      'Up to 5 blood test uploads per month',
+      'Advanced AI health analysis',
+      'Health score tracking',
+      'Standard biomarker insights',
+      'Comprehensive health reports',
+      'Trend analysis & predictions',
+      'Risk assessment reports',
+      'Email support',
+      'Performance optimization recommendations based on hormonal profiles',
+      'Recovery protocol suggestions using HRV & inflammatory markers',
+      'Sports nutritionist-grade supplement timing & dosage recommendations',
+    ],
   },
   pro: {
     name: 'Pro',
     price: 49.95,
+    period: '30 days access',
     priceId: STRIPE_CONFIG.PRO_PRICE_ID,
     type: 'payment' as const,
     interval: null,
+    description: 'One-time purchase for lifetime access to professional-grade health insights from your blood tests',
+    features: [
+      '20 blood test uploads',
+      'Advanced AI health analysis',
+      'Comprehensive health reports',
+      'Trend analysis & predictions',
+      'Priority email support',
+      'Custom health recommendations',
+      'Body composition tracking',
+      'Risk assessment reports',
+      '30 days full dashboard access',
+      'Complete insights & analytics',
+    ],
   },
 } as const;
 
