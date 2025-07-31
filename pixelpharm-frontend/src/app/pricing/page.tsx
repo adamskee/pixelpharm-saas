@@ -132,7 +132,7 @@ export default function PricingPage() {
             <Link href="/" className="flex items-center space-x-2">
               <Activity className="h-8 w-8 text-blue-600" />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                PixelPharm
+                PixelPharm Health
               </span>
             </Link>
             <nav className="hidden md:flex items-center space-x-8">
@@ -267,7 +267,7 @@ export default function PricingPage() {
           <div className="container mx-auto px-4 max-w-7xl">
             <div className="text-center mb-16">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                Why Choose PixelPharm?
+                Why Choose PixelPharm Health?
               </h2>
               <p className="text-xl text-gray-600">
                 Advanced health analytics powered by cutting-edge Multi Medical
@@ -420,7 +420,7 @@ export default function PricingPage() {
               <div className="flex items-center space-x-2 mb-4">
                 <Activity className="h-8 w-8 text-blue-400" />
                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  PixelPharm
+                  PixelPharm Health
                 </span>
               </div>
               <p className="text-gray-300 mb-4 max-w-md">
@@ -497,7 +497,7 @@ export default function PricingPage() {
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center">
             <p className="text-gray-400 text-sm">
-              © 2024 PixelPharm. All rights reserved.
+              © 2024 PixelPharm Health. All rights reserved.
             </p>
           </div>
         </div>

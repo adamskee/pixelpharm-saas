@@ -66,7 +66,7 @@ export default function DemoPage() {
               </Button>
               <div className="flex items-center space-x-2">
                 <Heart className="h-6 w-6 text-blue-600" />
-                <span className="text-xl font-bold">PixelPharm</span>
+                <span className="text-xl font-bold">PixelPharm Health</span>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -93,7 +93,7 @@ export default function DemoPage() {
               Experience Your Health Dashboard
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              See how PixelPharm transforms your blood test results into
+              See how PixelPharm Health transforms your blood test results into
               actionable health insights with our comprehensive analytics
               dashboard.
             </p>
@@ -192,7 +192,7 @@ export default function DemoPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              What You Get With PixelPharm
+              What You Get With PixelPharm Health
             </h2>
             <p className="text-lg text-gray-600">
               Professional-grade health analytics made accessible
@@ -246,7 +246,7 @@ export default function DemoPage() {
             <div className="md:col-span-2">
               <div className="flex items-center space-x-2 mb-4">
                 <Heart className="h-8 w-8 text-blue-400" />
-                <span className="text-2xl font-bold">PixelPharm</span>
+                <span className="text-2xl font-bold">PixelPharm Health</span>
               </div>
               <p className="text-gray-300 max-w-md">
                 Empowering individuals with professional-grade health analytics
@@ -322,7 +322,7 @@ export default function DemoPage() {
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center">
             <p className="text-gray-400">
-              © 2024 PixelPharm. All rights reserved.
+              © 2024 PixelPharm Health. All rights reserved.
             </p>
           </div>
         </div>

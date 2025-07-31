@@ -44,7 +44,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               <Link href="/dashboard" className="flex items-center space-x-2">
                 <Heart className="h-8 w-8 text-blue-600" />
                 <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  PixelPharm
+                  PixelPharm Health
                 </span>
               </Link>
             </div>
@@ -116,7 +116,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               <div className="flex items-center space-x-2 mb-4">
                 <Heart className="h-8 w-8 text-blue-400" />
                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  PixelPharm
+                  PixelPharm Health
                 </span>
               </div>
               <p className="text-gray-300 mb-4 max-w-md">
@@ -182,7 +182,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           {/* Bottom Bar */}
           <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
-              © 2024 PixelPharm. All rights reserved.
+              © 2024 PixelPharm Health. All rights reserved.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <Link href="/privacy" className="text-gray-400 hover:text-white text-sm transition-colors">

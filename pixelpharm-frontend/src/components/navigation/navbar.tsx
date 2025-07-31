@@ -27,7 +27,7 @@ export function Navbar() {
         <div className="flex items-center space-x-4">
           <Link href="/dashboard" className="flex items-center space-x-2">
             <Heart className="h-6 w-6 text-blue-600" />
-            <span className="text-xl font-bold">PixelPharm</span>
+            <span className="text-xl font-bold">PixelPharm Health</span>
           </Link>
         </div>
 

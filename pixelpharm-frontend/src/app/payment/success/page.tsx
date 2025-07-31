@@ -52,7 +52,7 @@ export default function PaymentSuccess() {
             Payment Successful!
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Thank you for choosing PixelPharm. Your subscription is now active and you have full access to all features.
+            Thank you for choosing PixelPharm Health. Your subscription is now active and you have full access to all features.
           </p>
         </div>
 
@@ -64,7 +64,7 @@ export default function PaymentSuccess() {
                 <span>What's Next?</span>
               </CardTitle>
               <CardDescription>
-                Get started with your PixelPharm experience
+                Get started with your PixelPharm Health experience
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

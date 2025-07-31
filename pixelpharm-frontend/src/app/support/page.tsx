@@ -51,7 +51,7 @@ export default function SupportPage() {
 
   const faqs = [
     {
-      question: "How accurate is PixelPharm's AI analysis?",
+      question: "How accurate is PixelPharm Health's AI analysis?",
       answer: "Our AI models are trained on millions of lab results and achieve 95%+ accuracy when compared to clinical standards. However, our analysis should always be used alongside professional medical advice.",
       category: "general"
     },
@@ -147,7 +147,7 @@ export default function SupportPage() {
             <Link href="/" className="flex items-center space-x-2">
               <Activity className="h-8 w-8 text-blue-600" />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                PixelPharm
+                PixelPharm Health
               </span>
             </Link>
             <nav className="hidden md:flex items-center space-x-8">
@@ -419,7 +419,7 @@ export default function SupportPage() {
                 Additional Resources
               </h2>
               <p className="text-xl text-gray-600">
-                Helpful guides and documentation to get the most out of PixelPharm
+                Helpful guides and documentation to get the most out of PixelPharm Health
               </p>
             </div>
 
@@ -429,7 +429,7 @@ export default function SupportPage() {
                   <FileText className="h-12 w-12 text-blue-600 mx-auto mb-4" />
                   <h3 className="font-semibold mb-2">User Guide</h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Comprehensive guide to using all PixelPharm features
+                    Comprehensive guide to using all PixelPharm Health features
                   </p>
                   <Button size="sm" variant="outline" className="w-full">
                     View Guide
@@ -463,7 +463,7 @@ export default function SupportPage() {
                   <div>
                     <h3 className="font-semibold text-red-900 mb-2">Medical Emergency Notice</h3>
                     <p className="text-red-800 text-sm">
-                      PixelPharm is not intended for medical emergencies. If you're experiencing a medical emergency, 
+                      PixelPharm Health is not intended for medical emergencies. If you're experiencing a medical emergency, 
                       please call 911 (US) or your local emergency services immediately. Our support team cannot 
                       provide medical advice or emergency assistance.
                     </p>
@@ -483,7 +483,7 @@ export default function SupportPage() {
               <div className="flex items-center space-x-2 mb-4">
                 <Activity className="h-8 w-8 text-blue-400" />
                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  PixelPharm
+                  PixelPharm Health
                 </span>
               </div>
               <p className="text-gray-300 mb-4 max-w-md">
@@ -509,7 +509,7 @@ export default function SupportPage() {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center">
-            <p className="text-gray-400 text-sm">© 2024 PixelPharm. All rights reserved.</p>
+            <p className="text-gray-400 text-sm">© 2024 PixelPharm Health. All rights reserved.</p>
           </div>
         </div>
       </footer>

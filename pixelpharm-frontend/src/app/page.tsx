@@ -176,7 +176,7 @@ export default function PixelPharmHomepage(): JSX.Element {
                 <Activity className="h-4 w-4 text-white" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                PixelPharm
+                PixelPharm Health
               </span>
             </div>
 
@@ -790,7 +790,7 @@ export default function PixelPharmHomepage(): JSX.Element {
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Activity className="h-4 w-4 text-white" />
                 </div>
-                <span className="text-2xl font-bold">PixelPharm</span>
+                <span className="text-2xl font-bold">PixelPharm Health</span>
               </div>
               <p className="text-slate-300 max-w-md leading-relaxed">
                 Empowering individuals with professional-grade health analytics
@@ -870,7 +870,7 @@ export default function PixelPharmHomepage(): JSX.Element {
 
           <div className="border-t border-slate-700 mt-12 pt-8 text-center">
             <p className="text-slate-400">
-              © 2024 PixelPharm. All rights reserved. • HIPAA Compliant •
+              © 2024 PixelPharm Health. All rights reserved. • HIPAA Compliant •
               Clinical-Grade Analytics
             </p>
           </div>
