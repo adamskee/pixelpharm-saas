@@ -338,7 +338,7 @@ Extract systematically:
 
 ### JSON Output Structure
 
-```json
+Expected JSON format:
 {
   "document_type": "blood_test" | "fitness_test",
   "analysis_metadata": {
@@ -403,7 +403,7 @@ Extract systematically:
     "disclaimer": "string or null"
   }
 }
-```
+(end of JSON structure)
 
 ---
 
