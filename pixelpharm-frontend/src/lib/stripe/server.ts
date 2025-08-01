@@ -45,7 +45,10 @@ export async function createCheckoutSession({
         const stripeCoupon = await stripe.coupons.retrieve(couponCode.toUpperCase());
         if (stripeCoupon) {
           discounts = [{ coupon: stripeCoupon.id }];
-          console.log(`✅ Applying coupon: ${stripeCoupon.id} (${stripeCoupon.percent_off}% off)`);
+          const discountDescription = stripeCoupon.percent_off 
+            ? `${stripeCoupon.percent_off}% off`
+            : `$${(stripeCoupon.amount_off! / 100).toFixed(2)} off`;
+          console.log(`✅ Applying coupon: ${stripeCoupon.id} (${discountDescription})`);
         }
       } catch (error: any) {
         console.log(`❌ Stripe coupon '${couponCode}' not found:`, error.message);

@@ -37,6 +37,7 @@ function CheckoutPageContent() {
   const [couponValidation, setCouponValidation] = useState<{
     isValid: boolean;
     discount: number;
+    discountType: 'percent' | 'amount';
     message: string;
   } | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
@@ -84,12 +85,14 @@ function CheckoutPageContent() {
         setCouponValidation({
           isValid: true,
           discount: data.discount,
+          discountType: data.discountType || 'percent',
           message: data.message,
         });
       } else {
         setCouponValidation({
           isValid: false,
           discount: 0,
+          discountType: 'percent',
           message: data.error || "Invalid coupon code",
         });
       }
@@ -97,6 +100,7 @@ function CheckoutPageContent() {
       setCouponValidation({
         isValid: false,
         discount: 0,
+        discountType: 'percent',
         message: "Error validating coupon code",
       });
     } finally {
@@ -178,8 +182,12 @@ function CheckoutPageContent() {
   }
 
   const originalPrice = plan.price;
-  const discountAmount = couponValidation?.isValid ? (originalPrice * couponValidation.discount / 100) : 0;
-  const finalPrice = originalPrice - discountAmount;
+  const discountAmount = couponValidation?.isValid 
+    ? couponValidation.discountType === 'percent'
+      ? (originalPrice * couponValidation.discount / 100)
+      : Math.min(couponValidation.discount, originalPrice) // Cap at original price for fixed amount
+    : 0;
+  const finalPrice = Math.max(0, originalPrice - discountAmount); // Ensure price doesn't go negative
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
