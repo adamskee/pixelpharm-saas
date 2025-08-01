@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Heart,
   Brain,
@@ -29,11 +30,19 @@ import {
   Stethoscope,
   FlaskConical,
   Beaker,
+  Mail,
+  Loader2,
 } from "lucide-react";
 
 export default function PixelPharmHomepage(): JSX.Element {
   const router = useRouter();
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<{
+    type: 'success' | 'error' | null;
+    message: string;
+  }>({ type: null, message: "" });
 
   const handleGetStarted = () => {
     router.push("/auth/signin");
@@ -41,6 +50,53 @@ export default function PixelPharmHomepage(): JSX.Element {
 
   const handleUploadResults = () => {
     router.push("/auth/signin");
+  };
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newsletterEmail.trim()) {
+      setSubscriptionStatus({
+        type: 'error',
+        message: 'Please enter your email address'
+      });
+      return;
+    }
+
+    setIsSubscribing(true);
+    setSubscriptionStatus({ type: null, message: "" });
+
+    try {
+      const response = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: newsletterEmail.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSubscriptionStatus({
+          type: 'success',
+          message: data.message || 'Successfully subscribed to newsletter!'
+        });
+        setNewsletterEmail("");
+      } else {
+        setSubscriptionStatus({
+          type: 'error',
+          message: data.error || 'Failed to subscribe. Please try again.'
+        });
+      }
+    } catch (error) {
+      setSubscriptionStatus({
+        type: 'error',
+        message: 'Network error. Please try again.'
+      });
+    } finally {
+      setIsSubscribing(false);
+    }
   };
 
   const healthGoals = [
@@ -737,6 +793,71 @@ export default function PixelPharmHomepage(): JSX.Element {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter Subscription Section */}
+      <section className="py-16 bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
+          <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-slate-200/50">
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                <Mail className="h-8 w-8 text-white" />
+              </div>
+            </div>
+            
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Stay Updated with Health Insights
+            </h2>
+            <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
+              Get the latest health optimization tips, biomarker insights, and exclusive content 
+              delivered straight to your inbox. Join our community of health-conscious individuals.
+            </p>
+
+            <form onSubmit={handleNewsletterSubmit} className="max-w-md mx-auto">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Input
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={newsletterEmail}
+                  onChange={(e) => setNewsletterEmail(e.target.value)}
+                  disabled={isSubscribing}
+                  className="flex-1 h-12 px-4 text-base border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                />
+                <Button
+                  type="submit"
+                  disabled={isSubscribing}
+                  className="h-12 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold whitespace-nowrap"
+                >
+                  {isSubscribing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Subscribing...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="h-4 w-4 mr-2" />
+                      Subscribe
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {subscriptionStatus.message && (
+                <div className={`mt-4 p-3 rounded-lg text-sm ${
+                  subscriptionStatus.type === 'success' 
+                    ? 'bg-green-50 text-green-800 border border-green-200' 
+                    : 'bg-red-50 text-red-800 border border-red-200'
+                }`}>
+                  {subscriptionStatus.message}
+                </div>
+              )}
+            </form>
+
+            <p className="text-sm text-slate-500 mt-6">
+              We respect your privacy. Unsubscribe at any time.
+            </p>
           </div>
         </div>
       </section>
