@@ -80,11 +80,12 @@ export async function POST(request: Request) {
           });
         } else if (stripeCoupon.amount_off) {
           const discountAmount = stripeCoupon.amount_off / 100; // Convert cents to dollars
+          const currency = stripeCoupon.currency?.toUpperCase() || 'USD';
           return NextResponse.json({
             isValid: true,
             discount: discountAmount,
             discountType: 'amount',
-            message: `Applied $${discountAmount.toFixed(2)} discount`,
+            message: `Applied $${discountAmount.toFixed(2)} ${currency} discount`,
             stripeId: stripeCoupon.id,
           });
         }
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
     // Return success for predefined coupon
     const discountMessage = coupon.discountType === 'percent' 
       ? `${coupon.description} - ${coupon.discount}% off`
-      : `${coupon.description} - $${coupon.discount} off`;
+      : `${coupon.description} - $${coupon.discount} AUD off`;
 
     return NextResponse.json({
       isValid: true,

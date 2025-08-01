@@ -28,8 +28,8 @@ const COUPONS = [
   },
   {
     id: 'TESTUSER',
-    amount_off: 4995, // $49.95 in cents
-    currency: 'usd',
+    amount_off: 4995, // $49.95 in cents (AUD)
+    currency: 'aud',
     name: 'Test User - Free Pro Plan',
     duration: 'once',
   },
