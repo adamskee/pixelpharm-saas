@@ -17,6 +17,13 @@ export async function POST(request: Request) {
 
     const { planType, couponCode }: { planType: PlanType; couponCode?: string } = await request.json();
 
+    console.log('🔍 Backend received checkout data:', {
+      planType,
+      couponCode,
+      couponCodeType: typeof couponCode,
+      couponCodeLength: couponCode?.length
+    });
+
     if (!planType || !PRICING_PLANS[planType]) {
       return NextResponse.json({ error: 'Invalid plan type' }, { status: 400 });
     }

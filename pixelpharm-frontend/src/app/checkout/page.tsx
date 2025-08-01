@@ -132,7 +132,56 @@ function CheckoutPageContent() {
     setIsProcessing(true);
     setError("");
 
+    // If there's a coupon code but no validation yet, validate it first and wait for result
+    let currentCouponValidation = couponValidation;
+    if (couponCode.trim() && !couponValidation) {
+      console.log('🔄 Validating coupon before checkout...');
+      try {
+        const response = await fetch("/api/stripe/validate-coupon", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ code: couponCode.trim() }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          currentCouponValidation = {
+            isValid: true,
+            discount: data.discount,
+            discountType: data.discountType || 'percent',
+            message: data.message,
+          };
+          setCouponValidation(currentCouponValidation);
+        } else {
+          currentCouponValidation = {
+            isValid: false,
+            discount: 0,
+            discountType: 'percent',
+            message: data.error || "Invalid coupon code",
+          };
+          setCouponValidation(currentCouponValidation);
+        }
+      } catch (error) {
+        currentCouponValidation = {
+          isValid: false,
+          discount: 0,
+          discountType: 'percent',
+          message: "Error validating coupon code",
+        };
+        setCouponValidation(currentCouponValidation);
+      }
+    }
+
     try {
+      const finalCouponCode = currentCouponValidation?.isValid ? couponCode.trim() : undefined;
+      console.log('🛒 Frontend checkout data:', {
+        planType,
+        couponCode: finalCouponCode,
+        couponValidation: currentCouponValidation,
+        rawCouponCode: couponCode
+      });
+
       const response = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: {
@@ -140,7 +189,7 @@ function CheckoutPageContent() {
         },
         body: JSON.stringify({ 
           planType,
-          couponCode: couponValidation?.isValid ? couponCode.trim() : undefined
+          couponCode: finalCouponCode
         }),
       });
 
