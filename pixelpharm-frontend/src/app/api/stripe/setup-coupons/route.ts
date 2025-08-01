@@ -26,6 +26,13 @@ const COUPONS = [
     name: 'Save 10% on your purchase',
     duration: 'once',
   },
+  {
+    id: 'TESTUSER',
+    amount_off: 4995, // $49.95 in cents
+    currency: 'usd',
+    name: 'Test User - Free Pro Plan',
+    duration: 'once',
+  },
 ];
 
 export async function POST() {
@@ -37,28 +44,48 @@ export async function POST() {
       try {
         // Check if coupon already exists
         const existingCoupon = await stripe.coupons.retrieve(couponData.id);
-        console.log(`✅ Coupon ${couponData.id} already exists`);
+        const discountDescription = existingCoupon.percent_off 
+          ? `${existingCoupon.percent_off}% off`
+          : `$${(existingCoupon.amount_off! / 100).toFixed(2)} off`;
+        console.log(`✅ Coupon ${couponData.id} already exists (${discountDescription})`);
         results.push({
           id: couponData.id,
           status: 'exists',
           percent_off: existingCoupon.percent_off,
+          amount_off: existingCoupon.amount_off,
+          currency: existingCoupon.currency,
         });
       } catch (error: any) {
         if (error.code === 'resource_missing') {
           // Coupon doesn't exist, create it
           try {
-            const coupon = await stripe.coupons.create({
+            const couponCreateData: any = {
               id: couponData.id,
-              percent_off: couponData.percent_off,
               name: couponData.name,
               duration: couponData.duration,
-            });
+            };
 
-            console.log(`✅ Created coupon: ${coupon.id} (${coupon.percent_off}% off)`);
+            // Handle percentage-off or amount-off coupons
+            if ('percent_off' in couponData) {
+              couponCreateData.percent_off = couponData.percent_off;
+            } else if ('amount_off' in couponData) {
+              couponCreateData.amount_off = couponData.amount_off;
+              couponCreateData.currency = couponData.currency;
+            }
+
+            const coupon = await stripe.coupons.create(couponCreateData);
+
+            const discountDescription = coupon.percent_off 
+              ? `${coupon.percent_off}% off`
+              : `$${(coupon.amount_off! / 100).toFixed(2)} off`;
+            
+            console.log(`✅ Created coupon: ${coupon.id} (${discountDescription})`);
             results.push({
               id: coupon.id,
               status: 'created',
               percent_off: coupon.percent_off,
+              amount_off: coupon.amount_off,
+              currency: coupon.currency,
             });
           } catch (createError: any) {
             console.error(`❌ Failed to create coupon ${couponData.id}:`, createError.message);
