@@ -296,35 +296,14 @@ ${biomarkers
 
 You are a medical AI assistant providing comprehensive health analysis. Based on the provided biomarker data, body composition, and fitness information, generate a JSON response with the following structure:
 
-{
-  "healthScore": number (0-100),
-  "riskLevel": "LOW" | "MODERATE" | "HIGH" | "CRITICAL",
-  "keyFindings": ["array of key findings"],
-  "recommendations": [
-    {
-      "category": "string",
-      "priority": "high" | "medium" | "low",
-      "recommendation": "string",
-      "reasoning": "string"
-    }
-  ],
-  "abnormalValues": [
-    {
-      "biomarker": "string",
-      "value": number,
-      "concern": "string",
-      "urgency": "string"
-    }
-  ],
-  "trends": [
-    {
-      "biomarker": "string", 
-      "trend": "string",
-      "timeframe": "string"
-    }
-  ],
-  "summary": "comprehensive summary string"
-}
+Expected JSON format:
+- healthScore: number between 0-100
+- riskLevel: one of "LOW", "MODERATE", "HIGH", "CRITICAL" 
+- keyFindings: array of key finding strings
+- recommendations: array of objects with category, priority, recommendation, reasoning
+- abnormalValues: array of objects with biomarker, value, concern, urgency
+- trends: array of objects with biomarker, trend, timeframe
+- summary: comprehensive summary string
 
 Provide evidence-based medical insights with clinical correlations and actionable recommendations.`;
 
