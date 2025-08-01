@@ -5,24 +5,28 @@ const COUPONS = [
   {
     id: 'LAUNCH50',
     percent_off: 50,
+    currency: 'aud', // Specify currency for consistency
     name: 'Launch Special - 50% Off',
     duration: 'once',
   },
   {
     id: 'WELCOME25',
     percent_off: 25,
+    currency: 'aud', // Specify currency for consistency
     name: 'Welcome Discount - 25% Off',
     duration: 'once',
   },
   {
     id: 'HEALTH20',
     percent_off: 20,
+    currency: 'aud', // Specify currency for consistency
     name: 'Health Journey - 20% Off',
     duration: 'once',
   },
   {
     id: 'SAVE10',
     percent_off: 10,
+    currency: 'aud', // Specify currency for consistency
     name: 'Save 10% on your purchase',
     duration: 'once',
   },
@@ -68,6 +72,10 @@ export async function POST() {
             // Handle percentage-off or amount-off coupons
             if ('percent_off' in couponData) {
               couponCreateData.percent_off = couponData.percent_off;
+              // Add currency for percentage coupons if specified
+              if (couponData.currency) {
+                couponCreateData.currency = couponData.currency;
+              }
             } else if ('amount_off' in couponData) {
               couponCreateData.amount_off = couponData.amount_off;
               couponCreateData.currency = couponData.currency;
