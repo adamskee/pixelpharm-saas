@@ -579,7 +579,7 @@ export default function PixelPharmHomepage(): JSX.Element {
                 className="bg-white text-slate-900 hover:bg-gray-100 text-xl px-10 py-6 shadow-2xl font-bold transform hover:scale-105 transition-all duration-200"
               >
                 <ArrowRight className="h-6 w-6 mr-3" />
-                Claim Your 50% Discount Now
+                Claim Your 50% Now - Use Code "LAUNCH50"
               </Button>
 
               <div className="text-white/80 text-sm">
