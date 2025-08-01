@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend only if API key is available
+let resend: Resend | null = null;
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+}
 
 export async function POST(request: Request) {
   try {
@@ -13,6 +17,18 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'All fields are required' },
         { status: 400 }
+      );
+    }
+
+    // Check if Resend is configured
+    if (!resend) {
+      console.log('⚠️ Resend API key not configured, email service unavailable');
+      return NextResponse.json(
+        { 
+          error: 'Email service is currently unavailable. Please contact us directly at support@pixelpharm.com.',
+          details: 'RESEND_API_KEY not configured'
+        },
+        { status: 503 }
       );
     }
 

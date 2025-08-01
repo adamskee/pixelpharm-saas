@@ -14,7 +14,7 @@ function AuthErrorContent() {
   const getErrorMessage = (error: string | null) => {
     switch (error) {
       case "Configuration":
-        return "There is a problem with the server configuration.";
+        return "Authentication is temporarily unavailable due to server configuration. Please try again later or contact support.";
       case "AccessDenied":
         return "Access denied. You may not have permission to sign in.";
       case "Verification":

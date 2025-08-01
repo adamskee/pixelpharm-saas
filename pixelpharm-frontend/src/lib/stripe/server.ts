@@ -1,10 +1,16 @@
 import Stripe from 'stripe';
 
-// Initialize Stripe with secret key
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-12-18.acacia',
-  typescript: true,
-});
+// Initialize Stripe with secret key - handle missing key gracefully
+let stripe: Stripe | null = null;
+
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2024-12-18.acacia',
+    typescript: true,
+  });
+}
+
+export { stripe };
 
 // Helper function to create checkout session
 export async function createCheckoutSession({
@@ -26,6 +32,10 @@ export async function createCheckoutSession({
   cancelUrl: string;
   couponCode?: string;
 }) {
+  if (!stripe) {
+    throw new Error('Stripe is not configured - STRIPE_SECRET_KEY environment variable is missing');
+  }
+  
   try {
     // Prepare discount configuration if coupon code is provided
     let discounts = undefined;
@@ -126,6 +136,10 @@ export async function createCheckoutSession({
 
 // Helper function to retrieve checkout session
 export async function getCheckoutSession(sessionId: string) {
+  if (!stripe) {
+    throw new Error('Stripe is not configured - STRIPE_SECRET_KEY environment variable is missing');
+  }
+  
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['line_items', 'customer'],
@@ -139,6 +153,10 @@ export async function getCheckoutSession(sessionId: string) {
 
 // Helper function to create or retrieve customer
 export async function getOrCreateCustomer(userEmail: string, userId: string) {
+  if (!stripe) {
+    throw new Error('Stripe is not configured - STRIPE_SECRET_KEY environment variable is missing');
+  }
+  
   try {
     // First, try to find existing customer
     const existingCustomers = await stripe.customers.list({
@@ -167,6 +185,10 @@ export async function getOrCreateCustomer(userEmail: string, userId: string) {
 
 // Helper function to cancel subscription
 export async function cancelSubscription(subscriptionId: string) {
+  if (!stripe) {
+    throw new Error('Stripe is not configured - STRIPE_SECRET_KEY environment variable is missing');
+  }
+  
   try {
     const subscription = await stripe.subscriptions.cancel(subscriptionId);
     return subscription;
@@ -178,6 +200,10 @@ export async function cancelSubscription(subscriptionId: string) {
 
 // Helper function to get customer subscriptions
 export async function getCustomerSubscriptions(customerId: string) {
+  if (!stripe) {
+    throw new Error('Stripe is not configured - STRIPE_SECRET_KEY environment variable is missing');
+  }
+  
   try {
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
