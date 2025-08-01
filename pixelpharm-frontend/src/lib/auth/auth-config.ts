@@ -72,6 +72,14 @@ export const authOptions: NextAuthOptions = {
         const normalizedEmail = email.toLowerCase().trim();
 
         try {
+          // Debug database connection in production
+          if (process.env.NODE_ENV === "production") {
+            console.log("🔍 Production DB Debug:", {
+              hasDbUrl: !!process.env.DATABASE_URL,
+              dbUrlStart: process.env.DATABASE_URL?.substring(0, 20) || 'NOT SET',
+            });
+          }
+
           if (action === "signup") {
             // Handle signup
             console.log("🔐 Processing signup for:", normalizedEmail);
