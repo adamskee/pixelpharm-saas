@@ -2,6 +2,8 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/database/client";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -55,39 +57,107 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Email and password are required");
         }
 
+        const { email, password, action, firstName, lastName } = credentials;
+
+        // Validate inputs
+        if (!email.includes("@")) {
+          throw new Error("Please enter a valid email address");
+        }
+
+        if (password.length < 6) {
+          throw new Error("Password must be at least 6 characters long");
+        }
+
+        // Normalize email
+        const normalizedEmail = email.toLowerCase().trim();
+
         try {
-          // Call our auth API endpoint
-          const authUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-          const response = await fetch(`${authUrl}/api/auth/credentials`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-              action: credentials.action || "signin",
-              firstName: credentials.firstName,
-              lastName: credentials.lastName,
-            }),
-          });
+          if (action === "signup") {
+            // Handle signup
+            console.log("🔐 Processing signup for:", normalizedEmail);
 
-          const result = await response.json();
+            // Check if user already exists
+            const existingUser = await prisma.user.findUnique({
+              where: { email: normalizedEmail },
+            });
 
-          if (response.ok && result.user) {
-            console.log("✅ Credentials auth successful:", result.user.email);
+            if (existingUser) {
+              console.log("❌ User already exists:", normalizedEmail);
+              throw new Error("An account with this email already exists. Please sign in instead.");
+            }
+
+            // Hash password
+            const saltRounds = 12;
+            const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+            // Generate user ID
+            const userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+            // Create new user
+            const newUser = await prisma.user.create({
+              data: {
+                userId,
+                email: normalizedEmail,
+                firstName: firstName || null,
+                lastName: lastName || null,
+                name: `${firstName || ""} ${lastName || ""}`.trim() || null,
+                passwordHash: hashedPassword,
+                provider: "credentials",
+                emailVerified: null,
+              },
+            });
+
+            console.log("✅ New user created:", {
+              userId: newUser.userId,
+              email: newUser.email,
+            });
 
             return {
-              id: result.user.id,
-              email: result.user.email,
-              name: result.user.name,
-              firstName: result.user.firstName,
-              lastName: result.user.lastName,
+              id: newUser.userId,
+              email: newUser.email,
+              name: newUser.name,
+              firstName: newUser.firstName,
+              lastName: newUser.lastName,
               provider: "credentials",
             };
           } else {
-            console.log("❌ Credentials auth failed:", result.error);
-            throw new Error(result.error || "Authentication failed");
+            // Handle signin
+            console.log("🔐 Processing signin for:", normalizedEmail);
+
+            // Find user by email
+            const user = await prisma.user.findUnique({
+              where: { email: normalizedEmail },
+            });
+
+            if (!user) {
+              console.log("❌ User not found:", normalizedEmail);
+              throw new Error("Invalid email or password");
+            }
+
+            // Check if user signed up with credentials (has password)
+            if (!user.passwordHash) {
+              console.log("❌ User exists but has no password (OAuth user):", normalizedEmail);
+              throw new Error("This email is associated with a Google account. Please sign in with Google.");
+            }
+
+            // Verify password
+            const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+
+            if (!isValidPassword) {
+              console.log("❌ Invalid password for user:", normalizedEmail);
+              throw new Error("Invalid email or password");
+            }
+
+            console.log("✅ User authenticated successfully:", normalizedEmail);
+
+            return {
+              id: user.userId,
+              email: user.email,
+              name: user.name,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              provider: "credentials",
+            };
           }
         } catch (error: any) {
           console.error("❌ Credentials auth error:", error);
@@ -109,28 +179,39 @@ export const authOptions: NextAuthOptions = {
       // Handle Google OAuth sign in
       if (account?.provider === "google") {
         try {
-          // Sync Google user to database
-          const response = await fetch(
-            `${process.env.NEXTAUTH_URL}/api/auth/sync-user`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
+          // Sync Google user to database directly (avoid HTTP call)
+          console.log("🔄 Syncing Google user to database:", user.email);
+
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email! },
+          });
+
+          if (existingUser) {
+            // Update existing user with Google info
+            await prisma.user.update({
+              where: { email: user.email! },
+              data: {
+                name: user.name,
+                image: user.image,
+                provider: "google", // Update provider if it changed
               },
-              body: JSON.stringify({
-                id: user.id,
-                email: user.email,
+            });
+            console.log("✅ Existing Google user updated");
+          } else {
+            // Create new Google user
+            const userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            await prisma.user.create({
+              data: {
+                userId,
+                email: user.email!,
                 name: user.name,
                 image: user.image,
                 provider: "google",
-              }),
-            }
-          );
-
-          if (response.ok) {
-            console.log("✅ Google user synced successfully");
-          } else {
-            console.log("⚠️ Google user sync failed, but allowing sign in");
+                emailVerified: new Date(), // Google emails are verified
+              },
+            });
+            console.log("✅ New Google user created");
           }
         } catch (error) {
           console.error("❌ Error syncing Google user:", error);
