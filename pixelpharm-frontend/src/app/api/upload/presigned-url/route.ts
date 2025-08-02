@@ -15,6 +15,12 @@ export async function POST(request: NextRequest) {
   try {
     const { fileName, fileType, uploadType, userId } = await request.json();
 
+    // Debug environment variables
+    console.log("🔍 API: Environment variables check:");
+    console.log("- AWS_S3_BUCKET_NAME:", process.env.AWS_S3_BUCKET_NAME);
+    console.log("- Type of AWS_S3_BUCKET_NAME:", typeof process.env.AWS_S3_BUCKET_NAME);
+    console.log("- Length:", process.env.AWS_S3_BUCKET_NAME?.length);
+
     console.log("🔍 API: Generating pre-signed URL for:", {
       fileName,
       fileType,
@@ -30,8 +36,22 @@ export async function POST(request: NextRequest) {
 
     console.log("📁 API: File key:", fileKey);
 
+    // Clean and validate bucket name
+    let bucketName = process.env.AWS_S3_BUCKET_NAME || 'pixelpharm-uploads-prod';
+    
+    // Handle cases where the environment variable might have extra characters
+    if (bucketName.includes('=')) {
+      // If the bucket name contains =, take the part after the last =
+      bucketName = bucketName.split('=').pop() || 'pixelpharm-uploads-prod';
+    }
+    
+    // Clean any potential encoding or whitespace issues
+    bucketName = bucketName.trim().replace(/[^a-z0-9.-]/g, '');
+    
+    console.log("🪣 API: Using bucket name:", bucketName);
+
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET_NAME!,
+      Bucket: bucketName,
       Key: fileKey,
       ContentType: fileType,
     });
