@@ -30,7 +30,7 @@ export async function getUserSubscription(userIdOverride?: string): Promise<User
   }
 
   const user = await prisma.user.findUnique({
-    where: { userId },
+    where: { userId: userId },
     select: {
       subscriptionStatus: true,
       subscriptionPlan: true,
