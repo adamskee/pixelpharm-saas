@@ -28,7 +28,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "pixelpharm-uploads-prod-463470967804.s3.amazonaws.com",
+        hostname: "pixelpharm-uploads-prod.s3.amazonaws.com",
         port: "",
         pathname: "/**",
       },

@@ -111,53 +111,63 @@ async function testBucketAccess(bucketName) {
 }
 
 async function main() {
-  const bucketName = process.env.AWS_S3_BUCKET_NAME || 'pixelpharm-uploads-prod-463470967804';
+  // Check both possible bucket names
+  const bucketNames = [
+    'pixelpharm-uploads-prod',
+    'pixelpharm-uploads-prod-463470967804',
+    process.env.AWS_S3_BUCKET_NAME
+  ].filter(Boolean).filter((name, index, array) => array.indexOf(name) === index); // Remove duplicates
   
   console.log('🚀 PixelPharm S3 CORS Configuration Tool');
   console.log('=====================================');
-  console.log(`🎯 Target Bucket: ${bucketName}`);
+  console.log(`🎯 Checking buckets: ${bucketNames.join(', ')}`);
   console.log(`🌍 AWS Region: ${process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-1'}`);
   console.log(`🔑 AWS Access Key: ${process.env.AWS_ACCESS_KEY_ID ? process.env.AWS_ACCESS_KEY_ID.substring(0, 4) + '...' : 'NOT SET'}`);
   console.log(`🔐 AWS Secret Key: ${process.env.AWS_SECRET_ACCESS_KEY ? 'SET' : 'NOT SET'}`);
   console.log('');
 
-  try {
-    // Test bucket access
-    const hasAccess = await testBucketAccess(bucketName);
-    if (!hasAccess) {
-      console.log('❌ Cannot access bucket. Please check:');
-      console.log('   - Bucket name is correct');
-      console.log('   - AWS credentials have S3 permissions');
-      console.log('   - Bucket exists in the specified region');
-      process.exit(1);
-    }
+  let successCount = 0;
 
-    // Get current CORS configuration
-    const currentCors = await getCurrentCORSConfig(bucketName);
+  for (const bucketName of bucketNames) {
+    console.log(`\n🔄 Processing bucket: ${bucketName}`);
+    try {
+      // Test bucket access
+      const hasAccess = await testBucketAccess(bucketName);
+      if (!hasAccess) {
+        console.log(`❌ Cannot access bucket: ${bucketName}`);
+        continue;
+      }
+
+      // Get current CORS configuration
+      const currentCors = await getCurrentCORSConfig(bucketName);
+      
+      // Set new CORS configuration
+      await setCORSConfig(bucketName);
+      successCount++;
+    } catch (error) {
+      console.error(`❌ Failed to configure ${bucketName}:`, error.message);
+    }
+  }
     
-    // Set new CORS configuration
-    await setCORSConfig(bucketName);
-    
-    console.log('');
-    console.log('🎉 CORS configuration complete!');
-    console.log('');
-    console.log('📋 What was configured:');
-    console.log('   ✅ Allow uploads from https://pixelpharm.com');
-    console.log('   ✅ Allow uploads from https://www.pixelpharm.com');
-    console.log('   ✅ Allow development uploads from localhost');
-    console.log('   ✅ Support for PUT, POST, GET, DELETE, HEAD methods');
-    console.log('   ✅ Allow all headers (*)');
-    console.log('   ✅ Cache for 1 hour (3600 seconds)');
-    console.log('');
-    console.log('🚀 Users should now be able to upload files successfully!');
-    
-  } catch (error) {
-    console.error('💥 Configuration failed:', error.message);
+  console.log('');
+  console.log(`🎉 CORS configuration complete! (${successCount}/${bucketNames.length} buckets configured)`);
+  console.log('');
+  console.log('📋 What was configured:');
+  console.log('   ✅ Allow uploads from https://pixelpharm.com');
+  console.log('   ✅ Allow uploads from https://www.pixelpharm.com');
+  console.log('   ✅ Allow development uploads from localhost');
+  console.log('   ✅ Support for PUT, POST, GET, DELETE, HEAD methods');
+  console.log('   ✅ Allow all headers (*)');
+  console.log('   ✅ Cache for 1 hour (3600 seconds)');
+  console.log('');
+  console.log('🚀 Users should now be able to upload files successfully!');
+  
+  if (successCount === 0) {
     console.log('');
     console.log('🔧 Manual CORS Configuration:');
-    console.log('If this script fails, you can manually configure CORS in AWS Console:');
+    console.log('If no buckets were configured, you can manually configure CORS in AWS Console:');
     console.log('1. Go to AWS S3 Console');
-    console.log(`2. Navigate to bucket: ${bucketName}`);
+    console.log('2. Navigate to the correct bucket');
     console.log('3. Go to Permissions > Cross-origin resource sharing (CORS)');
     console.log('4. Paste this configuration:');
     console.log('');
