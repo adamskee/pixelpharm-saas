@@ -227,13 +227,15 @@ export default function PixelPharmHomepage(): JSX.Element {
       <nav className="absolute top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-slate-200/50">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Activity className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                PixelPharm Health
-              </span>
+            <div className="flex items-center">
+              <Image 
+                src="/pp_logo.png" 
+                alt="PixelPharm Health Logo" 
+                width={280} 
+                height={60}
+                className="h-auto"
+                priority
+              />
             </div>
 
             <div className="hidden md:flex items-center space-x-8">
@@ -907,11 +909,14 @@ export default function PixelPharmHomepage(): JSX.Element {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
             <div className="col-span-2">
-              <div className="flex items-center space-x-3 mb-6">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Activity className="h-4 w-4 text-white" />
-                </div>
-                <span className="text-2xl font-bold">PixelPharm Health</span>
+              <div className="flex items-center mb-6">
+                <Image 
+                  src="/pp_logo.png" 
+                  alt="PixelPharm Health Logo" 
+                  width={280} 
+                  height={60}
+                  className="h-auto"
+                />
               </div>
               <p className="text-slate-300 max-w-md leading-relaxed">
                 Empowering individuals with professional-grade health analytics

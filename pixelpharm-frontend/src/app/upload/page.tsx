@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { ArrowLeft, FileText, CheckCircle, BarChart3 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function UploadPage() {
   const { data: session, status } = useSession();
@@ -54,14 +55,25 @@ export default function UploadPage() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Button variant="ghost" size="sm" asChild className="mr-4">
-              <Link href="/dashboard">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Link>
-            </Button>
-            <h1 className="text-2xl font-bold text-gray-900">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/dashboard">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Dashboard
+                </Link>
+              </Button>
+              <div className="h-8 w-px bg-gray-300"></div>
+              <Image 
+                src="/pp_logo.png" 
+                alt="PixelPharm Health Logo" 
+                width={160} 
+                height={35}
+                className="h-auto max-h-8"
+                priority
+              />
+            </div>
+            <h1 className="text-xl font-bold text-gray-900">
               Blood Test Upload
             </h1>
           </div>

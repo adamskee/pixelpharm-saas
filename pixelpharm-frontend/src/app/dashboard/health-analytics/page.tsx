@@ -619,18 +619,17 @@ export default function EnhancedHealthAnalyticsDashboard() {
     : "bg-blue-100 text-blue-800";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-6 py-8 max-w-7xl">
         {/* Header */}
-        <div className="mb-8">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Enhanced Health Analytics
+              <h1 className="text-2xl font-semibold text-gray-900 mb-1">
+                Health Analytics Dashboard
               </h1>
-              <p className="text-gray-600">
-                Welcome {user?.firstName || user?.email}! • Multi Medical Model
-                AI health assessment • Last updated{" "}
+              <p className="text-sm text-gray-500">
+                Welcome {user?.firstName || user?.email} • Last updated{" "}
                 {medicalReview.healthMetrics.lastAnalysisDate
                   ? safeDate(
                       medicalReview.healthMetrics.lastAnalysisDate
@@ -638,11 +637,15 @@ export default function EnhancedHealthAnalyticsDashboard() {
                   : "Never"}
               </p>
             </div>
-            <div className="flex items-center space-x-4">
-              <Badge className={dataSourceColor}>User: {user?.userId}</Badge>
+            <div className="flex items-center space-x-3">
+              <Badge variant="outline" className="text-xs">
+                {dataSourceBadge}
+              </Badge>
               <Button
                 onClick={triggerNewAnalysis}
                 disabled={isAnalyzing}
+                variant="outline"
+                size="sm"
                 className="flex items-center space-x-2"
               >
                 {isAnalyzing ? (
@@ -650,7 +653,7 @@ export default function EnhancedHealthAnalyticsDashboard() {
                 ) : (
                   <RefreshCw className="h-4 w-4" />
                 )}
-                <span>{isAnalyzing ? "Refreshing..." : "Refresh Data"}</span>
+                <span>{isAnalyzing ? "Refreshing..." : "Refresh"}</span>
               </Button>
             </div>
           </div>
@@ -658,50 +661,48 @@ export default function EnhancedHealthAnalyticsDashboard() {
 
         {/* Main Content */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger
-              value="overview"
-              className="flex items-center space-x-2"
-            >
-              <BarChart3 className="h-4 w-4" />
-              <span>Overview</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="clinical"
-              className="flex items-center space-x-2"
-            >
-              <Heart className="h-4 w-4" />
-              <span>Clinical</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="systems"
-              className="flex items-center space-x-2"
-            >
-              <Activity className="h-4 w-4" />
-              <span>Systems</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="actions"
-              className="flex items-center space-x-2"
-            >
-              <Target className="h-4 w-4" />
-              <span>Actions</span>
-            </TabsTrigger>
-            <TabsTrigger value="trends" className="flex items-center space-x-2">
-              <TrendingUp className="h-4 w-4" />
-              <span>Trends</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="insights"
-              className="flex items-center space-x-2"
-            >
-              <Brain className="h-4 w-4" />
-              <span>Data Insights</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <TabsList className="grid w-full grid-cols-6 bg-gray-50 border-b border-gray-200 rounded-t-lg">
+              <TabsTrigger
+                value="overview"
+                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all"
+              >
+                Overview
+              </TabsTrigger>
+              <TabsTrigger
+                value="clinical"
+                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all"
+              >
+                Clinical
+              </TabsTrigger>
+              <TabsTrigger
+                value="systems"
+                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all"
+              >
+                Systems
+              </TabsTrigger>
+              <TabsTrigger
+                value="actions"
+                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all"
+              >
+                Actions
+              </TabsTrigger>
+              <TabsTrigger 
+                value="trends"
+                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all"
+              >
+                Trends
+              </TabsTrigger>
+              <TabsTrigger
+                value="insights"
+                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all"
+              >
+                Data Insights
+              </TabsTrigger>
+            </TabsList>
 
           {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
+          <TabsContent value="overview" className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Health Score */}
               <Card>
@@ -856,7 +857,7 @@ export default function EnhancedHealthAnalyticsDashboard() {
           </TabsContent>
 
           {/* Clinical Tab */}
-          <TabsContent value="clinical" className="space-y-6">
+          <TabsContent value="clinical" className="p-6 space-y-6">
             {/* Clinical Review */}
             <Card>
               <CardHeader>
@@ -1123,7 +1124,7 @@ export default function EnhancedHealthAnalyticsDashboard() {
           </TabsContent>
 
           {/* Systems Tab */}
-          <TabsContent value="systems" className="space-y-6">
+          <TabsContent value="systems" className="p-6 space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>System Health Overview</CardTitle>
@@ -1187,12 +1188,12 @@ export default function EnhancedHealthAnalyticsDashboard() {
           </TabsContent>
 
           {/* Actions Tab */}
-          <TabsContent value="actions" className="space-y-6">
+          <TabsContent value="actions" className="p-6 space-y-6">
             <DetailedRecommendations userId={user?.userId || ""} />
           </TabsContent>
 
           {/* Trends Tab */}
-          <TabsContent value="trends" className="space-y-6">
+          <TabsContent value="trends" className="p-6 space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -1273,7 +1274,7 @@ export default function EnhancedHealthAnalyticsDashboard() {
           </TabsContent>
 
           {/* Data Insights Tab */}
-          <TabsContent value="insights" className="space-y-6">
+          <TabsContent value="insights" className="p-6 space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Recent Activity */}
               <Card>
@@ -1508,6 +1509,7 @@ export default function EnhancedHealthAnalyticsDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
+          </div>
         </Tabs>
       </div>
     </div>

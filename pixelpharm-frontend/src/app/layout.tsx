@@ -11,6 +11,11 @@ export const metadata: Metadata = {
     "PixelPharm Health Platform- Multi Medical Language Model  - Powered Health Analytics",
   description:
     "Upload your blood tests, Fitness data, Body scans and get Multi Model Medical health insights",
+  icons: {
+    icon: "/pp_logo.png",
+    shortcut: "/pp_logo.png",
+    apple: "/pp_logo.png",
+  },
 };
 
 export default function RootLayout({

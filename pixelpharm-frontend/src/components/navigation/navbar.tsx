@@ -10,8 +10,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth/auth-context";
-import { User, LogOut, Settings, Heart } from "lucide-react";
+import { User, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export function Navbar() {
   const { user, signOut } = useAuth();
@@ -25,9 +26,15 @@ export function Navbar() {
     <header className="border-b bg-white">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center space-x-4">
-          <Link href="/dashboard" className="flex items-center space-x-2">
-            <Heart className="h-6 w-6 text-blue-600" />
-            <span className="text-xl font-bold">PixelPharm Health</span>
+          <Link href="/dashboard">
+            <Image 
+              src="/pp_logo.png" 
+              alt="PixelPharm Health Logo" 
+              width={200} 
+              height={47}
+              className="h-auto max-h-10"
+              priority
+            />
           </Link>
         </div>
 

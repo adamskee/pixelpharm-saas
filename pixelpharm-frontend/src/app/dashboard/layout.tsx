@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { useSession } from "next-auth/react";
 import GoogleSignIn from "@/components/auth/google-signin";
 import Link from "next/link";
+import Image from "next/image";
 import { Heart, User, Settings, Bell, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -41,11 +42,15 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto px-4 py-4 max-w-7xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Link href="/dashboard" className="flex items-center space-x-2">
-                <Heart className="h-8 w-8 text-blue-600" />
-                <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  PixelPharm Health
-                </span>
+              <Link href="/dashboard">
+                <Image 
+                  src="/pp_logo.png" 
+                  alt="PixelPharm Health Logo" 
+                  width={200} 
+                  height={47}
+                  className="h-auto max-h-10"
+                  priority
+                />
               </Link>
             </div>
 
@@ -113,11 +118,14 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {/* Brand */}
             <div className="md:col-span-2">
-              <div className="flex items-center space-x-2 mb-4">
-                <Heart className="h-8 w-8 text-blue-400" />
-                <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  PixelPharm Health
-                </span>
+              <div className="mb-4">
+                <Image 
+                  src="/pp_logo.png" 
+                  alt="PixelPharm Health Logo" 
+                  width={240} 
+                  height={52}
+                  className="h-auto max-h-12 brightness-0 invert"
+                />
               </div>
               <p className="text-gray-300 mb-4 max-w-md">
                 Empowering individuals with professional-grade health analytics through advanced Multi Medical Model technology. Transform your lab results into actionable health insights.

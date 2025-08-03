@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Heart, Loader2 } from "lucide-react";
+import Image from "next/image";
 
 export default function LoginForm() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -88,16 +89,14 @@ export default function LoginForm() {
           <CardHeader className="text-center space-y-4">
             {/* Logo */}
             <div className="flex justify-center">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-                <Heart className="h-7 w-7 text-white" />
-              </div>
+              <Image 
+                src="/pp_logo.png" 
+                alt="PixelPharm Health Logo" 
+                width={280} 
+                height={60}
+                className="h-auto max-w-full"
+              />
             </div>
-
-            {/* Title */}
-            <div>
-              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                PixelPharm Health Analytics
-              </CardTitle>
               <CardDescription className="text-gray-600 mt-2">
                 {isSignUp
                   ? "Create your account to start tracking your health"
