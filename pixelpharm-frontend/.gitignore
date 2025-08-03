@@ -78,3 +78,5 @@ pixelpharm-frontend/CLAUDE.md
 *.temp
 
 .vercel
+db-ready.env
+*.env
