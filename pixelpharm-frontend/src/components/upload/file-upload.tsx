@@ -5,6 +5,7 @@ import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useUploadLimits } from "@/hooks/useUploadLimits";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +56,7 @@ export default function OptimizedFileUpload({
   maxFiles = 5,
 }: OptimizedFileUploadProps) {
   const { user } = useAuth();
+  const uploadLimits = useUploadLimits();
   const [files, setFiles] = useState<File[]>([]);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>("idle");
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -207,6 +209,12 @@ export default function OptimizedFileUpload({
 
     if (files.length === 0) {
       setErrorMessage("Please select files to upload");
+      return;
+    }
+
+    // Check upload limits
+    if (!uploadLimits.canUpload) {
+      setErrorMessage("Upload limit reached. Please upgrade your plan or wait for your limit to reset.");
       return;
     }
 
@@ -495,7 +503,7 @@ export default function OptimizedFileUpload({
         <Button
           onClick={handleUpload}
           disabled={
-            files.length === 0 || uploadStatus !== "idle" || !user?.userId
+            files.length === 0 || uploadStatus !== "idle" || !user?.userId || !uploadLimits.canUpload
           }
           className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
           size="lg"
