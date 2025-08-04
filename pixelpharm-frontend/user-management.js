@@ -5,6 +5,7 @@
  * node user-management.js <command> <email> [options]
  * 
  * Commands:
+ * - create-user <email> <firstName> <lastName> [password]  Create new user
  * - reset-password <email> <newPassword>    Reset user password
  * - activate-pro <email> [days]             Activate Pro subscription (default: 30 days)
  * - activate-basic <email>                  Activate Basic subscription
@@ -35,6 +36,50 @@ async function getUserByEmail(email) {
       updatedAt: true,
     }
   });
+}
+
+async function createUser(email, firstName, lastName, password = 'PixelPharm2025!') {
+  try {
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (existingUser) {
+      console.error(`❌ User already exists: ${email}`);
+      return false;
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create the user
+    const newUser = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        firstName: firstName,
+        lastName: lastName,
+        passwordHash: hashedPassword,
+        provider: 'credentials',
+        subscriptionStatus: 'inactive',
+        subscriptionPlan: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    });
+
+    console.log(`✅ User created successfully:`);
+    console.log(`   ID: ${newUser.userId}`);
+    console.log(`   Email: ${newUser.email}`);
+    console.log(`   Name: ${newUser.firstName} ${newUser.lastName}`);
+    console.log(`   Password: ${password}`);
+    console.log(`   Provider: ${newUser.provider}`);
+    
+    return newUser;
+  } catch (error) {
+    console.error(`❌ Error creating user:`, error);
+    return false;
+  }
 }
 
 async function resetPassword(email, newPassword) {
@@ -224,6 +269,7 @@ async function main() {
 Usage: node user-management.js <command> <email> [options]
 
 Commands:
+  create-user <email> <firstName> <lastName> [password]  Create new user
   reset-password <email> <newPassword>     Reset user password
   activate-pro <email> [days]              Activate Pro subscription (default: 30 days)
   activate-basic <email>                   Activate Basic subscription  
@@ -232,6 +278,7 @@ Commands:
   extend-subscription <email> <days>       Extend existing subscription
 
 Examples:
+  node user-management.js create-user user@example.com John Doe MyPassword123
   node user-management.js user-info jedimaster@pixelpharm.com
   node user-management.js activate-pro jedimaster@pixelpharm.com 30
   node user-management.js reset-password jedimaster@pixelpharm.com PixelPharm2025!
@@ -244,6 +291,16 @@ Examples:
 
   try {
     switch (command) {
+      case 'create-user':
+        if (!options[0] || !options[1]) {
+          console.error('❌ First name and last name required for create-user command');
+          console.error('Usage: node user-management.js create-user <email> <firstName> <lastName> [password]');
+          process.exit(1);
+        }
+        const password = options[2] || 'PixelPharm2025!';
+        await createUser(email, options[0], options[1], password);
+        break;
+
       case 'reset-password':
         if (!options[0]) {
           console.error('❌ Password required for reset-password command');
@@ -295,6 +352,7 @@ if (require.main === module) {
 
 module.exports = {
   getUserByEmail,
+  createUser,
   resetPassword,
   activateProSubscription,
   activateBasicSubscription,
