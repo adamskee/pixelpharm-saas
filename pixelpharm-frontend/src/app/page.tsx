@@ -407,6 +407,26 @@ export default function PixelPharmHomepage(): JSX.Element {
         </div>
       </section>
 
+      {/* YouTube Video Section */}
+      <section className="py-20 bg-slate-100">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="w-full max-w-6xl mx-auto">
+            <div className="relative w-full" style={{ paddingBottom: '50.625%' /* 16:9 aspect ratio */ }}>
+              <iframe
+                className="absolute top-0 left-0 w-full h-full rounded-2xl shadow-2xl"
+                src="https://www.youtube.com/embed/PsAyhIn2BUI?si=zI30mLey7D2tBhQi&rel=0&modestbranding=1"
+                title="PixelPharm Health Platform Demo"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+                style={{ width: '90%', left: '5%' }}
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Biomarker Preview Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
