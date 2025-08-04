@@ -74,8 +74,7 @@ export async function GET(request: NextRequest) {
       totalUploads,
       uploadsThisMonth,
       uploadsLastMonth,
-      uploadsLast7Days,
-      avgUploadsPerUser
+      uploadsLast7Days
     ] = await Promise.all([
       prisma.fileUpload.count(),
       prisma.fileUpload.count({
@@ -91,11 +90,6 @@ export async function GET(request: NextRequest) {
       }),
       prisma.fileUpload.count({
         where: { createdAt: { gte: last7Days } }
-      }),
-      prisma.fileUpload.aggregate({
-        _avg: {
-          id: true
-        }
       })
     ]);
 
@@ -136,22 +130,22 @@ export async function GET(request: NextRequest) {
     // Get daily upload trend for last 30 days
     const dailyUploads = await prisma.$queryRaw`
       SELECT 
-        DATE(created_at) as date,
+        DATE("createdAt") as date,
         COUNT(*) as uploads
-      FROM file_upload 
-      WHERE created_at >= ${last30Days}
-      GROUP BY DATE(created_at)
+      FROM "FileUpload" 
+      WHERE "createdAt" >= ${last30Days}
+      GROUP BY DATE("createdAt")
       ORDER BY date ASC
     ` as Array<{ date: Date; uploads: number }>;
 
     // Get user growth trend for last 30 days
     const dailySignups = await prisma.$queryRaw`
       SELECT 
-        DATE(created_at) as date,
+        DATE("createdAt") as date,
         COUNT(*) as signups
-      FROM user 
-      WHERE created_at >= ${last30Days}
-      GROUP BY DATE(created_at)
+      FROM "User" 
+      WHERE "createdAt" >= ${last30Days}
+      GROUP BY DATE("createdAt")
       ORDER BY date ASC
     ` as Array<{ date: Date; signups: number }>;
 
