@@ -56,8 +56,8 @@ export async function GET(request: NextRequest) {
       prisma.user.count({
         where: {
           OR: [
-            { FileUpload: { some: { createdAt: { gte: last7Days } } } },
-            { Biomarker: { some: { createdAt: { gte: last7Days } } } }
+            { fileUploads: { some: { createdAt: { gte: last7Days } } } },
+            { biomarkerValues: { some: { createdAt: { gte: last7Days } } } }
           ]
         }
       }),
@@ -100,14 +100,14 @@ export async function GET(request: NextRequest) {
       criticalBiomarkers,
       bodyCompositionEntries
     ] = await Promise.all([
-      prisma.biomarker.count(),
-      prisma.biomarker.count({
+      prisma.biomarkerValue.count(),
+      prisma.biomarkerValue.count({
         where: { createdAt: { gte: startOfMonth } }
       }),
-      prisma.biomarker.count({
-        where: { abnormalityLevel: 'CRITICAL' }
+      prisma.biomarkerValue.count({
+        where: { isAbnormal: true }
       }),
-      prisma.bodyComposition.count()
+      prisma.bodyCompositionResult.count()
     ]);
 
     // Calculate revenue estimates (based on subscription plans)
@@ -130,22 +130,22 @@ export async function GET(request: NextRequest) {
     // Get daily upload trend for last 30 days
     const dailyUploads = await prisma.$queryRaw`
       SELECT 
-        DATE("createdAt") as date,
-        COUNT(*) as uploads
-      FROM "FileUpload" 
-      WHERE "createdAt" >= ${last30Days}
-      GROUP BY DATE("createdAt")
+        DATE("created_at") as date,
+        COUNT(*)::int as uploads
+      FROM "file_uploads" 
+      WHERE "created_at" >= ${last30Days}
+      GROUP BY DATE("created_at")
       ORDER BY date ASC
     ` as Array<{ date: Date; uploads: number }>;
 
     // Get user growth trend for last 30 days
     const dailySignups = await prisma.$queryRaw`
       SELECT 
-        DATE("createdAt") as date,
-        COUNT(*) as signups
-      FROM "User" 
-      WHERE "createdAt" >= ${last30Days}
-      GROUP BY DATE("createdAt")
+        DATE("created_at") as date,
+        COUNT(*)::int as signups
+      FROM "users" 
+      WHERE "created_at" >= ${last30Days}
+      GROUP BY DATE("created_at")
       ORDER BY date ASC
     ` as Array<{ date: Date; signups: number }>;
 
@@ -214,8 +214,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // More detailed error logging
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+    }
+
     return NextResponse.json(
-      { error: 'Failed to fetch analytics' },
+      { error: 'Failed to fetch analytics', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
