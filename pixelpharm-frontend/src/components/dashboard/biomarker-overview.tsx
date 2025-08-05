@@ -24,6 +24,12 @@ import {
   Upload,
   BarChart3,
   Target,
+  Info,
+  Heart,
+  Brain,
+  Zap,
+  Shield,
+  Droplets,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -37,10 +43,166 @@ interface BiomarkerData {
   testDate: string;
 }
 
+interface BiomarkerInfo {
+  description: string;
+  clinicalSignificance: string;
+  normalRange: string;
+  highImplications: string;
+  lowImplications: string;
+  category: string;
+}
+
 interface BiomarkerOverviewProps {
   medicalReview: any;
   user: any;
 }
+
+const biomarkerDatabase: Record<string, BiomarkerInfo> = {
+  "Glucose": {
+    description: "Blood sugar level - primary source of energy for cells",
+    clinicalSignificance: "Essential for diagnosing diabetes and monitoring blood sugar control",
+    normalRange: "70-100 mg/dL (fasting)",
+    highImplications: "May indicate diabetes, prediabetes, or insulin resistance",
+    lowImplications: "May indicate hypoglycemia, liver disease, or medication effects",
+    category: "Metabolic"
+  },
+  "Hemoglobin A1c": {
+    description: "Average blood sugar levels over the past 2-3 months",
+    clinicalSignificance: "Gold standard for long-term diabetes management and diagnosis",
+    normalRange: "<5.7%",
+    highImplications: "Indicates poor blood sugar control, increased diabetes complications risk",
+    lowImplications: "Generally not concerning, may indicate excellent glucose control",
+    category: "Metabolic"
+  },
+  "Total Cholesterol": {
+    description: "Total amount of cholesterol in blood - includes HDL, LDL, and VLDL",
+    clinicalSignificance: "Key marker for cardiovascular disease risk assessment",
+    normalRange: "<200 mg/dL",
+    highImplications: "Increased risk of heart disease and stroke",
+    lowImplications: "Generally favorable, but extremely low levels may indicate malnutrition",
+    category: "Lipid Panel"
+  },
+  "HDL Cholesterol": {
+    description: "High-density lipoprotein - 'good' cholesterol that removes bad cholesterol",
+    clinicalSignificance: "Protective against heart disease - higher levels are better",
+    normalRange: ">40 mg/dL (men), >50 mg/dL (women)",
+    highImplications: "Protective against heart disease - this is good!",
+    lowImplications: "Increased risk of heart disease and metabolic syndrome",
+    category: "Lipid Panel"
+  },
+  "LDL Cholesterol": {
+    description: "Low-density lipoprotein - 'bad' cholesterol that can clog arteries",
+    clinicalSignificance: "Primary target for cholesterol-lowering therapy",
+    normalRange: "<100 mg/dL",
+    highImplications: "Increased risk of atherosclerosis, heart attack, and stroke",
+    lowImplications: "Generally favorable for cardiovascular health",
+    category: "Lipid Panel"
+  },
+  "Triglycerides": {
+    description: "Type of fat in blood - energy storage form of dietary fats",
+    clinicalSignificance: "Elevated levels increase cardiovascular disease risk",
+    normalRange: "<150 mg/dL",
+    highImplications: "Increased risk of heart disease and pancreatitis",
+    lowImplications: "Generally not concerning, may indicate good metabolic health",
+    category: "Lipid Panel"
+  },
+  "TSH": {
+    description: "Thyroid Stimulating Hormone - regulates thyroid function",
+    clinicalSignificance: "Primary screening test for thyroid disorders",
+    normalRange: "0.4-4.0 mIU/L",
+    highImplications: "May indicate hypothyroidism (underactive thyroid)",
+    lowImplications: "May indicate hyperthyroidism (overactive thyroid)",
+    category: "Thyroid"
+  },
+  "Creatinine": {
+    description: "Waste product filtered by kidneys - marker of kidney function",
+    clinicalSignificance: "Essential for assessing kidney health and drug dosing",
+    normalRange: "0.6-1.2 mg/dL",
+    highImplications: "May indicate kidney disease or dehydration",
+    lowImplications: "May indicate low muscle mass or liver disease",
+    category: "Kidney Function"
+  },
+  "BUN": {
+    description: "Blood Urea Nitrogen - waste product filtered by kidneys",
+    clinicalSignificance: "Assesses kidney function and protein metabolism",
+    normalRange: "7-20 mg/dL",
+    highImplications: "May indicate kidney disease, dehydration, or high protein diet",
+    lowImplications: "May indicate liver disease or low protein diet",
+    category: "Kidney Function"
+  },
+  "ALT": {
+    description: "Alanine Aminotransferase - liver enzyme indicating liver cell damage",
+    clinicalSignificance: "Primary marker for liver health and hepatocyte injury",
+    normalRange: "7-56 U/L",
+    highImplications: "May indicate liver damage, hepatitis, or medication toxicity",
+    lowImplications: "Generally not concerning, may indicate healthy liver function",
+    category: "Liver Function"
+  },
+  "AST": {
+    description: "Aspartate Aminotransferase - enzyme found in liver, heart, and muscles",
+    clinicalSignificance: "Indicates tissue damage, particularly liver and heart",
+    normalRange: "10-40 U/L",
+    highImplications: "May indicate liver damage, heart attack, or muscle injury",
+    lowImplications: "Generally not concerning, indicates healthy tissue function",
+    category: "Liver Function"
+  },
+  "WBC": {
+    description: "White Blood Cell count - immune system cells that fight infection",
+    clinicalSignificance: "Assesses immune system function and infection status",
+    normalRange: "4.5-11.0 K/uL",
+    highImplications: "May indicate infection, inflammation, or blood disorders",
+    lowImplications: "May indicate immune suppression or bone marrow problems",
+    category: "Complete Blood Count"
+  },
+  "RBC": {
+    description: "Red Blood Cell count - cells that carry oxygen throughout the body",
+    clinicalSignificance: "Assesses oxygen-carrying capacity and overall blood health",
+    normalRange: "4.7-6.1 M/uL (men), 4.2-5.4 M/uL (women)",
+    highImplications: "May indicate dehydration, lung disease, or blood disorders",
+    lowImplications: "May indicate anemia, blood loss, or nutritional deficiencies",
+    category: "Complete Blood Count"
+  },
+  "Hemoglobin": {
+    description: "Protein in red blood cells that carries oxygen from lungs to tissues",
+    clinicalSignificance: "Essential for diagnosing anemia and assessing oxygen transport",
+    normalRange: "14-18 g/dL (men), 12-16 g/dL (women)",
+    highImplications: "May indicate dehydration, smoking, or blood disorders",
+    lowImplications: "May indicate anemia, blood loss, or chronic disease",
+    category: "Complete Blood Count"
+  },
+  "Hematocrit": {
+    description: "Percentage of blood volume made up of red blood cells",
+    clinicalSignificance: "Assesses blood thickness and oxygen-carrying capacity",
+    normalRange: "42-52% (men), 37-47% (women)",
+    highImplications: "May indicate dehydration, lung disease, or blood disorders",
+    lowImplications: "May indicate anemia, blood loss, or overhydration",
+    category: "Complete Blood Count"
+  },
+  "Platelets": {
+    description: "Blood cells responsible for clotting and preventing bleeding",
+    clinicalSignificance: "Essential for assessing bleeding risk and clotting ability",
+    normalRange: "150-450 K/uL",
+    highImplications: "May indicate blood disorders or increased clotting risk",
+    lowImplications: "May indicate bleeding risk, bone marrow problems, or medication effects",
+    category: "Complete Blood Count"
+  },
+  "Vitamin D": {
+    description: "Fat-soluble vitamin essential for bone health and immune function",
+    clinicalSignificance: "Critical for calcium absorption and overall health",
+    normalRange: "30-100 ng/mL",
+    highImplications: "Rarely toxic, but extremely high levels may cause hypercalcemia",
+    lowImplications: "May indicate deficiency leading to bone problems and immune dysfunction",
+    category: "Vitamins"
+  },
+  "Vitamin B12": {
+    description: "Essential vitamin for nerve function, DNA synthesis, and red blood cell formation",
+    clinicalSignificance: "Critical for neurological health and preventing megaloblastic anemia",
+    normalRange: "200-900 pg/mL",
+    highImplications: "Generally not concerning, may indicate supplementation",
+    lowImplications: "May cause anemia, neurological problems, and cognitive issues",
+    category: "Vitamins"
+  }
+};
 
 export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverviewProps) {
   const [biomarkerData, setBiomarkerData] = useState<BiomarkerData[]>([]);
@@ -99,6 +261,30 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
         Normal
       </Badge>
     );
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "Metabolic": return <Zap className="h-4 w-4 text-orange-500" />;
+      case "Lipid Panel": return <Heart className="h-4 w-4 text-red-500" />;
+      case "Thyroid": return <Brain className="h-4 w-4 text-purple-500" />;
+      case "Kidney Function": return <Droplets className="h-4 w-4 text-blue-500" />;
+      case "Liver Function": return <Shield className="h-4 w-4 text-green-500" />;
+      case "Complete Blood Count": return <Activity className="h-4 w-4 text-red-600" />;
+      case "Vitamins": return <Target className="h-4 w-4 text-yellow-500" />;
+      default: return <Info className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getBiomarkerInfo = (biomarkerName: string): BiomarkerInfo => {
+    return biomarkerDatabase[biomarkerName] || {
+      description: "Important health marker measured in your blood test",
+      clinicalSignificance: "This biomarker provides valuable insights into your health status",
+      normalRange: "Reference range varies by lab",
+      highImplications: "Elevated levels may require medical attention",
+      lowImplications: "Low levels may require medical attention",
+      category: "General"
+    };
   };
 
   const formatValue = (value: number, unit: string) => {
@@ -240,44 +426,119 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
               </Badge>
             </div>
             
-            <div className="grid gap-3 max-h-96 overflow-y-auto">
-              {biomarkerData.map((biomarker) => (
-                <div
-                  key={biomarker.valueId}
-                  className={`p-4 rounded-lg border ${
-                    biomarker.isAbnormal 
-                      ? 'border-red-200 bg-red-50' 
-                      : 'border-gray-200 bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
+            <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+              {biomarkerData.map((biomarker) => {
+                const info = getBiomarkerInfo(biomarker.biomarkerName);
+                return (
+                  <div
+                    key={biomarker.valueId}
+                    className={`p-6 rounded-xl border-2 transition-all hover:shadow-lg ${
+                      biomarker.isAbnormal 
+                        ? 'border-red-200 bg-red-50 hover:bg-red-100' 
+                        : 'border-gray-200 bg-white hover:bg-gray-50'
+                    }`}
+                  >
+                    {/* Header with name, category icon, and status */}
+                    <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center space-x-3">
-                        <h5 className="font-medium text-gray-900">
-                          {biomarker.biomarkerName}
-                        </h5>
-                        {getBiomarkerBadge(biomarker.isAbnormal)}
+                        {getCategoryIcon(info.category)}
+                        <div>
+                          <h5 className="font-semibold text-gray-900 text-lg">
+                            {biomarker.biomarkerName}
+                          </h5>
+                          <p className="text-sm text-gray-600 font-medium">
+                            {info.category}
+                          </p>
+                        </div>
                       </div>
-                      <div className="mt-2 flex items-center space-x-4 text-sm text-gray-600">
-                        <span className="font-semibold">
-                          Value: {formatValue(biomarker.value, biomarker.unit)}
-                        </span>
+                      {getBiomarkerBadge(biomarker.isAbnormal)}
+                    </div>
+
+                    {/* Patient's Results */}
+                    <div className="bg-white rounded-lg p-4 mb-4 border border-gray-100">
+                      <h6 className="font-medium text-gray-800 mb-2 flex items-center">
+                        <BarChart3 className="h-4 w-4 mr-2 text-blue-500" />
+                        Your Results
+                      </h6>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Value:</span>
+                          <span className={`font-bold text-lg ${
+                            biomarker.isAbnormal ? 'text-red-600' : 'text-green-600'
+                          }`}>
+                            {formatValue(biomarker.value, biomarker.unit)}
+                          </span>
+                        </div>
                         {biomarker.referenceRange && (
-                          <span>Reference: {biomarker.referenceRange}</span>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Reference Range:</span>
+                            <span className="text-sm font-medium text-gray-800">
+                              {biomarker.referenceRange}
+                            </span>
+                          </div>
                         )}
-                        <span>Date: {formatDate(biomarker.testDate)}</span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Test Date:</span>
+                          <span className="text-sm font-medium text-gray-800">
+                            {formatDate(biomarker.testDate)}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center">
-                      {biomarker.isAbnormal ? (
-                        <TrendingUp className="h-5 w-5 text-red-500" />
-                      ) : (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      )}
+
+                    {/* What This Biomarker Is */}
+                    <div className="mb-4">
+                      <h6 className="font-medium text-gray-800 mb-2 flex items-center">
+                        <Info className="h-4 w-4 mr-2 text-blue-500" />
+                        What This Measures
+                      </h6>
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        {info.description}
+                      </p>
+                    </div>
+
+                    {/* Clinical Significance */}
+                    <div className="mb-4">
+                      <h6 className="font-medium text-gray-800 mb-2 flex items-center">
+                        <Target className="h-4 w-4 mr-2 text-purple-500" />
+                        Clinical Significance
+                      </h6>
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        {info.clinicalSignificance}
+                      </p>
+                    </div>
+
+                    {/* Interpretation */}
+                    <div className={`p-3 rounded-lg ${
+                      biomarker.isAbnormal ? 'bg-red-100 border border-red-200' : 'bg-green-100 border border-green-200'
+                    }`}>
+                      <h6 className={`font-medium mb-2 flex items-center ${
+                        biomarker.isAbnormal ? 'text-red-800' : 'text-green-800'
+                      }`}>
+                        {biomarker.isAbnormal ? (
+                          <AlertTriangle className="h-4 w-4 mr-2" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                        )}
+                        Interpretation
+                      </h6>
+                      <p className={`text-sm leading-relaxed ${
+                        biomarker.isAbnormal ? 'text-red-700' : 'text-green-700'
+                      }`}>
+                        {biomarker.isAbnormal ? info.highImplications : "Your results are within the normal range, indicating healthy levels for this biomarker."}
+                      </p>
+                    </div>
+
+                    {/* Normal Range Context */}
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>Typical Normal Range:</span>
+                        <span className="font-medium">{info.normalRange}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {biomarkerData.length > 0 && (
