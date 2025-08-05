@@ -77,6 +77,22 @@ pixelpharm-frontend/CLAUDE.md
 *.tmp
 *.temp
 
+# Security sensitive files - NEVER COMMIT THESE
+analyze-403-error.js
+diagnose-production-credentials.js
+create-joel-direct.js
+USERS_CREATED.md
+user-management.js
+create_response.txt
+response.txt
+infrastructure-with-rds.yaml
+
+# AWS and other credentials
+*.pem
+*.key
+credentials
+config
+
 .vercel
 db-ready.env
 *.env
