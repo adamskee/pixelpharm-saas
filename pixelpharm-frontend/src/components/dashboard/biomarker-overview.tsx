@@ -307,7 +307,25 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
   const getBiomarkerInfo = (biomarkerName: string): BiomarkerInfo => {
     // Handle common variations in biomarker names
     const normalizedName = biomarkerName.replace(/^25-hydroxy\s+/i, '25-hydroxy ');
-    return biomarkerDatabase[normalizedName] || biomarkerDatabase[biomarkerName] || {
+    
+    // Try exact match first, then normalized name
+    let info = biomarkerDatabase[biomarkerName] || biomarkerDatabase[normalizedName];
+    
+    // If still no match, try partial matching for common variations
+    if (!info) {
+      const lowerName = biomarkerName.toLowerCase();
+      const dbKey = Object.keys(biomarkerDatabase).find(key => 
+        key.toLowerCase() === lowerName || 
+        lowerName.includes(key.toLowerCase()) ||
+        key.toLowerCase().includes(lowerName)
+      );
+      if (dbKey) {
+        info = biomarkerDatabase[dbKey];
+      }
+    }
+    
+    // Return found info or fallback
+    return info || {
       scientificInsight: "This biomarker provides valuable insights into your health status and may correlate with age-related physiological changes",
       normalRange: "Reference range varies by lab",
       highImplications: "Elevated levels may require medical attention",
@@ -349,12 +367,16 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
     return null;
   };
 
-  const getProximityAdvice = (value: number, biomarkerName: string, info: BiomarkerInfo) => {
-    const range = parseReferenceRange(info.normalRange);
+  const getProximityAdvice = (value: number, biomarkerName: string, info: BiomarkerInfo, referenceRange: string, isAbnormal: boolean) => {
+    // Use the actual reference range from the biomarker data, not the database default
+    const range = parseReferenceRange(referenceRange);
     if (!range) {
+      // If we can't parse the range, use the isAbnormal flag from the API data
       return {
-        advice: biomarkerName.includes('abnormal') || biomarkerName.includes('high') ? info.highImplications : info.lowImplications,
-        status: 'abnormal'
+        advice: isAbnormal ? 
+          `🚨 Outside Normal Range: Your ${biomarkerName.toLowerCase()} level is outside the reference range. Consider consulting with your healthcare provider for evaluation.` :
+          `✅ Within Range: Your ${biomarkerName.toLowerCase()} level appears to be within the acceptable range based on your lab's reference values.`,
+        status: isAbnormal ? 'abnormal' : 'optimal'
       };
     }
 
@@ -628,7 +650,7 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
 
                     {/* Interpretation */}
                     {(() => {
-                      const proximityResult = getProximityAdvice(biomarker.value, biomarker.biomarkerName, info);
+                      const proximityResult = getProximityAdvice(biomarker.value, biomarker.biomarkerName, info, biomarker.referenceRange, biomarker.isAbnormal);
                       const { advice, status } = proximityResult;
                       
                       const getStatusStyles = (status: string) => {
