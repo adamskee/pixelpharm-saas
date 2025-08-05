@@ -212,6 +212,15 @@ const biomarkerDatabase: Record<string, BiomarkerInfo> = {
     nearLowAdvice: "Increase sun exposure, consider 2000-4000 IU daily supplementation, and include fatty fish in diet for natural vitamin D sources.",
     category: "Vitamins"
   },
+  "25-hydroxy Vitamin D": {
+    scientificInsight: "25(OH)D is the storage form and best indicator of vitamin D status. Levels <50 nmol/L (20 ng/mL) indicate deficiency, while 75-125 nmol/L (30-50 ng/mL) is optimal. Winter levels drop 10-25% due to reduced UV exposure.",
+    normalRange: "75-125 nmol/L",
+    highImplications: "Levels >375 nmol/L may cause hypercalcemia and kidney stones",
+    lowImplications: "Deficiency increases fracture risk, immune dysfunction, and may affect mood and muscle strength",
+    nearHighAdvice: "Excellent vitamin D status - maintain current sun exposure and supplementation routine while monitoring calcium levels.",
+    nearLowAdvice: "Consider increasing vitamin D3 supplementation to 2000-4000 IU daily, especially during winter months, and increase sun exposure when possible.",
+    category: "Vitamins"
+  },
   "Vitamin B12": {
     scientificInsight: "B12 absorption requires intrinsic factor and decreases with age due to reduced stomach acid. Metformin reduces B12 by 19% through ileal absorption interference. Vegans require supplementation as B12 is only found in animal products.",
     normalRange: "200-900 pg/mL",
@@ -296,7 +305,9 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
   };
 
   const getBiomarkerInfo = (biomarkerName: string): BiomarkerInfo => {
-    return biomarkerDatabase[biomarkerName] || {
+    // Handle common variations in biomarker names
+    const normalizedName = biomarkerName.replace(/^25-hydroxy\s+/i, '25-hydroxy ');
+    return biomarkerDatabase[normalizedName] || biomarkerDatabase[biomarkerName] || {
       scientificInsight: "This biomarker provides valuable insights into your health status and may correlate with age-related physiological changes",
       normalRange: "Reference range varies by lab",
       highImplications: "Elevated levels may require medical attention",
@@ -310,10 +321,10 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
   const parseReferenceRange = (referenceRange: string, isNumeric: boolean = true) => {
     if (!isNumeric || !referenceRange) return null;
     
-    // Handle ranges like "70-100", "<200", ">40" etc.
+    // Handle ranges like "70-100", "<200", ">40", "≥50", "<=5.7" etc.
     const rangeMatch = referenceRange.match(/([0-9.]+)\s*-\s*([0-9.]+)/);
-    const lessThanMatch = referenceRange.match(/<\s*([0-9.]+)/);
-    const greaterThanMatch = referenceRange.match(/>\s*([0-9.]+)/);
+    const lessThanMatch = referenceRange.match(/[<≤]\s*([0-9.]+)/);
+    const greaterThanMatch = referenceRange.match(/[>≥]\s*([0-9.]+)/);
     
     if (rangeMatch) {
       return {
@@ -347,15 +358,35 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
       };
     }
 
-    const { min, max } = range;
-    const rangeWidth = max - min;
-    const tenPercentRange = rangeWidth * 0.1;
+    const { min, max, type } = range;
     
-    // Check if within 10% of boundaries
-    const nearHigh = value >= (max - tenPercentRange) && value <= max;
-    const nearLow = value >= min && value <= (min + tenPercentRange);
-    const isAbnormalHigh = value > max;
-    const isAbnormalLow = value < min;
+    // Handle different range types for 10% calculation
+    let tenPercentRange;
+    let nearHigh = false;
+    let nearLow = false;
+    let isAbnormalHigh = false;
+    let isAbnormalLow = false;
+    
+    if (type === 'range') {
+      const rangeWidth = max - min;
+      tenPercentRange = rangeWidth * 0.1;
+      nearHigh = value >= (max - tenPercentRange) && value <= max;
+      nearLow = value >= min && value <= (min + tenPercentRange);
+      isAbnormalHigh = value > max;
+      isAbnormalLow = value < min;
+    } else if (type === 'greaterThan') {
+      // For "≥50" type ranges, consider 10% above the minimum as monitoring zone
+      tenPercentRange = min * 0.1;
+      nearLow = value >= min && value <= (min + tenPercentRange);
+      isAbnormalLow = value < min;
+      // No upper boundary for this type
+    } else if (type === 'lessThan') {
+      // For "<200" type ranges, consider 10% below the maximum as monitoring zone
+      tenPercentRange = max * 0.1;
+      nearHigh = value >= (max - tenPercentRange) && value <= max;
+      isAbnormalHigh = value > max;
+      // No lower boundary for this type
+    }
     
     if (isAbnormalHigh) {
       return {
