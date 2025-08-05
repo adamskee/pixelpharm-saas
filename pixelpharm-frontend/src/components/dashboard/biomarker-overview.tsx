@@ -341,7 +341,10 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
   const getProximityAdvice = (value: number, biomarkerName: string, info: BiomarkerInfo) => {
     const range = parseReferenceRange(info.normalRange);
     if (!range) {
-      return biomarkerName.includes('abnormal') || biomarkerName.includes('high') ? info.highImplications : info.lowImplications;
+      return {
+        advice: biomarkerName.includes('abnormal') || biomarkerName.includes('high') ? info.highImplications : info.lowImplications,
+        status: 'abnormal'
+      };
     }
 
     const { min, max } = range;
@@ -355,15 +358,30 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
     const isAbnormalLow = value < min;
     
     if (isAbnormalHigh) {
-      return info.highImplications;
+      return {
+        advice: `🚨 Above Normal Range: Your ${biomarkerName.toLowerCase()} level is elevated above the reference range. ${info.highImplications} Consider consulting with your healthcare provider for evaluation and management strategies.`,
+        status: 'abnormal'
+      };
     } else if (isAbnormalLow) {
-      return info.lowImplications;
+      return {
+        advice: `🚨 Below Normal Range: Your ${biomarkerName.toLowerCase()} level is below the reference range. ${info.lowImplications} Consider consulting with your healthcare provider for evaluation and potential supplementation.`,
+        status: 'abnormal'
+      };
     } else if (nearHigh) {
-      return `⚠️ Monitoring Zone: Your result is near the upper normal limit. ${info.nearHighAdvice}`;
+      return {
+        advice: `⚠️ Monitoring Zone - Upper Boundary: Your result is within 10% of the upper normal limit, indicating you're in a monitoring zone that warrants attention. ${info.nearHighAdvice} Regular monitoring and preventive measures can help maintain optimal levels.`,
+        status: 'monitoring'
+      };
     } else if (nearLow) {
-      return `⚠️ Monitoring Zone: Your result is near the lower normal limit. ${info.nearLowAdvice}`;
+      return {
+        advice: `⚠️ Monitoring Zone - Lower Boundary: Your result is within 10% of the lower normal limit, suggesting early intervention may be beneficial. ${info.nearLowAdvice} Proactive steps now can help optimize this biomarker.`,
+        status: 'monitoring'
+      };
     } else {
-      return "Your results are within the optimal range, indicating healthy levels for this biomarker.";
+      return {
+        advice: `✅ Optimal Range: Your ${biomarkerName.toLowerCase()} level is within the healthy optimal range, indicating excellent metabolic function for this biomarker. Continue your current lifestyle habits that support these healthy levels.`,
+        status: 'optimal'
+      };
     }
   };
 
@@ -578,25 +596,51 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
                     </div>
 
                     {/* Interpretation */}
-                    <div className={`p-3 rounded-lg ${
-                      biomarker.isAbnormal ? 'bg-red-100 border border-red-200' : 'bg-green-100 border border-green-200'
-                    }`}>
-                      <h6 className={`font-medium mb-2 flex items-center ${
-                        biomarker.isAbnormal ? 'text-red-800' : 'text-green-800'
-                      }`}>
-                        {biomarker.isAbnormal ? (
-                          <AlertTriangle className="h-4 w-4 mr-2" />
-                        ) : (
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                        )}
-                        Interpretation
-                      </h6>
-                      <p className={`text-sm leading-relaxed ${
-                        biomarker.isAbnormal ? 'text-red-700' : 'text-green-700'
-                      }`}>
-                        {getProximityAdvice(biomarker.value, biomarker.biomarkerName, info)}
-                      </p>
-                    </div>
+                    {(() => {
+                      const proximityResult = getProximityAdvice(biomarker.value, biomarker.biomarkerName, info);
+                      const { advice, status } = proximityResult;
+                      
+                      const getStatusStyles = (status: string) => {
+                        switch (status) {
+                          case 'abnormal':
+                            return {
+                              containerClass: 'bg-red-100 border border-red-200',
+                              textClass: 'text-red-800',
+                              descriptionClass: 'text-red-700',
+                              icon: <AlertTriangle className="h-4 w-4 mr-2" />
+                            };
+                          case 'monitoring':
+                            return {
+                              containerClass: 'bg-orange-100 border border-orange-200',
+                              textClass: 'text-orange-800',
+                              descriptionClass: 'text-orange-700',
+                              icon: <Target className="h-4 w-4 mr-2" />
+                            };
+                          case 'optimal':
+                          default:
+                            return {
+                              containerClass: 'bg-green-100 border border-green-200',
+                              textClass: 'text-green-800',
+                              descriptionClass: 'text-green-700',
+                              icon: <CheckCircle className="h-4 w-4 mr-2" />
+                            };
+                        }
+                      };
+                      
+                      const styles = getStatusStyles(status);
+                      
+                      return (
+                        <div className={`p-4 rounded-lg ${styles.containerClass}`}>
+                          <h6 className={`font-medium mb-3 flex items-center ${styles.textClass}`}>
+                            {styles.icon}
+                            Clinical Assessment
+                          </h6>
+                          <p className={`text-sm leading-relaxed ${styles.descriptionClass}`}>
+                            {advice}
+                          </p>
+                        </div>
+                      );
+                    })()}
 
                     {/* Normal Range Context */}
                     <div className="mt-3 pt-3 border-t border-gray-200">
