@@ -44,11 +44,12 @@ interface BiomarkerData {
 }
 
 interface BiomarkerInfo {
-  description: string;
-  clinicalSignificance: string;
+  scientificInsight: string;
   normalRange: string;
   highImplications: string;
   lowImplications: string;
+  nearHighAdvice: string;
+  nearLowAdvice: string;
   category: string;
 }
 
@@ -59,147 +60,165 @@ interface BiomarkerOverviewProps {
 
 const biomarkerDatabase: Record<string, BiomarkerInfo> = {
   "Glucose": {
-    description: "Blood sugar level - primary source of energy for cells",
-    clinicalSignificance: "Essential for diagnosing diabetes and monitoring blood sugar control",
+    scientificInsight: "Glucose levels exhibit circadian rhythm and can increase with age due to declining insulin sensitivity. Post-meal spikes >180 mg/dL indicate early metabolic dysfunction.",
     normalRange: "70-100 mg/dL (fasting)",
     highImplications: "May indicate diabetes, prediabetes, or insulin resistance",
     lowImplications: "May indicate hypoglycemia, liver disease, or medication effects",
+    nearHighAdvice: "Consider reducing refined carbohydrates, increasing fiber intake, and adding post-meal walks to improve glucose metabolism.",
+    nearLowAdvice: "Ensure regular meal timing and consider protein-rich snacks to maintain stable blood sugar levels.",
     category: "Metabolic"
   },
   "Hemoglobin A1c": {
-    description: "Average blood sugar levels over the past 2-3 months",
-    clinicalSignificance: "Gold standard for long-term diabetes management and diagnosis",
+    scientificInsight: "A1c reflects glycation of hemoglobin over RBC lifespan (~120 days). Each 1% increase correlates with ~30 mg/dL average glucose increase. Values naturally increase 0.1% per decade after age 30.",
     normalRange: "<5.7%",
     highImplications: "Indicates poor blood sugar control, increased diabetes complications risk",
     lowImplications: "Generally not concerning, may indicate excellent glucose control",
+    nearHighAdvice: "Focus on consistent carbohydrate counting, regular exercise, and consider continuous glucose monitoring to prevent progression to diabetes.",
+    nearLowAdvice: "Maintain current lifestyle habits that support excellent glucose control - you're doing great!",
     category: "Metabolic"
   },
   "Total Cholesterol": {
-    description: "Total amount of cholesterol in blood - includes HDL, LDL, and VLDL",
-    clinicalSignificance: "Key marker for cardiovascular disease risk assessment",
+    scientificInsight: "Cholesterol increases ~2 mg/dL per year with age. 80% is endogenously produced by the liver, making dietary cholesterol less impactful than previously thought. Genetic variants affect synthesis rates significantly.",
     normalRange: "<200 mg/dL",
     highImplications: "Increased risk of heart disease and stroke",
     lowImplications: "Generally favorable, but extremely low levels may indicate malnutrition",
+    nearHighAdvice: "Focus on soluble fiber (oats, beans), plant sterols, and regular aerobic exercise to naturally lower cholesterol production.",
+    nearLowAdvice: "Continue heart-healthy habits while ensuring adequate protein intake for optimal hormone production.",
     category: "Lipid Panel"
   },
   "HDL Cholesterol": {
-    description: "High-density lipoprotein - 'good' cholesterol that removes bad cholesterol",
-    clinicalSignificance: "Protective against heart disease - higher levels are better",
+    scientificInsight: "HDL functionality matters more than quantity - particle size and efflux capacity are key. Exercise increases HDL by 5-15%, while smoking reduces it by 10-15%. Genetic variants strongly influence baseline levels.",
     normalRange: ">40 mg/dL (men), >50 mg/dL (women)",
     highImplications: "Protective against heart disease - this is good!",
     lowImplications: "Increased risk of heart disease and metabolic syndrome",
+    nearHighAdvice: "Maintain current exercise routine and consider omega-3 supplements to optimize HDL particle function.",
+    nearLowAdvice: "Increase moderate-intensity exercise, reduce refined sugars, and consider niacin-rich foods to boost HDL levels.",
     category: "Lipid Panel"
   },
   "LDL Cholesterol": {
-    description: "Low-density lipoprotein - 'bad' cholesterol that can clog arteries",
-    clinicalSignificance: "Primary target for cholesterol-lowering therapy",
+    scientificInsight: "Small, dense LDL particles are more atherogenic than large, buoyant ones. Pattern B (small dense) correlates with insulin resistance. LDL particle number (apoB) is more predictive than LDL-C levels.",
     normalRange: "<100 mg/dL",
     highImplications: "Increased risk of atherosclerosis, heart attack, and stroke",
     lowImplications: "Generally favorable for cardiovascular health",
+    nearHighAdvice: "Reduce saturated fat intake, increase soluble fiber, and consider advanced lipid testing to assess particle size and number.",
+    nearLowAdvice: "Excellent LDL control - maintain current diet and exercise patterns to preserve cardiovascular health.",
     category: "Lipid Panel"
   },
   "Triglycerides": {
-    description: "Type of fat in blood - energy storage form of dietary fats",
-    clinicalSignificance: "Elevated levels increase cardiovascular disease risk",
+    scientificInsight: "Triglycerides are highly responsive to dietary carbohydrates and correlate strongly with insulin resistance. They increase rapidly with fructose intake and decrease with omega-3 fatty acids.",
     normalRange: "<150 mg/dL",
     highImplications: "Increased risk of heart disease and pancreatitis",
     lowImplications: "Generally not concerning, may indicate good metabolic health",
+    nearHighAdvice: "Limit refined carbohydrates and added sugars, increase omega-3 rich fish, and consider intermittent fasting to improve triglyceride clearance.",
+    nearLowAdvice: "Great metabolic health indicator - continue current dietary patterns that support low triglyceride levels.",
     category: "Lipid Panel"
   },
   "TSH": {
-    description: "Thyroid Stimulating Hormone - regulates thyroid function",
-    clinicalSignificance: "Primary screening test for thyroid disorders",
+    scientificInsight: "TSH exhibits circadian rhythm with peak at 2-4 AM. Levels increase with age and stress. Subclinical hypothyroidism (4.5-10 mIU/L) affects 4-20% of adults and may impact cognition and metabolism.",
     normalRange: "0.4-4.0 mIU/L",
     highImplications: "May indicate hypothyroidism (underactive thyroid)",
     lowImplications: "May indicate hyperthyroidism (overactive thyroid)",
+    nearHighAdvice: "Monitor energy levels and weight changes. Consider selenium, zinc, and tyrosine-rich foods to support thyroid function. Avoid excessive soy intake.",
+    nearLowAdvice: "Watch for hyperthyroid symptoms like rapid heartbeat or weight loss. Ensure adequate iodine but avoid excess supplementation.",
     category: "Thyroid"
   },
   "Creatinine": {
-    description: "Waste product filtered by kidneys - marker of kidney function",
-    clinicalSignificance: "Essential for assessing kidney health and drug dosing",
+    scientificInsight: "Creatinine correlates directly with muscle mass and increases ~0.01 mg/dL per decade due to age-related muscle loss. Athletic individuals typically have higher baseline levels due to increased muscle mass.",
     normalRange: "0.6-1.2 mg/dL",
     highImplications: "May indicate kidney disease or dehydration",
     lowImplications: "May indicate low muscle mass or liver disease",
+    nearHighAdvice: "Ensure adequate hydration, limit NSAIDs use, and monitor blood pressure. Consider reducing protein intake temporarily if levels continue rising.",
+    nearLowAdvice: "May indicate low muscle mass - consider resistance training and adequate protein intake to maintain muscle health.",
     category: "Kidney Function"
   },
   "BUN": {
-    description: "Blood Urea Nitrogen - waste product filtered by kidneys",
-    clinicalSignificance: "Assesses kidney function and protein metabolism",
+    scientificInsight: "BUN/Creatinine ratio >20:1 suggests dehydration or high protein catabolism, while <10:1 may indicate liver dysfunction. BUN is more variable than creatinine due to dietary protein influence.",
     normalRange: "7-20 mg/dL",
     highImplications: "May indicate kidney disease, dehydration, or high protein diet",
     lowImplications: "May indicate liver disease or low protein diet",
+    nearHighAdvice: "Increase water intake and consider moderating protein intake if very high. Monitor alongside creatinine for kidney function assessment.",
+    nearLowAdvice: "Ensure adequate protein intake for muscle maintenance and metabolic function - aim for 0.8-1.2g per kg body weight.",
     category: "Kidney Function"
   },
   "ALT": {
-    description: "Alanine Aminotransferase - liver enzyme indicating liver cell damage",
-    clinicalSignificance: "Primary marker for liver health and hepatocyte injury",
+    scientificInsight: "ALT is more liver-specific than AST and correlates with non-alcoholic fatty liver disease (NAFLD). Even mild elevations (30-40 U/L) may indicate early metabolic dysfunction in the absence of other causes.",
     normalRange: "7-56 U/L",
     highImplications: "May indicate liver damage, hepatitis, or medication toxicity",
     lowImplications: "Generally not concerning, may indicate healthy liver function",
+    nearHighAdvice: "Reduce alcohol intake, limit processed foods, and increase antioxidant-rich vegetables. Consider milk thistle and omega-3 supplements for liver support.",
+    nearLowAdvice: "Excellent liver function - maintain current healthy lifestyle to preserve optimal hepatic metabolism.",
     category: "Liver Function"
   },
   "AST": {
-    description: "Aspartate Aminotransferase - enzyme found in liver, heart, and muscles",
-    clinicalSignificance: "Indicates tissue damage, particularly liver and heart",
+    scientificInsight: "AST/ALT ratio >2.0 suggests alcoholic liver disease, while <1.0 indicates NAFLD. AST is also found in cardiac and skeletal muscle, making it less liver-specific than ALT.",
     normalRange: "10-40 U/L",
     highImplications: "May indicate liver damage, heart attack, or muscle injury",
     lowImplications: "Generally not concerning, indicates healthy tissue function",
+    nearHighAdvice: "Assess recent exercise intensity and alcohol consumption. Consider liver-protective foods like cruciferous vegetables and green tea.",
+    nearLowAdvice: "Good tissue health marker - continue current activities that support cellular integrity and metabolic function.",
     category: "Liver Function"
   },
   "WBC": {
-    description: "White Blood Cell count - immune system cells that fight infection",
-    clinicalSignificance: "Assesses immune system function and infection status",
+    scientificInsight: "WBC count varies with circadian rhythm (lowest at night) and decreases ~2% per decade after age 20. Chronic stress and poor sleep can elevate baseline levels through cortisol effects.",
     normalRange: "4.5-11.0 K/uL",
     highImplications: "May indicate infection, inflammation, or blood disorders",
     lowImplications: "May indicate immune suppression or bone marrow problems",
+    nearHighAdvice: "Ensure adequate sleep, manage stress levels, and consider anti-inflammatory foods like turmeric and omega-3s to support immune balance.",
+    nearLowAdvice: "Monitor for signs of infection. Support immune function with vitamin D, zinc, and adequate protein intake.",
     category: "Complete Blood Count"
   },
   "RBC": {
-    description: "Red Blood Cell count - cells that carry oxygen throughout the body",
-    clinicalSignificance: "Assesses oxygen-carrying capacity and overall blood health",
+    scientificInsight: "RBC production requires 120 days and is stimulated by erythropoietin from kidneys. High altitude living increases RBC count by 10-15%. Dehydration can artificially elevate counts.",
     normalRange: "4.7-6.1 M/uL (men), 4.2-5.4 M/uL (women)",
     highImplications: "May indicate dehydration, lung disease, or blood disorders",
     lowImplications: "May indicate anemia, blood loss, or nutritional deficiencies",
+    nearHighAdvice: "Ensure proper hydration and assess for sleep apnea or lung function issues that might stimulate RBC production.",
+    nearLowAdvice: "Check iron, B12, and folate levels. Increase iron-rich foods and vitamin C to enhance absorption.",
     category: "Complete Blood Count"
   },
   "Hemoglobin": {
-    description: "Protein in red blood cells that carries oxygen from lungs to tissues",
-    clinicalSignificance: "Essential for diagnosing anemia and assessing oxygen transport",
+    scientificInsight: "Hemoglobin A1c glycation occurs at 0.1% per 1 mg/dL glucose increase. Iron deficiency affects hemoglobin synthesis before RBC count drops. Athletes often have slightly lower levels due to plasma volume expansion.",
     normalRange: "14-18 g/dL (men), 12-16 g/dL (women)",
     highImplications: "May indicate dehydration, smoking, or blood disorders",
     lowImplications: "May indicate anemia, blood loss, or chronic disease",
+    nearHighAdvice: "Assess hydration status and smoking history. Consider blood donation if levels remain elevated without underlying cause.",
+    nearLowAdvice: "Increase iron-rich foods (heme iron from meat, non-heme from plants), pair with vitamin C, and check for hidden blood loss sources.",
     category: "Complete Blood Count"
   },
   "Hematocrit": {
-    description: "Percentage of blood volume made up of red blood cells",
-    clinicalSignificance: "Assesses blood thickness and oxygen-carrying capacity",
+    scientificInsight: "Hematocrit typically equals hemoglobin × 3 in healthy individuals. Values >50% increase blood viscosity and thrombosis risk. Endurance athletes may have lower values due to plasma volume expansion.",
     normalRange: "42-52% (men), 37-47% (women)",
     highImplications: "May indicate dehydration, lung disease, or blood disorders",
     lowImplications: "May indicate anemia, blood loss, or overhydration",
+    nearHighAdvice: "Monitor hydration status and blood pressure. Consider cardiovascular assessment if persistently elevated without dehydration.",
+    nearLowAdvice: "Address potential iron deficiency and assess for chronic blood loss. Increase iron bioavailability with vitamin C.",
     category: "Complete Blood Count"
   },
   "Platelets": {
-    description: "Blood cells responsible for clotting and preventing bleeding",
-    clinicalSignificance: "Essential for assessing bleeding risk and clotting ability",
+    scientificInsight: "Platelet lifespan is 8-10 days with 30% residing in the spleen. Reactive thrombocytosis often occurs with inflammation or iron deficiency. Exercise can transiently increase platelet count by 25%.",
     normalRange: "150-450 K/uL",
     highImplications: "May indicate blood disorders or increased clotting risk",
     lowImplications: "May indicate bleeding risk, bone marrow problems, or medication effects",
+    nearHighAdvice: "Assess for inflammatory conditions or iron deficiency. Consider low-dose aspirin if cardiovascular risk factors present (consult physician).",
+    nearLowAdvice: "Monitor for easy bruising or bleeding. Avoid NSAIDs and ensure adequate B12 and folate for platelet production.",
     category: "Complete Blood Count"
   },
   "Vitamin D": {
-    description: "Fat-soluble vitamin essential for bone health and immune function",
-    clinicalSignificance: "Critical for calcium absorption and overall health",
+    scientificInsight: "Vitamin D levels drop 1-2 ng/mL per decade after age 40. 90% comes from UVB skin synthesis, requiring 20-30 minutes daily sun exposure. Dark skin requires 3-5x longer UV exposure for equivalent synthesis.",
     normalRange: "30-100 ng/mL",
     highImplications: "Rarely toxic, but extremely high levels may cause hypercalcemia",
     lowImplications: "May indicate deficiency leading to bone problems and immune dysfunction",
+    nearHighAdvice: "Reduce supplementation if taking high doses. Monitor calcium levels and ensure adequate K2 for proper calcium utilization.",
+    nearLowAdvice: "Increase sun exposure, consider 2000-4000 IU daily supplementation, and include fatty fish in diet for natural vitamin D sources.",
     category: "Vitamins"
   },
   "Vitamin B12": {
-    description: "Essential vitamin for nerve function, DNA synthesis, and red blood cell formation",
-    clinicalSignificance: "Critical for neurological health and preventing megaloblastic anemia",
+    scientificInsight: "B12 absorption requires intrinsic factor and decreases with age due to reduced stomach acid. Metformin reduces B12 by 19% through ileal absorption interference. Vegans require supplementation as B12 is only found in animal products.",
     normalRange: "200-900 pg/mL",
     highImplications: "Generally not concerning, may indicate supplementation",
     lowImplications: "May cause anemia, neurological problems, and cognitive issues",
+    nearHighAdvice: "Excellent B12 status - maintain current intake from food sources or appropriate supplementation levels.",
+    nearLowAdvice: "Increase B12-rich foods (meat, fish, dairy) or consider sublingual supplements. If vegetarian/vegan, supplementation is essential.",
     category: "Vitamins"
   }
 };
@@ -278,13 +297,74 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
 
   const getBiomarkerInfo = (biomarkerName: string): BiomarkerInfo => {
     return biomarkerDatabase[biomarkerName] || {
-      description: "Important health marker measured in your blood test",
-      clinicalSignificance: "This biomarker provides valuable insights into your health status",
+      scientificInsight: "This biomarker provides valuable insights into your health status and may correlate with age-related physiological changes",
       normalRange: "Reference range varies by lab",
       highImplications: "Elevated levels may require medical attention",
       lowImplications: "Low levels may require medical attention",
+      nearHighAdvice: "Monitor trends and consider lifestyle modifications to optimize this marker",
+      nearLowAdvice: "Consider nutritional support and lifestyle changes to improve this marker",
       category: "General"
     };
+  };
+
+  const parseReferenceRange = (referenceRange: string, isNumeric: boolean = true) => {
+    if (!isNumeric || !referenceRange) return null;
+    
+    // Handle ranges like "70-100", "<200", ">40" etc.
+    const rangeMatch = referenceRange.match(/([0-9.]+)\s*-\s*([0-9.]+)/);
+    const lessThanMatch = referenceRange.match(/<\s*([0-9.]+)/);
+    const greaterThanMatch = referenceRange.match(/>\s*([0-9.]+)/);
+    
+    if (rangeMatch) {
+      return {
+        min: parseFloat(rangeMatch[1]),
+        max: parseFloat(rangeMatch[2]),
+        type: 'range'
+      };
+    } else if (lessThanMatch) {
+      return {
+        min: 0,
+        max: parseFloat(lessThanMatch[1]),
+        type: 'lessThan'
+      };
+    } else if (greaterThanMatch) {
+      return {
+        min: parseFloat(greaterThanMatch[1]),
+        max: Infinity,
+        type: 'greaterThan'
+      };
+    }
+    
+    return null;
+  };
+
+  const getProximityAdvice = (value: number, biomarkerName: string, info: BiomarkerInfo) => {
+    const range = parseReferenceRange(info.normalRange);
+    if (!range) {
+      return biomarkerName.includes('abnormal') || biomarkerName.includes('high') ? info.highImplications : info.lowImplications;
+    }
+
+    const { min, max } = range;
+    const rangeWidth = max - min;
+    const tenPercentRange = rangeWidth * 0.1;
+    
+    // Check if within 10% of boundaries
+    const nearHigh = value >= (max - tenPercentRange) && value <= max;
+    const nearLow = value >= min && value <= (min + tenPercentRange);
+    const isAbnormalHigh = value > max;
+    const isAbnormalLow = value < min;
+    
+    if (isAbnormalHigh) {
+      return info.highImplications;
+    } else if (isAbnormalLow) {
+      return info.lowImplications;
+    } else if (nearHigh) {
+      return `⚠️ Monitoring Zone: Your result is near the upper normal limit. ${info.nearHighAdvice}`;
+    } else if (nearLow) {
+      return `⚠️ Monitoring Zone: Your result is near the lower normal limit. ${info.nearLowAdvice}`;
+    } else {
+      return "Your results are within the optimal range, indicating healthy levels for this biomarker.";
+    }
   };
 
   const formatValue = (value: number, unit: string) => {
@@ -486,25 +566,14 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
                       </div>
                     </div>
 
-                    {/* What This Biomarker Is */}
-                    <div className="mb-4">
-                      <h6 className="font-medium text-gray-800 mb-2 flex items-center">
-                        <Info className="h-4 w-4 mr-2 text-blue-500" />
-                        What This Measures
-                      </h6>
-                      <p className="text-sm text-gray-700 leading-relaxed">
-                        {info.description}
-                      </p>
-                    </div>
-
-                    {/* Clinical Significance */}
+                    {/* Scientific Insight */}
                     <div className="mb-4">
                       <h6 className="font-medium text-gray-800 mb-2 flex items-center">
                         <Target className="h-4 w-4 mr-2 text-purple-500" />
-                        Clinical Significance
+                        Scientific Insight
                       </h6>
                       <p className="text-sm text-gray-700 leading-relaxed">
-                        {info.clinicalSignificance}
+                        {info.scientificInsight}
                       </p>
                     </div>
 
@@ -525,7 +594,7 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
                       <p className={`text-sm leading-relaxed ${
                         biomarker.isAbnormal ? 'text-red-700' : 'text-green-700'
                       }`}>
-                        {biomarker.isAbnormal ? info.highImplications : "Your results are within the normal range, indicating healthy levels for this biomarker."}
+                        {getProximityAdvice(biomarker.value, biomarker.biomarkerName, info)}
                       </p>
                     </div>
 
