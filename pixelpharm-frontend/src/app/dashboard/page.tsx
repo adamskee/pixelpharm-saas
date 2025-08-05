@@ -595,78 +595,322 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Body Composition Tracking */}
+      {/* Comprehensive Body Composition Analysis */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <LineChart className="h-5 w-5 text-blue-500" />
-            <span>Body Composition Tracking</span>
+            <span>Comprehensive Body Composition Analysis</span>
           </CardTitle>
           <CardDescription>
-            Track changes in body composition over time with automated progress charts
+            Complete body composition metrics from your latest DEXA, InBody, or body composition scan
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {/* BMI */}
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600">BMI</span>
-                <Weight className="h-4 w-4 text-blue-500" />
+          {/* Primary Metrics */}
+          <div className="mb-6">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <Target className="h-5 w-5 text-blue-500 mr-2" />
+              Primary Body Composition Metrics
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Total Weight */}
+              <div className="p-4 border rounded-lg bg-blue-50 border-blue-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Total Weight</span>
+                  <Weight className="h-4 w-4 text-blue-500" />
+                </div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {stats.bodyComposition?.totalWeight ? `${stats.bodyComposition.totalWeight}kg` : '--'}
+                </div>
+                <div className="flex items-center mt-1">
+                  <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                  <span className="text-xs text-green-600">Healthy range</span>
+                </div>
               </div>
-              <div className="text-2xl font-bold">
-                {stats.bodyComposition?.latestBMI ? stats.bodyComposition.latestBMI.toFixed(1) : '--'}
-              </div>
-              <div className="flex items-center mt-1">
-                <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                <span className="text-xs text-green-600">Normal range</span>
-              </div>
-            </div>
 
-            {/* Body Fat */}
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600">Body Fat</span>
-                <Percent className="h-4 w-4 text-orange-500" />
+              {/* BMI */}
+              <div className="p-4 border rounded-lg bg-purple-50 border-purple-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">BMI</span>
+                  <Scale className="h-4 w-4 text-purple-500" />
+                </div>
+                <div className="text-2xl font-bold text-purple-600">
+                  {stats.bodyComposition?.latestBMI ? stats.bodyComposition.latestBMI.toFixed(1) : '--'}
+                </div>
+                <div className="flex items-center mt-1">
+                  <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                  <span className="text-xs text-green-600">Normal range</span>
+                </div>
               </div>
-              <div className="text-2xl font-bold">
-                {stats.bodyComposition?.bodyFatPercentage ? `${stats.bodyComposition.bodyFatPercentage}%` : '--'}
-              </div>
-              <div className="flex items-center mt-1">
-                <TrendingDown className="h-3 w-3 text-blue-500 mr-1" />
-                <span className="text-xs text-blue-600">Decreasing</span>
-              </div>
-            </div>
 
-            {/* Muscle Mass */}
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600">Muscle Mass</span>
-                <Dumbbell className="h-4 w-4 text-green-500" />
+              {/* Body Fat Percentage */}
+              <div className="p-4 border rounded-lg bg-orange-50 border-orange-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Body Fat %</span>
+                  <Percent className="h-4 w-4 text-orange-500" />
+                </div>
+                <div className="text-2xl font-bold text-orange-600">
+                  {stats.bodyComposition?.bodyFatPercentage ? `${stats.bodyComposition.bodyFatPercentage}%` : '--'}
+                </div>
+                <div className="flex items-center mt-1">
+                  <TrendingDown className="h-3 w-3 text-blue-500 mr-1" />
+                  <span className="text-xs text-blue-600">Optimizing</span>
+                </div>
               </div>
-              <div className="text-2xl font-bold">
-                {stats.bodyComposition?.muscleMass ? `${stats.bodyComposition.muscleMass}kg` : '--'}
-              </div>
-              <div className="flex items-center mt-1">
-                <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                <span className="text-xs text-green-600">Increasing</span>
+
+              {/* Skeletal Muscle Mass */}
+              <div className="p-4 border rounded-lg bg-green-50 border-green-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Muscle Mass</span>
+                  <Dumbbell className="h-4 w-4 text-green-500" />
+                </div>
+                <div className="text-2xl font-bold text-green-600">
+                  {stats.bodyComposition?.muscleMass ? `${stats.bodyComposition.muscleMass}kg` : '--'}
+                </div>
+                <div className="flex items-center mt-1">
+                  <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                  <span className="text-xs text-green-600">Building</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Progress Chart Placeholder */}
-          <div className="h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center">
-            <div className="text-center">
-              <BarChart3 className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">Body composition progress chart</p>
-              <p className="text-xs text-gray-400 mt-1">Upload body scans to see trends</p>
+          {/* Advanced Composition Metrics */}
+          <div className="mb-6">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <BarChart3 className="h-5 w-5 text-indigo-500 mr-2" />
+              Advanced Composition Analysis
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Visceral Fat Level */}
+              <div className="p-4 border rounded-lg bg-yellow-50 border-yellow-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Visceral Fat</span>
+                  <AlertCircle className="h-4 w-4 text-yellow-500" />
+                </div>
+                <div className="text-xl font-bold text-yellow-600">
+                  Level {stats.bodyComposition?.visceralFatLevel || '--'}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">Internal organ fat</div>
+              </div>
+
+              {/* BMR */}
+              <div className="p-4 border rounded-lg bg-red-50 border-red-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">BMR</span>
+                  <Zap className="h-4 w-4 text-red-500" />
+                </div>
+                <div className="text-xl font-bold text-red-600">
+                  {stats.bodyComposition?.bmr || '--'}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">kcal/day</div>
+              </div>
+
+              {/* Body Fat Mass */}
+              <div className="p-4 border rounded-lg bg-amber-50 border-amber-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Fat Mass</span>
+                  <Percent className="h-4 w-4 text-amber-500" />
+                </div>
+                <div className="text-xl font-bold text-amber-600">
+                  {stats.bodyComposition?.bodyFatMass ? `${stats.bodyComposition.bodyFatMass}kg` : '--'}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">Total body fat</div>
+              </div>
+
+              {/* Lean Mass */}
+              <div className="p-4 border rounded-lg bg-emerald-50 border-emerald-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Lean Mass</span>
+                  <Dumbbell className="h-4 w-4 text-emerald-500" />
+                </div>
+                <div className="text-xl font-bold text-emerald-600">
+                  {stats.bodyComposition?.leanMass ? `${stats.bodyComposition.leanMass}kg` : '--'}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">Fat-free mass</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Hydration & Mineral Analysis */}
+          <div className="mb-6">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <Activity className="h-5 w-5 text-cyan-500 mr-2" />
+              Hydration & Mineral Analysis
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Total Body Water */}
+              <div className="p-4 border rounded-lg bg-cyan-50 border-cyan-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Total Body Water</span>
+                  <Activity className="h-4 w-4 text-cyan-500" />
+                </div>
+                <div className="text-xl font-bold text-cyan-600">
+                  {stats.bodyComposition?.totalBodyWater ? `${stats.bodyComposition.totalBodyWater}L` : '--'}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">Hydration status</div>
+              </div>
+
+              {/* Protein Mass */}
+              <div className="p-4 border rounded-lg bg-pink-50 border-pink-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Protein Mass</span>
+                  <Target className="h-4 w-4 text-pink-500" />
+                </div>
+                <div className="text-xl font-bold text-pink-600">
+                  {stats.bodyComposition?.proteinMass ? `${stats.bodyComposition.proteinMass}kg` : '--'}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">Structural protein</div>
+              </div>
+
+              {/* Bone Mineral Content */}
+              <div className="p-4 border rounded-lg bg-stone-50 border-stone-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Bone Mineral</span>
+                  <Calendar className="h-4 w-4 text-stone-500" />
+                </div>
+                <div className="text-xl font-bold text-stone-600">
+                  {stats.bodyComposition?.boneMineralContent ? `${stats.bodyComposition.boneMineralContent}kg` : '--'}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">Bone density</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Segmental Analysis */}
+          <div className="mb-6">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <Users className="h-5 w-5 text-violet-500 mr-2" />
+              Segmental Body Composition
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {/* Right Arm */}
+              <div className="p-3 border rounded-lg bg-slate-50 border-slate-200 text-center">
+                <div className="text-sm font-medium text-gray-700 mb-1">Right Arm</div>
+                <div className="text-lg font-bold text-slate-600">
+                  {stats.bodyComposition?.rightArmMuscle ? `${stats.bodyComposition.rightArmMuscle}kg` : '--'}
+                </div>
+                <div className="text-xs text-gray-500">Muscle mass</div>
+              </div>
+
+              {/* Left Arm */}
+              <div className="p-3 border rounded-lg bg-slate-50 border-slate-200 text-center">
+                <div className="text-sm font-medium text-gray-700 mb-1">Left Arm</div>
+                <div className="text-lg font-bold text-slate-600">
+                  {stats.bodyComposition?.leftArmMuscle ? `${stats.bodyComposition.leftArmMuscle}kg` : '--'}
+                </div>
+                <div className="text-xs text-gray-500">Muscle mass</div>
+              </div>
+
+              {/* Trunk */}
+              <div className="p-3 border rounded-lg bg-slate-50 border-slate-200 text-center">
+                <div className="text-sm font-medium text-gray-700 mb-1">Trunk</div>
+                <div className="text-lg font-bold text-slate-600">
+                  {stats.bodyComposition?.trunkMuscle ? `${stats.bodyComposition.trunkMuscle}kg` : '--'}
+                </div>
+                <div className="text-xs text-gray-500">Core muscle</div>
+              </div>
+
+              {/* Right Leg */}
+              <div className="p-3 border rounded-lg bg-slate-50 border-slate-200 text-center">
+                <div className="text-sm font-medium text-gray-700 mb-1">Right Leg</div>
+                <div className="text-lg font-bold text-slate-600">
+                  {stats.bodyComposition?.rightLegMuscle ? `${stats.bodyComposition.rightLegMuscle}kg` : '--'}
+                </div>
+                <div className="text-xs text-gray-500">Muscle mass</div>
+              </div>
+
+              {/* Left Leg */}
+              <div className="p-3 border rounded-lg bg-slate-50 border-slate-200 text-center">
+                <div className="text-sm font-medium text-gray-700 mb-1">Left Leg</div>
+                <div className="text-lg font-bold text-slate-600">
+                  {stats.bodyComposition?.leftLegMuscle ? `${stats.bodyComposition.leftLegMuscle}kg` : '--'}
+                </div>
+                <div className="text-xs text-gray-500">Muscle mass</div>
+              </div>
+            </div>
+          </div>
+
+          {/* InBody-Specific Advanced Metrics */}
+          <div className="mb-6">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <Brain className="h-5 w-5 text-purple-500 mr-2" />
+              Advanced InBody Metrics
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Phase Angle */}
+              <div className="p-4 border rounded-lg bg-purple-50 border-purple-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Phase Angle</span>
+                  <Zap className="h-4 w-4 text-purple-500" />
+                </div>
+                <div className="text-xl font-bold text-purple-600">
+                  {stats.bodyComposition?.phaseAngle ? `${stats.bodyComposition.phaseAngle}°` : '--'}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">Cell integrity</div>
+              </div>
+
+              {/* ECW/TBW Ratio */}
+              <div className="p-4 border rounded-lg bg-teal-50 border-teal-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">ECW/TBW</span>
+                  <Activity className="h-4 w-4 text-teal-500" />
+                </div>
+                <div className="text-xl font-bold text-teal-600">
+                  {stats.bodyComposition?.ecwTbwRatio ? stats.bodyComposition.ecwTbwRatio.toFixed(3) : '--'}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">Fluid balance</div>
+              </div>
+
+              {/* Intracellular Water */}
+              <div className="p-4 border rounded-lg bg-blue-50 border-blue-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">ICW</span>
+                  <Activity className="h-4 w-4 text-blue-500" />
+                </div>
+                <div className="text-xl font-bold text-blue-600">
+                  {stats.bodyComposition?.intracellularWater ? `${stats.bodyComposition.intracellularWater}L` : '--'}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">Cellular hydration</div>
+              </div>
+
+              {/* Extracellular Water */}
+              <div className="p-4 border rounded-lg bg-sky-50 border-sky-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">ECW</span>
+                  <Activity className="h-4 w-4 text-sky-500" />
+                </div>
+                <div className="text-xl font-bold text-sky-600">
+                  {stats.bodyComposition?.extracellularWater ? `${stats.bodyComposition.extracellularWater}L` : '--'}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">Tissue fluid</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Device & Test Information */}
+          <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-gray-700">Device:</span>
+                <span className="ml-2 text-gray-600">{stats.bodyComposition?.deviceModel || 'Not specified'}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Test Date:</span>
+                <span className="ml-2 text-gray-600">{formatDate(stats.bodyComposition?.lastScanDate) || 'No scans yet'}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Total Scans:</span>
+                <span className="ml-2 text-gray-600">{totalScans} completed</span>
+              </div>
             </div>
           </div>
           
-          <div className="flex justify-between items-center mt-4">
-            <p className="text-xs text-gray-500">
-              Last scan: {formatDate(stats.bodyComposition?.lastScanDate) || 'No scans yet'}
-            </p>
+          <div className="flex justify-between items-center">
+            <Badge variant="outline" className="text-xs">
+              {totalScans} total scans • Latest: {formatDate(stats.bodyComposition?.lastScanDate) || 'None'}
+            </Badge>
             <Link href="/body-composition">
               <Button size="sm" variant="outline">
                 <Upload className="h-4 w-4 mr-2" />
