@@ -175,12 +175,36 @@ export async function GET(request: Request) {
           });
           console.log(`🏋️ Body composition data found:`, latestBodyComposition ? 'Yes' : 'No');
           if (latestBodyComposition) {
-            console.log(`🏋️ Body composition values:`, {
+            console.log(`🏋️ Body composition basic values:`, {
               weight: latestBodyComposition.totalWeight?.toString(),
               bodyFat: latestBodyComposition.bodyFatPercentage?.toString(),
               muscleMass: latestBodyComposition.skeletalMuscleMass?.toString(),
               testDate: latestBodyComposition.testDate
             });
+            
+            // Debug rawData structure
+            if (latestBodyComposition.rawData) {
+              console.log(`🏋️ RawData structure available:`, Object.keys(latestBodyComposition.rawData));
+              if (latestBodyComposition.rawData.bodyComposition) {
+                console.log(`🏋️ Body composition detailed data:`, Object.keys(latestBodyComposition.rawData.bodyComposition));
+                
+                // Show sample values
+                const bc = latestBodyComposition.rawData.bodyComposition;
+                console.log(`🏋️ Sample detailed metrics:`, {
+                  totalWeight: bc.totalWeight,
+                  bodyFatPercentage: bc.bodyFatPercentage,
+                  muscle: bc.muscle ? Object.keys(bc.muscle) : 'none',
+                  fat: bc.fat ? Object.keys(bc.fat) : 'none',
+                  water: bc.water ? Object.keys(bc.water) : 'none',
+                  phaseAngle: bc.phaseAngle,
+                  ecwTbwRatio: bc.ecwTbwRatio
+                });
+              } else {
+                console.log(`🏋️ No bodyComposition field in rawData`);
+              }
+            } else {
+              console.log(`🏋️ No rawData available in body composition result`);
+            }
           }
         } catch (error) {
           console.log("⚠️ bodyCompositionResult table not accessible:", error.message);
@@ -379,6 +403,42 @@ export async function GET(request: Request) {
               fileUploads
                 .find((f) => f.uploadType === "BODY_COMPOSITION")
                 ?.createdAt?.toISOString() || null,
+            
+            // Extract all detailed metrics from rawData
+            ...(latestBodyComposition?.rawData?.bodyComposition ? {
+              // Basic metrics (may override above if more detailed data available)
+              totalWeight: latestBodyComposition.rawData.bodyComposition.totalWeight || latestBodyComposition.totalWeight,
+              bodyFatPercentage: latestBodyComposition.rawData.bodyComposition.bodyFatPercentage || latestBodyComposition.bodyFatPercentage,
+              skeletalMuscleMass: latestBodyComposition.rawData.bodyComposition.skeletalMuscleMass || latestBodyComposition.skeletalMuscleMass,
+              visceralFatLevel: latestBodyComposition.rawData.bodyComposition.visceralFatLevel || latestBodyComposition.visceralFatLevel,
+              bmr: latestBodyComposition.rawData.bodyComposition.bmr || latestBodyComposition.bmr,
+              
+              // Advanced composition metrics
+              bodyFatMass: latestBodyComposition.rawData.bodyComposition.fat?.bodyFatMass,
+              leanMass: latestBodyComposition.rawData.bodyComposition.muscle?.dryLeanMass,
+              
+              // Hydration & minerals
+              totalBodyWater: latestBodyComposition.rawData.bodyComposition.water?.totalBodyWater,
+              proteinMass: latestBodyComposition.rawData.bodyComposition.metabolic?.proteinMass,
+              boneMineralContent: latestBodyComposition.rawData.bodyComposition.mineral?.boneMineralContent,
+              
+              // Segmental analysis
+              rightArmMuscle: latestBodyComposition.rawData.bodyComposition.muscle?.rightArm,
+              leftArmMuscle: latestBodyComposition.rawData.bodyComposition.muscle?.leftArm,
+              trunkMuscle: latestBodyComposition.rawData.bodyComposition.muscle?.trunk,
+              rightLegMuscle: latestBodyComposition.rawData.bodyComposition.muscle?.rightLeg,
+              leftLegMuscle: latestBodyComposition.rawData.bodyComposition.muscle?.leftLeg,
+              
+              // Advanced InBody metrics
+              phaseAngle: latestBodyComposition.rawData.bodyComposition.phaseAngle,
+              ecwTbwRatio: latestBodyComposition.rawData.bodyComposition.ecwTbwRatio,
+              intracellularWater: latestBodyComposition.rawData.bodyComposition.water?.intracellularWater,
+              extracellularWater: latestBodyComposition.rawData.bodyComposition.water?.extracellularWater,
+              
+              // Device information
+              deviceModel: latestBodyComposition.rawData.deviceInfo?.deviceModel,
+              facilityName: latestBodyComposition.rawData.deviceInfo?.facilityName,
+            } : {}),
           },
           trends: {
             healthScoreTrend:

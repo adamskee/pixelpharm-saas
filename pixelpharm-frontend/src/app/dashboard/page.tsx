@@ -73,6 +73,38 @@ interface DashboardStats {
     bodyFatPercentage: number | null;
     muscleMass: number | null;
     lastScanDate: string | null;
+    
+    // Enhanced body composition metrics from rawData extraction
+    totalWeight?: number;
+    skeletalMuscleMass?: number;
+    visceralFatLevel?: number;
+    bmr?: number;
+    
+    // Advanced composition metrics
+    bodyFatMass?: number;
+    leanMass?: number;
+    
+    // Hydration & minerals
+    totalBodyWater?: number;
+    proteinMass?: number;
+    boneMineralContent?: number;
+    
+    // Segmental analysis
+    rightArmMuscle?: number;
+    leftArmMuscle?: number;
+    trunkMuscle?: number;
+    rightLegMuscle?: number;
+    leftLegMuscle?: number;
+    
+    // Advanced InBody metrics
+    phaseAngle?: number;
+    ecwTbwRatio?: number;
+    intracellularWater?: number;
+    extracellularWater?: number;
+    
+    // Device information
+    deviceModel?: string;
+    facilityName?: string;
   };
   trends?: {
     healthScoreTrend: string;
@@ -167,7 +199,7 @@ export default function DashboardPage() {
       const response = await fetch(
         `/api/dashboard/comprehensive-stats?userId=${
           user?.userId
-        }&_timestamp=${Date.now()}`
+        }&_timestamp=${Date.now()}&_refresh=${isRefresh ? 'true' : 'false'}`
       );
 
       if (!response.ok) {
@@ -176,6 +208,7 @@ export default function DashboardPage() {
 
       const data = await response.json();
       console.log("📊 Dashboard stats received:", data);
+      console.log("🏋️ Body composition data in dashboard:", data.bodyComposition);
       setStats(data);
       setError(null);
     } catch (err) {
