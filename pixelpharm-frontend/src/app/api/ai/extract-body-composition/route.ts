@@ -62,14 +62,19 @@ export async function POST(request: NextRequest) {
     console.log("🏋️ Claude Body Composition API called");
     console.log("🔐 Environment check:");
     console.log("- ANTHROPIC_API_KEY exists:", !!process.env.ANTHROPIC_API_KEY);
-    console.log("- AWS_S3_BUCKET_NAME exists:", !!process.env.AWS_S3_BUCKET_NAME);
+    console.log("- AWS_S3_BUCKET_NAME:", process.env.AWS_S3_BUCKET_NAME);
+    console.log("- AWS_REGION:", process.env.AWS_REGION || "us-east-1");
 
-    const { fileKey, uploadType = "BODY_COMPOSITION" } = await request.json();
+    const requestBody = await request.json();
+    console.log("📥 Full request body:", JSON.stringify(requestBody, null, 2));
+
+    const { fileKey, uploadType = "BODY_COMPOSITION" } = requestBody;
     console.log("🎯 Processing body composition scan:", { fileKey, uploadType });
 
     if (!fileKey) {
+      console.error("❌ No fileKey provided in request");
       return NextResponse.json(
-        { error: "File key is required" },
+        { error: "File key is required", receivedBody: requestBody },
         { status: 400 }
       );
     }
@@ -78,24 +83,54 @@ export async function POST(request: NextRequest) {
 
     // Get image from S3
     console.log("📁 Retrieving image from S3...");
+    console.log("📁 S3 Bucket:", process.env.AWS_S3_BUCKET_NAME);
+    console.log("📁 S3 Key:", fileKey);
+    
     const getObjectCommand = new GetObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET_NAME!,
       Key: fileKey,
     });
 
-    const s3Response = await s3Client.send(getObjectCommand);
-    if (!s3Response.Body) {
-      throw new Error("Failed to retrieve image from S3");
+    let s3Response;
+    try {
+      s3Response = await s3Client.send(getObjectCommand);
+    } catch (s3Error: any) {
+      console.error("❌ S3 GetObject failed:", s3Error);
+      console.error("❌ S3 Error details:", {
+        code: s3Error.name,
+        message: s3Error.message,
+        bucket: process.env.AWS_S3_BUCKET_NAME,
+        key: fileKey
+      });
+      
+      throw new Error(`S3 file retrieval failed: ${s3Error.message}. Check if the file was uploaded successfully with key: ${fileKey}`);
     }
+
+    if (!s3Response.Body) {
+      throw new Error("Failed to retrieve image from S3 - empty response body");
+    }
+    
+    console.log("✅ Successfully retrieved file from S3");
 
     // Convert to base64 for Claude
     const imageBuffer = await streamToBuffer(s3Response.Body as any);
     const base64Image = imageBuffer.toString("base64");
-    const mimeType = fileKey.endsWith(".pdf")
-      ? "application/pdf"
-      : fileKey.endsWith(".png")
-      ? "image/png"
-      : "image/jpeg";
+    
+    // Determine proper MIME type based on file extension
+    let mimeType = "image/jpeg"; // default
+    if (fileKey.endsWith(".pdf")) {
+      mimeType = "application/pdf";
+    } else if (fileKey.endsWith(".png")) {
+      mimeType = "image/png";
+    } else if (fileKey.endsWith(".webp")) {
+      mimeType = "image/webp";
+    } else if (fileKey.endsWith(".gif")) {
+      mimeType = "image/gif";
+    } else if (fileKey.endsWith(".jpeg") || fileKey.endsWith(".jpg")) {
+      mimeType = "image/jpeg";
+    }
+    
+    console.log(`📎 File type detected: ${mimeType} from ${fileKey}`);
 
     console.log(
       `📊 Image size: ${(imageBuffer.length / 1024 / 1024).toFixed(2)} MB`
