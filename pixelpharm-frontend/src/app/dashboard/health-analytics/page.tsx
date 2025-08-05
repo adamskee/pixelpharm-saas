@@ -166,6 +166,22 @@ export default function EnhancedHealthAnalyticsDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [detailedBiomarkers, setDetailedBiomarkers] = useState<any[]>([]);
+
+  // Fetch detailed biomarker data for clinical review
+  const fetchDetailedBiomarkers = async () => {
+    if (!user?.userId) return;
+
+    try {
+      const response = await fetch(`/api/user/biomarkers?userId=${user.userId}&limit=1000`);
+      if (response.ok) {
+        const data = await response.json();
+        setDetailedBiomarkers(data.biomarkers || []);
+      }
+    } catch (error) {
+      console.error('Error fetching detailed biomarkers:', error);
+    }
+  };
 
   // Export biomarkers function
   const exportBiomarkers = async (format: 'pdf' | 'txt' | 'csv') => {
@@ -537,6 +553,7 @@ Date: ${currentDate}
   useEffect(() => {
     if (user?.userId) {
       fetchMedicalReview();
+      fetchDetailedBiomarkers();
     }
   }, [user?.userId]);
 
@@ -652,7 +669,61 @@ Date: ${currentDate}
     }
   };
 
-  // Generate clinical review paragraph
+  // Helper function to determine if biomarker is in monitoring zone
+  const isInMonitoringZone = (biomarker: any): boolean => {
+    if (!biomarker.referenceRange || biomarker.isAbnormal) return false;
+    
+    const parseReferenceRange = (referenceRange: string) => {
+      const rangeMatch = referenceRange.match(/([0-9.]+)\s*-\s*([0-9.]+)/);
+      const lessThanMatch = referenceRange.match(/[<≤]\s*([0-9.]+)/);
+      const greaterThanMatch = referenceRange.match(/[>≥]\s*([0-9.]+)/);
+      
+      if (rangeMatch) {
+        return {
+          min: parseFloat(rangeMatch[1]),
+          max: parseFloat(rangeMatch[2]),
+          type: 'range'
+        };
+      } else if (lessThanMatch) {
+        return {
+          min: 0,
+          max: parseFloat(lessThanMatch[1]),
+          type: 'lessThan'
+        };
+      } else if (greaterThanMatch) {
+        return {
+          min: parseFloat(greaterThanMatch[1]),
+          max: Infinity,
+          type: 'greaterThan'
+        };
+      }
+      return null;
+    };
+
+    const range = parseReferenceRange(biomarker.referenceRange);
+    if (!range) return false;
+
+    const { min, max, type } = range;
+    const value = biomarker.value;
+    
+    if (type === 'range') {
+      const rangeWidth = max - min;
+      const tenPercentRange = rangeWidth * 0.1;
+      const nearHigh = value >= (max - tenPercentRange) && value <= max;
+      const nearLow = value >= min && value <= (min + tenPercentRange);
+      return nearHigh || nearLow;
+    } else if (type === 'greaterThan') {
+      const tenPercentRange = min * 0.1;
+      return value >= min && value <= (min + tenPercentRange);
+    } else if (type === 'lessThan') {
+      const tenPercentRange = max * 0.1;
+      return value >= (max - tenPercentRange) && value <= max;
+    }
+    
+    return false;
+  };
+
+  // Generate clinical review paragraph with specific biomarker details
   const generateClinicalReview = (medicalReview: MedicalReview): string => {
     const userName = medicalReview.user?.firstName || user?.firstName || user?.name || "there";
     const totalBiomarkers = medicalReview.biomarkers.totalBiomarkers;
@@ -674,6 +745,26 @@ Date: ${currentDate}
       (bodyComposition.totalScans > 0 ||
         bodyComposition.bodyFatPercentage ||
         bodyComposition.muscleMass);
+
+    // Analyze detailed biomarkers if available
+    const abnormalBiomarkers = detailedBiomarkers.filter(b => b.isAbnormal);
+    const monitoringBiomarkers = detailedBiomarkers.filter(b => !b.isAbnormal && isInMonitoringZone(b));
+    const criticalBiomarkers = abnormalBiomarkers.filter(b => {
+      // Define critical biomarkers based on common medical criteria
+      const name = b.biomarkerName.toLowerCase();
+      const value = b.value;
+      
+      if (name.includes('glucose') && value > 180) return true;
+      if (name.includes('a1c') && value > 8.0) return true;
+      if (name.includes('total cholesterol') && value > 280) return true;
+      if (name.includes('ldl') && value > 190) return true;
+      if (name.includes('triglycerides') && value > 500) return true;
+      if (name.includes('creatinine') && value > 2.0) return true;
+      if (name.includes('alt') && value > 120) return true;
+      if (name.includes('ast') && value > 120) return true;
+      
+      return false;
+    });
 
     if (totalBiomarkers === 0) {
       let reviewText = `Hello ${userName}, let's discuss your current health status. Currently, there are no recent laboratory results available for analysis. To provide you with the most comprehensive health assessment and personalized recommendations, regular blood testing is essential. `;
@@ -701,17 +792,26 @@ Date: ${currentDate}
 
     let reviewText = `Hello ${userName}, here's a comprehensive review of your recent health data from ${lastTestDate}. `;
 
-    // Overall assessment
-    if (criticalCount > 0) {
-      reviewText += `Your test results show ${criticalCount} critical value${
-        criticalCount > 1 ? "s" : ""
-      } that require immediate attention and intervention. `;
-    } else if (abnormalCount > 0) {
-      reviewText += `Your results show ${abnormalCount} biomarker${
-        abnormalCount > 1 ? "s" : ""
-      } outside the normal range that should be addressed. `;
+    // Overall assessment with specific biomarker details
+    if (criticalBiomarkers.length > 0) {
+      reviewText += `Your test results show ${criticalBiomarkers.length} critical value${criticalBiomarkers.length > 1 ? "s" : ""} requiring immediate medical attention: `;
+      reviewText += criticalBiomarkers.map(b => `${b.biomarkerName} (${b.value} ${b.unit})`).join(', ');
+      reviewText += `. These values are significantly outside normal ranges and warrant urgent healthcare provider consultation. `;
+    } else if (abnormalBiomarkers.length > 0) {
+      reviewText += `Your results show ${abnormalBiomarkers.length} biomarker${abnormalBiomarkers.length > 1 ? "s" : ""} outside normal range: `;
+      reviewText += abnormalBiomarkers.slice(0, 5).map(b => `${b.biomarkerName} (${b.value} ${b.unit})`).join(', ');
+      if (abnormalBiomarkers.length > 5) reviewText += ` and ${abnormalBiomarkers.length - 5} others`;
+      reviewText += `. These should be addressed with your healthcare provider. `;
     } else {
       reviewText += `Excellent news - your laboratory values are within normal ranges, indicating good overall metabolic health. `;
+    }
+
+    // Add monitoring zone markers
+    if (monitoringBiomarkers.length > 0) {
+      reviewText += `\n\nAdditionally, ${monitoringBiomarkers.length} biomarker${monitoringBiomarkers.length > 1 ? "s are" : " is"} in the monitoring zone (within 10% of normal range boundaries): `;
+      reviewText += monitoringBiomarkers.slice(0, 5).map(b => `${b.biomarkerName} (${b.value} ${b.unit})`).join(', ');
+      if (monitoringBiomarkers.length > 5) reviewText += ` and ${monitoringBiomarkers.length - 5} others`;
+      reviewText += `. While technically normal, these markers warrant closer attention and proactive lifestyle optimization to prevent future progression outside normal ranges. `;
     }
 
     // Health score context
@@ -766,64 +866,61 @@ Date: ${currentDate}
       reviewText += `The combination of your blood work and body composition data provides a comprehensive view of your metabolic health status. `;
     }
 
-    // Short-term recommendations
-    reviewText += `\n\nFor the next 3-6 months, focus on `;
+    // Specific recommendations based on abnormal and monitoring biomarkers
+    reviewText += `\n\nBased on your specific results, here are targeted recommendations: `;
 
-    if (criticalCount > 0 || abnormalCount > 2) {
-      reviewText += `immediate lifestyle modifications including a heart-healthy diet rich in omega-3 fatty acids, regular moderate exercise (30 minutes daily), stress management techniques, and ensuring adequate sleep (7-9 hours nightly). `;
-      if (
-        hasBodyData &&
-        bodyComposition?.bodyFatPercentage &&
-        bodyComposition.bodyFatPercentage > 25
-      ) {
+    if (criticalBiomarkers.length > 0 || abnormalBiomarkers.length > 2) {
+      reviewText += `Immediate lifestyle modifications are essential, including a heart-healthy diet rich in omega-3 fatty acids, regular moderate exercise (30 minutes daily), stress management techniques, and ensuring adequate sleep (7-9 hours nightly). `;
+      
+      // Add specific recommendations for common abnormal biomarkers
+      const hasGlucoseIssues = abnormalBiomarkers.some(b => b.biomarkerName.toLowerCase().includes('glucose') || b.biomarkerName.toLowerCase().includes('a1c'));
+      const hasLipidIssues = abnormalBiomarkers.some(b => b.biomarkerName.toLowerCase().includes('cholesterol') || b.biomarkerName.toLowerCase().includes('triglyceride'));
+      const hasLiverIssues = abnormalBiomarkers.some(b => b.biomarkerName.toLowerCase().includes('alt') || b.biomarkerName.toLowerCase().includes('ast'));
+      
+      if (hasGlucoseIssues) {
+        reviewText += `Given your glucose/A1c results, focus on carbohydrate management, consider continuous glucose monitoring, and prioritize post-meal physical activity. `;
+      }
+      if (hasLipidIssues) {
+        reviewText += `For your lipid profile concerns, emphasize soluble fiber intake, plant sterols, and consider omega-3 supplementation. `;
+      }
+      if (hasLiverIssues) {
+        reviewText += `Your liver enzyme results suggest reducing alcohol intake, increasing antioxidant-rich foods, and considering milk thistle supplementation. `;
+      }
+      
+      if (hasBodyData && bodyComposition?.bodyFatPercentage && bodyComposition.bodyFatPercentage > 25) {
         reviewText += `Given your body composition, incorporating both cardiovascular exercise and strength training will be particularly beneficial for improving both your biomarkers and body composition. `;
       }
-    } else if (abnormalCount > 0) {
-      reviewText += `targeted dietary adjustments, incorporating regular physical activity into your routine, and monitoring your progress with simple lifestyle tracking. `;
+    } else if (abnormalBiomarkers.length > 0 || monitoringBiomarkers.length > 0) {
+      reviewText += `Targeted lifestyle adjustments and preventive measures can help optimize your results. `;
+      
+      if (monitoringBiomarkers.length > 0) {
+        reviewText += `For your monitoring zone biomarkers, small dietary and activity modifications now can prevent future progression to abnormal ranges. `;
+      }
+      
       if (hasBodyData) {
         reviewText += `Your body composition data suggests maintaining or building lean muscle mass while optimizing your overall body composition. `;
       }
     } else {
-      reviewText += `maintaining your current healthy lifestyle patterns while fine-tuning your nutrition and exercise routine for optimal wellness. `;
-      if (
-        hasBodyData &&
-        bodyComposition?.muscleMass &&
-        bodyComposition.muscleMass > 30
-      ) {
+      reviewText += `Maintain your current healthy lifestyle patterns while fine-tuning your nutrition and exercise routine for optimal wellness. `;
+      if (hasBodyData && bodyComposition?.muscleMass && bodyComposition.muscleMass > 30) {
         reviewText += `Your excellent muscle mass indicates you're doing great with your fitness routine - keep it up! `;
       }
     }
 
-    // Long-term recommendations
-    reviewText += `Looking ahead over the next year, `;
-
-    if (riskLevel === "CRITICAL" || riskLevel === "HIGH") {
-      reviewText += `the goal is to significantly reduce your cardiovascular and metabolic risk through sustained lifestyle changes and establishing a strong foundation for long-term health. `;
-      if (
-        hasBodyData &&
-        bodyComposition?.bodyFatPercentage &&
-        bodyComposition.bodyFatPercentage > 30
-      ) {
-        reviewText += `Body composition optimization will play a crucial role in improving your overall health metrics. `;
-      }
-    } else if (riskLevel === "MODERATE") {
-      reviewText += `focus on optimizing your biomarker levels through consistent healthy habits, regular exercise, and nutritional support to prevent progression to higher risk categories. `;
-    } else {
-      reviewText += `continue maintaining your healthy status through preventive care, regular screenings, and supporting your body's natural ability to maintain optimal function. `;
-    }
-
     // Regular testing recommendations
-    reviewText += `\n\nFor the best ongoing health recommendations, blood tests should be done regularly. `;
+    reviewText += `\n\nFor ongoing monitoring, `;
 
-    if (criticalCount > 0) {
-      reviewText += `Given your critical values, consider retesting key biomarkers in 4-6 weeks, then transitioning to quarterly monitoring until values normalize. `;
-    } else if (abnormalCount > 0) {
-      reviewText += `With some abnormal values present, plan for retesting in 8-12 weeks, then every 3-6 months depending on progress. `;
+    if (criticalBiomarkers.length > 0) {
+      reviewText += `given your critical values, consider retesting key biomarkers in 4-6 weeks, then transitioning to quarterly monitoring until values normalize. `;
+    } else if (abnormalBiomarkers.length > 0) {
+      reviewText += `with abnormal values present, plan for retesting in 8-12 weeks, then every 3-6 months depending on progress. `;
+    } else if (monitoringBiomarkers.length > 0) {
+      reviewText += `with some markers in monitoring zones, consider retesting in 3-6 months to ensure stability. `;
     } else {
-      reviewText += `With your excellent current results, annual comprehensive testing is appropriate for continued health monitoring. `;
+      reviewText += `with your excellent current results, annual comprehensive testing is appropriate for continued health monitoring. `;
     }
 
-    reviewText += `Regular monitoring helps track progress, catch changes early, and adjust recommendations as needed. This data-driven approach, combined with body composition tracking when available, provides the most comprehensive picture of your health journey.`;
+    reviewText += `Regular monitoring helps track progress, catch changes early, and adjust recommendations as needed. This data-driven approach provides the most comprehensive picture of your health journey.`;
 
     return reviewText;
   };
