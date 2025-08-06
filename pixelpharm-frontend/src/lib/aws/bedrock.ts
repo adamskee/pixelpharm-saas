@@ -676,3 +676,59 @@ Provide evidence-based medical insights with clinical correlations and actionabl
 }
 
 export const bedrockAnalyzer = new BedrockHealthAnalyzer();
+
+// Simple Claude invocation function for direct prompts
+export async function callBedrockClaude(
+  prompt: string,
+  options?: {
+    maxTokens?: number;
+    temperature?: number;
+    modelId?: string;
+  }
+): Promise<string> {
+  const {
+    maxTokens = 4000,
+    temperature = 0.7,
+    modelId = "anthropic.claude-3-haiku-20240307-v1:0"
+  } = options || {};
+
+  try {
+    const command = new InvokeModelCommand({
+      modelId,
+      contentType: "application/json",
+      accept: "application/json",
+      body: JSON.stringify({
+        anthropic_version: "bedrock-2023-05-31",
+        max_tokens: maxTokens,
+        temperature,
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ]
+      })
+    });
+
+    console.log(`🧠 Invoking Claude model: ${modelId}`);
+    const response = await client.send(command);
+    
+    if (!response.body) {
+      throw new Error("No response body received from Bedrock");
+    }
+
+    const responseText = new TextDecoder().decode(response.body);
+    const parsedResponse = JSON.parse(responseText);
+    
+    if (parsedResponse.content && parsedResponse.content[0] && parsedResponse.content[0].text) {
+      return parsedResponse.content[0].text;
+    } else if (parsedResponse.completion) {
+      return parsedResponse.completion;
+    } else {
+      throw new Error("Unexpected response format from Claude");
+    }
+  } catch (error) {
+    console.error("❌ Claude invocation error:", error);
+    throw error;
+  }
+}

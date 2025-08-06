@@ -66,11 +66,22 @@ export async function GET(request: Request) {
     console.log(`🥗 Generating sports nutrition protocol for user: ${userId}`);
 
     // Get latest biomarker data
-    const biomarkerValues = await prisma.biomarkerValue.findMany({
-      where: { userId },
-      orderBy: { testDate: "desc" },
-      take: 50,
-    });
+    let biomarkerValues;
+    try {
+      biomarkerValues = await prisma.biomarkerValue.findMany({
+        where: { userId },
+        orderBy: { testDate: "desc" },
+        take: 50,
+      });
+      console.log(`📊 Found ${biomarkerValues.length} biomarker records for user: ${userId}`);
+    } catch (dbError: any) {
+      console.error("❌ Database error fetching biomarkers:", dbError);
+      return NextResponse.json({
+        success: false,
+        error: "Database connection failed",
+        details: dbError.message,
+      }, { status: 500 });
+    }
 
     // Get body composition for metabolic calculations
     const bodyComposition = await prisma.bodyCompositionResult.findFirst({

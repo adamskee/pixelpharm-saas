@@ -43,28 +43,53 @@ export async function GET(request: Request) {
     console.log(`🔄 Generating recovery protocol for user: ${userId}`);
 
     // Get latest biomarker data
-    const biomarkerValues = await prisma.biomarkerValue.findMany({
-      where: { userId },
-      orderBy: { testDate: "desc" },
-      take: 50, // Get recent values
-    });
+    let biomarkerValues;
+    try {
+      biomarkerValues = await prisma.biomarkerValue.findMany({
+        where: { userId },
+        orderBy: { testDate: "desc" },
+        take: 50, // Get recent values
+      });
+      console.log(`📊 Found ${biomarkerValues.length} biomarker records for user: ${userId}`);
+    } catch (dbError: any) {
+      console.error("❌ Database error fetching biomarkers:", dbError);
+      return NextResponse.json({
+        success: false,
+        error: "Database connection failed",
+        details: dbError.message,
+      }, { status: 500 });
+    }
 
     // Get latest body composition for metabolic status
-    const bodyComposition = await prisma.bodyCompositionResult.findFirst({
-      where: { userId },
-      orderBy: { testDate: "desc" },
-    });
+    let bodyComposition = null;
+    try {
+      bodyComposition = await prisma.bodyCompositionResult.findFirst({
+        where: { userId },
+        orderBy: { testDate: "desc" },
+      });
+      console.log(`🏋️ Body composition data found: ${bodyComposition ? 'Yes' : 'No'}`);
+    } catch (dbError) {
+      console.warn("⚠️ Could not fetch body composition data:", dbError);
+      bodyComposition = null;
+    }
 
     // Get user profile for personalization
-    const user = await prisma.user.findUnique({
-      where: { userId },
-      select: {
-        dateOfBirth: true,
-        gender: true,
-        height: true,
-        weight: true,
-      }
-    });
+    let user = null;
+    try {
+      user = await prisma.user.findUnique({
+        where: { userId },
+        select: {
+          dateOfBirth: true,
+          gender: true,
+          height: true,
+          weight: true,
+        }
+      });
+      console.log(`👤 User profile found: ${user ? 'Yes' : 'No'}`);
+    } catch (dbError) {
+      console.warn("⚠️ Could not fetch user profile:", dbError);
+      user = null;
+    }
 
     if (biomarkerValues.length === 0) {
       return NextResponse.json({
@@ -178,11 +203,36 @@ FORMAT AS JSON:
 }`;
 
     // Call Claude AI for recovery protocol generation
-    const claudeResponse = await callBedrockClaude(recoveryPrompt, {
-      maxTokens: 4000,
-      temperature: 0.3,
-      modelId: "anthropic.claude-3-haiku-20240307-v1:0"
-    });
+    let claudeResponse;
+    try {
+      console.log("🧠 Calling Claude AI for recovery protocol generation...");
+      claudeResponse = await callBedrockClaude(recoveryPrompt, {
+        maxTokens: 4000,
+        temperature: 0.3,
+        modelId: "anthropic.claude-3-haiku-20240307-v1:0"
+      });
+      console.log("✅ Claude AI response received");
+    } catch (aiError: any) {
+      console.error("❌ Claude AI call failed:", aiError);
+      // Fall back to generating a basic protocol
+      const recoveryProtocol = generateBasicRecoveryProtocol(relevantBiomarkers, age, bmi);
+      return NextResponse.json({
+        success: true,
+        userId,
+        generatedAt: new Date().toISOString(),
+        dataPoints: relevantBiomarkers.length,
+        recoveryProtocol,
+        fallback: true,
+        message: "Generated using fallback algorithm due to AI service unavailability",
+        userProfile: {
+          age,
+          gender: user?.gender,
+          bmi,
+          bodyFatPercentage: bodyComposition?.bodyFatPercentage,
+          muscleMass: bodyComposition?.skeletalMuscleMass,
+        }
+      });
+    }
 
     let recoveryProtocol: RecoveryProtocol;
     
