@@ -4,7 +4,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/auth-config";
-import { getUserPlanStatus, checkUploadPermission } from "@/lib/plans/plan-utils";
+// TEMPORARILY DISABLED - PLAN FIELDS REMOVED FROM SCHEMA
+// import { getUserPlanStatus, checkUploadPermission } from "@/lib/plans/plan-utils";
+import { prisma } from "@/lib/database/client";
 
 export async function GET(request: Request) {
   try {
@@ -20,11 +22,46 @@ export async function GET(request: Request) {
 
     console.log(`📊 Getting plan status for user: ${userId}`);
 
-    // Get plan status and upload permissions
-    const [planStatus, uploadPermission] = await Promise.all([
-      getUserPlanStatus(userId),
-      checkUploadPermission(userId)
-    ]);
+    // TEMPORARY FREE PLAN LOGIC - Check if user has uploaded before
+    const userFileUploads = await prisma.fileUpload.count({
+      where: { userId }
+    });
+    
+    const userBiomarkers = await prisma.biomarkerValue.count({
+      where: { userId }
+    });
+    
+    const uniqueBiomarkers = await prisma.biomarkerValue.findMany({
+      where: { userId },
+      select: { biomarkerName: true },
+      distinct: ['biomarkerName']
+    });
+    
+    console.log(`📊 User ${userId}: ${userFileUploads} uploads, ${userBiomarkers} biomarkers, ${uniqueBiomarkers.length} unique`);
+    
+    // Hardcoded free plan logic until schema is restored
+    const FREE_PLAN_BIOMARKER_LIMIT = 3;
+    const hasUsedUpload = userFileUploads > 0;
+    
+    const planStatus = {
+      currentPlan: 'free',
+      uploadsUsed: hasUsedUpload ? 1 : 0,
+      uploadsRemaining: hasUsedUpload ? 0 : 1,
+      canUpload: !hasUsedUpload,
+      needsUpgrade: uniqueBiomarkers.length > FREE_PLAN_BIOMARKER_LIMIT,
+      limits: {
+        maxUploads: 1,
+        maxBiomarkers: FREE_PLAN_BIOMARKER_LIMIT,
+        hasHealthOptimization: true,
+        hasAdvancedAnalytics: false,
+      }
+    };
+    
+    const uploadPermission = {
+      canUpload: !hasUsedUpload,
+      reason: hasUsedUpload ? "Free plan upload limit reached (1 lifetime upload used)" : "Upload allowed",
+      upgradeRequired: hasUsedUpload
+    };
 
     return NextResponse.json({
       success: true,
