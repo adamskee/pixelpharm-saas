@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth/auth-context";
-import { User, LogOut, Settings } from "lucide-react";
+import { User, LogOut, Settings, Zap } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -50,6 +50,13 @@ export function Navbar() {
             className="text-sm font-medium hover:text-blue-600"
           >
             Health Analytics
+          </Link>
+          <Link
+            href="/dashboard/health-optimization"
+            className="text-sm font-medium hover:text-blue-600 flex items-center space-x-1"
+          >
+            <Zap className="h-4 w-4" />
+            <span>Health Optimization</span>
           </Link>
           <Link
             href="/upload"

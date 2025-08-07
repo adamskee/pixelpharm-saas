@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import GoogleSignIn from "@/components/auth/google-signin";
 import Link from "next/link";
 import Image from "next/image";
-import { Heart, User, Settings, Bell, LogOut } from "lucide-react";
+import { Heart, User, Settings, Bell, LogOut, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
@@ -66,6 +66,13 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 className="text-gray-600 hover:text-gray-900 font-medium"
               >
                 Health Analytics
+              </Link>
+              <Link
+                href="/dashboard/health-optimization"
+                className="text-gray-600 hover:text-gray-900 font-medium flex items-center space-x-1"
+              >
+                <Zap className="h-4 w-4" />
+                <span>Health Optimization</span>
               </Link>
               <Link
                 href="/upload"
@@ -149,6 +156,11 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 <li>
                   <Link href="/dashboard/health-analytics" className="text-gray-300 hover:text-white transition-colors">
                     Analytics
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/dashboard/health-optimization" className="text-gray-300 hover:text-white transition-colors">
+                    Health Optimization
                   </Link>
                 </li>
                 <li>

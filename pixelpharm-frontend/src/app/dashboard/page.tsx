@@ -176,7 +176,7 @@ const safeNumber = (value: any): number => {
   return Number(value);
 };
 
-const safeArray = <T>(value: any): T[] => {
+const safeArray = <T,>(value: any): T[] => {
   if (!Array.isArray(value)) return [];
   return value;
 };
