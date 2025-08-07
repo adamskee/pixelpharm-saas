@@ -112,7 +112,12 @@ export async function GET(request: Request) {
 
         // Apply plan-based limitations for Free users (fallback to 'free' if planType doesn't exist)
         const userPlanType = (user as any).planType || 'free';
-        biomarkerValues = limitBiomarkersForPlan(rawBiomarkerValues, userPlanType);
+        const filteredBiomarkerValues = limitBiomarkersForPlan(rawBiomarkerValues, userPlanType);
+        
+        console.log(`🔒 Plan filtering applied for ${userPlanType} plan: ${rawBiomarkerValues.length} → ${filteredBiomarkerValues.length} biomarkers`);
+        
+        // Use filtered biomarkers for calculations but keep track of both counts
+        biomarkerValues = filteredBiomarkerValues;
 
         console.log(`📊 Found ${totalBiomarkerCount} total biomarker records`);
         console.log(
@@ -377,23 +382,24 @@ export async function GET(request: Request) {
             lastAnalysisDate: fileUploads[0]?.createdAt?.toISOString() || null,
           },
           biomarkers: {
-            // Show plan-filtered biomarker count for dashboard display
-            totalBiomarkers: biomarkerValues.length, // Show filtered count for free users
+            // Show total available biomarker count (not filtered) so component knows data exists
+            totalBiomarkers: totalBiomarkerCount, // Total available biomarkers
             uniqueBiomarkers: uniqueBiomarkerNames.length,
             abnormalCount: abnormalBiomarkers,
             criticalCount: criticalBiomarkers,
-            normalCount: biomarkerValues.length - abnormalBiomarkers - criticalBiomarkers, // Recalculate based on filtered data
+            normalCount: biomarkerValues.length - abnormalBiomarkers - criticalBiomarkers, // Based on filtered analysis
             lastTestDate:
               bloodTestResults[0]?.testDate?.toISOString() ||
               biomarkerValues[0]?.createdAt?.toISOString() ||
               fileUploads[0]?.createdAt?.toISOString() ||
               null,
-            // Add debug info about filtering
+            // Add plan filtering info for dashboard components
             _planFiltering: {
               totalAvailable: totalBiomarkerCount,
               displayedCount: biomarkerValues.length,
               planType: userPlanType,
-              isFiltered: totalBiomarkerCount > biomarkerValues.length
+              isFiltered: totalBiomarkerCount > biomarkerValues.length,
+              allowedByPlan: biomarkerValues.length
             }
           },
           bodyComposition: {

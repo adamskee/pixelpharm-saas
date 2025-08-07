@@ -515,7 +515,12 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
               <span>Biomarker Overview</span>
             </CardTitle>
             <CardDescription>
-              Detailed view of your {medicalReview.biomarkers.totalBiomarkers} biomarker{medicalReview.biomarkers.totalBiomarkers !== 1 ? 's' : ''}
+              Detailed view of your biomarkers
+              {medicalReview.biomarkers._planFiltering?.isFiltered ? (
+                ` (showing ${medicalReview.biomarkers._planFiltering.allowedByPlan} of ${medicalReview.biomarkers.totalBiomarkers} available)`
+              ) : (
+                ` (${medicalReview.biomarkers.totalBiomarkers} total)`
+              )}
             </CardDescription>
           </div>
           <div className="flex items-center space-x-2">
@@ -540,9 +545,11 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
-              {medicalReview.biomarkers.totalBiomarkers}
+              {medicalReview.biomarkers._planFiltering?.allowedByPlan || medicalReview.biomarkers.totalBiomarkers}
             </div>
-            <div className="text-sm text-gray-600">Total Biomarkers</div>
+            <div className="text-sm text-gray-600">
+              {medicalReview.biomarkers._planFiltering?.isFiltered ? 'Shown' : 'Total'} Biomarkers
+            </div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">
