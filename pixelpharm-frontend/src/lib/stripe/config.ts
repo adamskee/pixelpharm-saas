@@ -55,7 +55,7 @@ export const PRICING_PLANS = {
     interval: 'month' as const,
     description: 'Created for elite athletes, coaches, and dedicated health optimizers who demand clinical-grade insights',
     features: [
-      'Up to 5 blood test uploads per month',
+      'Up to 20 blood test uploads per month',
       'Analysis of ALL biomarkers (unlimited)',
       'Advanced AI health analysis',
       'Health score tracking',
@@ -68,7 +68,7 @@ export const PRICING_PLANS = {
       'Sports nutritionist-grade supplement timing & dosage recommendations',
     ],
     limits: {
-      maxUploads: 5,
+      maxUploads: 20,
       maxBiomarkers: null, // unlimited
     },
   },

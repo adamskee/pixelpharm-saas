@@ -127,7 +127,7 @@ export function getUpgradePromptText(planStatus: PlanStatus): string {
   const { currentPlan, needsUpgrade, limits } = planStatus;
   
   if (currentPlan === 'free' && needsUpgrade) {
-    return "Upgrade to Elite Athlete for 5 uploads per month and unlimited biomarker analysis!";
+    return "Upgrade to Elite Athlete for 20 uploads per month and unlimited biomarker analysis!";
   }
   
   if (currentPlan === 'free' && !planStatus.canUpload) {
