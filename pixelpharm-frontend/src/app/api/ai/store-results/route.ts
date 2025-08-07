@@ -48,16 +48,45 @@ export async function POST(request: NextRequest) {
 
     // Step 1: Ensure user exists
     console.log("👤 Ensuring user exists...");
-    await prisma.user.upsert({
-      where: { userId },
-      update: {},
-      create: {
-        userId,
-        email: `user-${userId}@temp.com`, // Temporary email
-        provider: "google",
-      },
-    });
-    console.log("✅ User ensured");
+    try {
+      await prisma.user.upsert({
+        where: { userId },
+        update: {
+          // Increment uploads used for existing users
+          uploadsUsed: {
+            increment: 1
+          }
+        },
+        create: {
+          userId,
+          email: `user-${userId}@temp.com`, // Temporary email
+          provider: "google",
+          planType: "FREE", // Default to FREE plan
+          uploadsUsed: 1, // First upload
+          upgradePromptShown: false,
+        },
+      });
+      console.log("✅ User ensured");
+    } catch (userError) {
+      console.error("❌ User upsert failed:", userError);
+      // If the new plan fields don't exist yet, try without them
+      console.log("⚠️ Retrying user upsert without plan fields...");
+      try {
+        await prisma.user.upsert({
+          where: { userId },
+          update: {},
+          create: {
+            userId,
+            email: `user-${userId}@temp.com`,
+            provider: "google",
+          },
+        });
+        console.log("✅ User ensured (fallback)");
+      } catch (fallbackError) {
+        console.error("❌ User upsert fallback failed:", fallbackError);
+        throw fallbackError;
+      }
+    }
 
     // Step 2: Parse test date
     let testDate = new Date();
