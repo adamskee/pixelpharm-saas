@@ -9,8 +9,20 @@ const prisma = new PrismaClient();
 export async function POST(request: NextRequest) {
   try {
     console.log("🔍 Store-Results API called");
+    console.log("🔍 Request method:", request.method);
+    console.log("🔍 Request headers:", Object.fromEntries(request.headers.entries()));
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+      console.log("✅ JSON parsing successful");
+    } catch (jsonError) {
+      console.error("❌ JSON parsing failed:", jsonError);
+      return NextResponse.json(
+        { error: "Invalid JSON in request body", details: jsonError.message },
+        { status: 400 }
+      );
+    }
     const {
       userId,
       uploadId,

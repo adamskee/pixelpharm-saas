@@ -182,7 +182,17 @@ export default function OptimizedFileUpload({
         });
 
         if (!storeResponse.ok) {
-          console.warn("Failed to store biomarkers in database");
+          const errorText = await storeResponse.text();
+          console.error("❌ Failed to store biomarkers in database:", {
+            status: storeResponse.status,
+            statusText: storeResponse.statusText,
+            error: errorText
+          });
+          // Don't fail the whole upload for biomarker storage issues
+          console.warn("⚠️ Continuing upload despite biomarker storage failure");
+        } else {
+          const storeResult = await storeResponse.json();
+          console.log("✅ Biomarkers stored successfully:", storeResult);
         }
       }
 
