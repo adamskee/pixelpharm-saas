@@ -248,9 +248,10 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
       setLoading(true);
       setError(null);
 
-      console.log("🔬 Fetching ALL biomarker data for user:", user.userId);
+      console.log("🔬 Fetching biomarker data for user:", user.userId);
+      console.log("🔬 Medical review shows total biomarkers:", medicalReview?.biomarkers?.totalBiomarkers);
 
-      // Fetch all biomarkers without limit
+      // Fetch biomarkers (will be plan-filtered by API)
       const response = await fetch(`/api/user/biomarkers?userId=${user.userId}&limit=1000`);
       
       if (!response.ok) {
@@ -258,13 +259,17 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
       }
 
       const data = await response.json();
-      console.log("🔬 Received biomarker data:", data);
+      console.log("🔬 Received biomarker data from API:", data);
+      console.log("🔬 Plan status from API:", data.planStatus);
+      console.log("🔬 Biomarkers array length:", data.biomarkers?.length);
+      console.log("🔬 Total count from API:", data.totalCount);
 
       if (data.biomarkers && Array.isArray(data.biomarkers)) {
         setBiomarkerData(data.biomarkers);
         setTotalBiomarkers(data.totalCount || data.biomarkers.length);
         setPlanStatus(data.planStatus);
-        console.log(`✅ Loaded ${data.biomarkers.length} biomarkers (${data.totalCount || data.biomarkers.length} total available)`);
+        console.log(`✅ Loaded ${data.biomarkers.length} biomarkers for display (${data.totalCount || data.biomarkers.length} total available)`);
+        console.log(`✅ Plan: ${data.planStatus?.currentPlan || 'unknown'}, Can upgrade: ${data.totalCount > data.biomarkers.length}`);
       } else {
         console.log("⚠️ No biomarker array in response");
         setBiomarkerData([]);
@@ -457,6 +462,14 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
       return dateString;
     }
   };
+
+  console.log("🔬 BiomarkerOverviewSection render check:", {
+    medicalReviewExists: !!medicalReview,
+    totalBiomarkers: medicalReview?.biomarkers?.totalBiomarkers,
+    biomarkerDataLength: biomarkerData.length,
+    loading,
+    error
+  });
 
   // If no biomarker data exists in medical review, show upload prompt
   if (medicalReview?.biomarkers?.totalBiomarkers === 0) {
