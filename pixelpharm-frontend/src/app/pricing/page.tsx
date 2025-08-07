@@ -46,7 +46,13 @@ export default function PricingPage() {
     setLoading(planType);
 
     try {
-      // Redirect to checkout page with plan parameter
+      // Handle free plan - redirect directly to dashboard
+      if (planType === "free") {
+        router.push("/dashboard");
+        return;
+      }
+      
+      // Redirect to checkout page with plan parameter for paid plans
       router.push(`/checkout?plan=${planType}`);
     } catch (error: any) {
       console.error("Checkout error:", error);
@@ -57,6 +63,26 @@ export default function PricingPage() {
   };
   const plans = [
     {
+      name: "Free",
+      price: "Free",
+      period: "forever",
+      description:
+        "Get started with basic health insights from your blood tests. Perfect for trying out our AI-powered health analytics",
+      features: [
+        "1 blood test upload (lifetime)",
+        "Analysis of 3 biomarkers only", 
+        "Basic health insights",
+        "Simple health report",
+        "Recovery protocol suggestions using HRV & inflammatory markers",
+        "Sports nutritionist-grade supplement timing & dosage recommendations",
+        "Community support",
+        "Upgrade anytime for full access"
+      ],
+      popular: false,
+      cta: "Get Started Free",
+      planType: "free" as PlanType,
+    },
+    {
       name: "Elite Athlete",
       price: "$24.95",
       period: "per month",
@@ -64,19 +90,19 @@ export default function PricingPage() {
         "Created for elite athletes, coaches, and dedicated health optimizers who demand clinical-grade insights",
       features: [
         "Up to 5 blood test uploads per month",
+        "Analysis of ALL biomarkers (unlimited)",
         "Advanced AI health analysis",
         "Health score tracking",
-        "Standard biomarker insights",
         "Comprehensive health reports",
         "Trend analysis & predictions",
         "Risk assessment reports",
         "Email support",
         "Performance optimization recommendations based on hormonal profiles",
-        "Recovery protocol suggestions using HRV & inflammatory markers (Now included!)",
-        "Sports nutritionist-grade supplement timing & dosage recommendations (Now included!)",
+        "Recovery protocol suggestions using HRV & inflammatory markers",
+        "Sports nutritionist-grade supplement timing & dosage recommendations",
       ],
-      popular: false,
-      cta: "Start Now!",
+      popular: true,
+      cta: "Start Elite Plan",
       planType: "basic" as PlanType,
     },
     {
@@ -84,9 +110,10 @@ export default function PricingPage() {
       price: "$49.95",
       period: "30 days access",
       description:
-        "One-time purchase for lifetime access to professional-grade health insights from your blood tests",
+        "One-time purchase for comprehensive health insights with full access to all features and unlimited biomarker analysis",
       features: [
         "20 blood test uploads",
+        "Analysis of ALL biomarkers (unlimited)",
         "Advanced AI health analysis",
         "Comprehensive health reports",
         "Trend analysis & predictions",
@@ -99,29 +126,9 @@ export default function PricingPage() {
         "30 days full dashboard access",
         "Complete insights & analytics",
       ],
-      popular: true,
-      cta: "Start Your 30-Day Access Now",
-      planType: "pro" as PlanType,
-    },
-    {
-      name: "Enterprise",
-      price: "Custom",
-      period: "contact us",
-      description:
-        "Enterprise-grade AI health analytics platform for healthcare systems, clinics, and corporate wellness programs",
-      features: [
-        "Everything in Pro",
-        "White-label solutions",
-        "API access",
-        "Dedicated account manager",
-        "Custom integrations",
-        "Advanced analytics dashboard",
-        "Bulk user management",
-        "24/7 phone support",
-      ],
       popular: false,
-      cta: "Contact Sales",
-      planType: null,
+      cta: "Get Pro Access",
+      planType: "pro" as PlanType,
     },
   ];
 

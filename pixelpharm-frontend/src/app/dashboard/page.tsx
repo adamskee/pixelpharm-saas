@@ -45,6 +45,7 @@ import {
   Info,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
+import UpgradePrompt from "@/components/plans/upgrade-prompt";
 import { MiniPieChart } from "@/components/ui/mini-pie-chart";
 
 interface DashboardStats {
@@ -53,6 +54,19 @@ interface DashboardStats {
     email: string;
     firstName?: string;
     lastName?: string;
+  };
+  planStatus?: {
+    currentPlan: string;
+    uploadsUsed: number;
+    uploadsRemaining: number | null;
+    canUpload: boolean;
+    needsUpgrade: boolean;
+    limits: {
+      maxUploads: number | null;
+      maxBiomarkers: number | null;
+      hasHealthOptimization: boolean;
+      hasAdvancedAnalytics: boolean;
+    };
   };
   healthMetrics?: {
     totalReports: number;
@@ -1095,6 +1109,29 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Upgrade Prompt for Free Users */}
+      {stats?.planStatus?.currentPlan === 'FREE' && (
+        <>
+          {!stats.planStatus.canUpload && (
+            <UpgradePrompt 
+              reason="upload_limit"
+              uploadsUsed={stats.planStatus.uploadsUsed}
+              maxUploads={stats.planStatus.limits.maxUploads || 1}
+              className="mb-6"
+            />
+          )}
+          {stats.biomarkers && stats.planStatus.limits.maxBiomarkers && 
+           stats.biomarkers.totalCount > stats.planStatus.limits.maxBiomarkers && (
+            <UpgradePrompt 
+              reason="biomarker_limit"
+              biomarkersShown={stats.planStatus.limits.maxBiomarkers}
+              totalBiomarkers={stats.biomarkers.totalCount}
+              className="mb-6"
+            />
+          )}
+        </>
+      )}
 
       {/* Action Items */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -1,7 +1,9 @@
 // File: src/app/api/dashboard/comprehensive-stats/route.ts
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/database/client";
+import { limitBiomarkersForPlan, getUserPlanStatus } from "@/lib/plans/plan-utils";
+import { PlanType } from "@/lib/stripe/config";
 
 export async function GET(request: Request) {
   try {
@@ -44,6 +46,9 @@ export async function GET(request: Request) {
         subscriptionStatus: true,
         subscriptionPlan: true,
         subscriptionExpiresAt: true,
+        planType: true,
+        uploadsUsed: true,
+        upgradePromptShown: true,
       }
     });
 
@@ -102,11 +107,14 @@ export async function GET(request: Request) {
         uniqueBiomarkerNames = uniqueMarkers.map((m) => m.biomarkerName);
 
         // Get sample biomarker values for statistics
-        biomarkerValues = await prisma.biomarkerValue.findMany({
+        const rawBiomarkerValues = await prisma.biomarkerValue.findMany({
           where: { userId },
           orderBy: { createdAt: "desc" },
           take: 50, // Get more for better statistics
         });
+
+        // Apply plan-based limitations for Free users
+        biomarkerValues = limitBiomarkersForPlan(rawBiomarkerValues, user.planType as PlanType);
 
         console.log(`📊 Found ${totalBiomarkerCount} total biomarker records`);
         console.log(
@@ -499,6 +507,15 @@ export async function GET(request: Request) {
             sampleBiomarkers: uniqueBiomarkerNames.slice(0, 10), // Show sample names
           },
         };
+
+        // Add plan status for frontend display
+        try {
+          const planStatus = await getUserPlanStatus(userId);
+          realStats.planStatus = planStatus;
+          console.log(`📊 Added plan status: ${planStatus.currentPlan}, uploads used: ${planStatus.uploadsUsed}`);
+        } catch (planError) {
+          console.warn("⚠️ Could not fetch plan status:", planError);
+        }
 
         return NextResponse.json(realStats);
       } else {

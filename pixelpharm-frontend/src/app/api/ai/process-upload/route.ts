@@ -1,6 +1,7 @@
 // src/app/api/ai/process-upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/database/client";
+import { checkUploadPermission, incrementUploadCount } from "@/lib/plans/plan-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +18,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
+      );
+    }
+
+    // Check if user can upload based on their plan
+    const uploadPermission = await checkUploadPermission(userId);
+    if (!uploadPermission.canUpload) {
+      console.log(`🚫 Upload blocked for user ${userId}: ${uploadPermission.reason}`);
+      return NextResponse.json(
+        { 
+          error: "Upload limit reached", 
+          reason: uploadPermission.reason,
+          upgradeRequired: uploadPermission.upgradeRequired 
+        },
+        { status: 403 }
       );
     }
 
@@ -109,6 +124,15 @@ export async function POST(request: NextRequest) {
       });
 
       console.log("✅ AI processing completed successfully");
+
+      // Increment user's upload count after successful processing
+      try {
+        await incrementUploadCount(userId);
+        console.log(`📈 Incremented upload count for user: ${userId}`);
+      } catch (countError) {
+        console.error("⚠️ Failed to increment upload count:", countError);
+        // Don't fail the entire request for this
+      }
 
       return NextResponse.json({
         success: true,

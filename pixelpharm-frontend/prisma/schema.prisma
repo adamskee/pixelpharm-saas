@@ -31,6 +31,9 @@ model User {
   subscriptionExpiresAt  DateTime?               @map("subscription_expires_at")
   subscriptionPlan       String?                 @map("subscription_plan")
   subscriptionStatus     String?                 @map("subscription_status")
+  planType               PlanType                @default(FREE) @map("plan_type")
+  uploadsUsed            Int                     @default(0) @map("uploads_used")
+  upgradePromptShown     Boolean                 @default(false) @map("upgrade_prompt_shown")
   accounts               Account[]
   aiProcessingResults    AiProcessingResult[]
   biomarkerValues        BiomarkerValue[]
@@ -291,4 +294,10 @@ enum Priority {
   MEDIUM
   HIGH
   URGENT
+}
+
+enum PlanType {
+  FREE
+  BASIC
+  PRO
 }
