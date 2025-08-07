@@ -64,43 +64,46 @@ export async function POST(request: NextRequest) {
 
     // Step 1: Ensure user exists
     console.log("👤 Ensuring user exists...");
+    
+    // Always try the fallback approach first since production DB doesn't have new plan fields
     try {
       await prisma.user.upsert({
         where: { userId },
-        update: {
-          // Increment uploads used for existing users
-          uploadsUsed: {
-            increment: 1
-          }
-        },
+        update: {}, // Don't update any plan fields in fallback mode
         create: {
           userId,
-          email: `user-${userId}@temp.com`, // Temporary email
+          email: `user-${userId}@temp.com`,
           provider: "google",
-          planType: "FREE", // Default to FREE plan
-          uploadsUsed: 1, // First upload
-          upgradePromptShown: false,
         },
       });
-      console.log("✅ User ensured");
-    } catch (userError) {
-      console.error("❌ User upsert failed:", userError);
-      // If the new plan fields don't exist yet, try without them
-      console.log("⚠️ Retrying user upsert without plan fields...");
+      console.log("✅ User ensured (using fallback - no plan fields)");
+    } catch (fallbackError) {
+      console.error("❌ User upsert failed:", fallbackError);
+      console.log("⚠️ Retrying user upsert with plan fields (for updated schema)...");
+      
+      // If fallback fails, try with plan fields (for future when DB is migrated)
       try {
         await prisma.user.upsert({
           where: { userId },
-          update: {},
+          update: {
+            // Increment uploads used for existing users
+            uploadsUsed: {
+              increment: 1
+            }
+          },
           create: {
             userId,
             email: `user-${userId}@temp.com`,
             provider: "google",
+            planType: "FREE",
+            uploadsUsed: 1,
+            upgradePromptShown: false,
           },
         });
-        console.log("✅ User ensured (fallback)");
-      } catch (fallbackError) {
-        console.error("❌ User upsert fallback failed:", fallbackError);
-        throw fallbackError;
+        console.log("✅ User ensured (with plan fields)");
+      } catch (planFieldsError) {
+        console.error("❌ Both user upsert methods failed:", planFieldsError);
+        throw planFieldsError;
       }
     }
 
