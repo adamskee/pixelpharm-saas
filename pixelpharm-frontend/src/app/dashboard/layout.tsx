@@ -46,9 +46,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 <Image 
                   src="/pp_logo.png" 
                   alt="PixelPharm Health Logo" 
-                  width={200} 
-                  height={47}
-                  className="h-auto max-h-10"
+                  width={280} 
+                  height={60}
+                  className="h-auto max-h-12"
                   priority
                 />
               </Link>

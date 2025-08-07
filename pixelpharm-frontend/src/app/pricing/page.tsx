@@ -89,7 +89,7 @@ export default function PricingPage() {
       description:
         "Created for elite athletes, coaches, and dedicated health optimizers who demand clinical-grade insights",
       features: [
-        "Up to 20 blood test uploads per month",
+        "Up to 20 blood test uploads per month", // Updated from 5 to 20
         "Analysis of ALL biomarkers (unlimited)",
         "Advanced AI health analysis",
         "Health score tracking",
