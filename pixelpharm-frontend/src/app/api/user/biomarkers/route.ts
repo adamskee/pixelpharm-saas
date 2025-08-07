@@ -41,19 +41,26 @@ export async function GET(request: Request) {
       dateTo,
     });
 
-    // TEMPORARILY DISABLED - Plan filtering removed until schema is updated
-    let filteredBiomarkers = biomarkers; // Show all biomarkers
+    // TEMPORARY FREE PLAN LIMITATION - Hardcode to 3 biomarkers for now
+    let filteredBiomarkers = biomarkers;
     let planStatus = null;
 
-    console.log(`🔬 Returning all biomarkers (plan filtering temporarily disabled): ${biomarkers.length}`);
+    // Simple hardcoded free plan limitation (until proper plan system is restored)
+    const FREE_PLAN_BIOMARKER_LIMIT = 3;
+    if (biomarkers.length > FREE_PLAN_BIOMARKER_LIMIT) {
+      filteredBiomarkers = biomarkers.slice(0, FREE_PLAN_BIOMARKER_LIMIT);
+      console.log(`🔬 Applied temporary free plan limit: ${biomarkers.length} → ${filteredBiomarkers.length} biomarkers`);
+    } else {
+      console.log(`🔬 Returning all biomarkers (within free limit): ${biomarkers.length}`);
+    }
     
     // Default plan status for compatibility
     planStatus = {
       currentPlan: 'free',
-      uploadsUsed: 0,
-      uploadsRemaining: 1,
-      canUpload: true,
-      needsUpgrade: false,
+      uploadsUsed: 1, // Show that they've used their upload
+      uploadsRemaining: 0, // No more uploads for free users after first one
+      canUpload: false, // Free users get 1 upload only
+      needsUpgrade: biomarkers.length > FREE_PLAN_BIOMARKER_LIMIT, // Show upgrade prompt if they have more data
     };
 
     // try {

@@ -111,14 +111,26 @@ export async function GET(request: Request) {
           take: 50, // Get more for better statistics
         });
 
-        // TEMPORARILY DISABLED - Plan filtering removed until schema is updated
-        // const userPlanType = (user as any).planType || 'free';
-        // const filteredBiomarkerValues = limitBiomarkersForPlan(rawBiomarkerValues, userPlanType);
-        // console.log(`🔒 Plan filtering applied for ${userPlanType} plan: ${rawBiomarkerValues.length} → ${filteredBiomarkerValues.length} biomarkers`);
+        // TEMPORARY FREE PLAN LIMITATION - Hardcode to 3 biomarkers for now
+        const FREE_PLAN_BIOMARKER_LIMIT = 3;
         
-        // Use all biomarkers for now (no plan filtering)
-        biomarkerValues = rawBiomarkerValues;
-        console.log(`📊 Using all biomarkers (no plan filtering): ${biomarkerValues.length}`);
+        // Get unique biomarkers first, then limit
+        const uniqueBiomarkersByName = new Map();
+        rawBiomarkerValues.forEach(biomarker => {
+          if (!uniqueBiomarkersByName.has(biomarker.biomarkerName)) {
+            uniqueBiomarkersByName.set(biomarker.biomarkerName, biomarker);
+          }
+        });
+        
+        const uniqueBiomarkers = Array.from(uniqueBiomarkersByName.values());
+        
+        if (uniqueBiomarkers.length > FREE_PLAN_BIOMARKER_LIMIT) {
+          biomarkerValues = uniqueBiomarkers.slice(0, FREE_PLAN_BIOMARKER_LIMIT);
+          console.log(`📊 Applied temporary free plan limit: ${uniqueBiomarkers.length} unique → ${biomarkerValues.length} biomarkers`);
+        } else {
+          biomarkerValues = uniqueBiomarkers;
+          console.log(`📊 Using all biomarkers (within free limit): ${biomarkerValues.length}`);
+        }
 
         console.log(`📊 Found ${totalBiomarkerCount} total biomarker records`);
         console.log(
@@ -520,22 +532,24 @@ export async function GET(request: Request) {
           },
         };
 
-        // TEMPORARILY DISABLED - Plan status removed until schema is updated
-        // Add default plan status for compatibility
+        // TEMPORARY FREE PLAN STATUS - Hardcoded until schema is updated
+        const totalUniqueBiomarkers = uniqueBiomarkerNames.length;
+        const FREE_PLAN_BIOMARKER_LIMIT = 3;
+        
         realStats.planStatus = {
           currentPlan: 'free',
-          uploadsUsed: 0,
-          uploadsRemaining: 1,
-          canUpload: true,
-          needsUpgrade: false,
+          uploadsUsed: 1, // Show that they've used their upload
+          uploadsRemaining: 0, // No more uploads for free users after first one
+          canUpload: false, // Free users get 1 upload only
+          needsUpgrade: totalUniqueBiomarkers > FREE_PLAN_BIOMARKER_LIMIT, // Show upgrade prompt if they have more data
           limits: {
             maxUploads: 1,
-            maxBiomarkers: 999, // Show all biomarkers temporarily
+            maxBiomarkers: FREE_PLAN_BIOMARKER_LIMIT,
             hasHealthOptimization: true,
             hasAdvancedAnalytics: false,
           },
         };
-        console.log(`📊 Added default plan status (plan fields temporarily disabled)`);
+        console.log(`📊 Added temporary free plan status: ${totalUniqueBiomarkers} total biomarkers, showing ${Math.min(totalUniqueBiomarkers, FREE_PLAN_BIOMARKER_LIMIT)}`);
 
         return NextResponse.json(realStats);
       } else {
