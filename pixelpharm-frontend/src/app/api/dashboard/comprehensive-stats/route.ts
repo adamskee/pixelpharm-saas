@@ -2,8 +2,9 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/database/client";
-import { limitBiomarkersForPlan, getUserPlanStatus } from "@/lib/plans/plan-utils";
-import { PlanType } from "@/lib/stripe/config";
+// TEMPORARILY DISABLED - PLAN FIELDS REMOVED FROM SCHEMA
+// import { limitBiomarkersForPlan, getUserPlanStatus } from "@/lib/plans/plan-utils";
+// import { PlanType } from "@/lib/stripe/config";
 
 export async function GET(request: Request) {
   try {
@@ -110,14 +111,14 @@ export async function GET(request: Request) {
           take: 50, // Get more for better statistics
         });
 
-        // Apply plan-based limitations for Free users (fallback to 'free' if planType doesn't exist)
-        const userPlanType = (user as any).planType || 'free';
-        const filteredBiomarkerValues = limitBiomarkersForPlan(rawBiomarkerValues, userPlanType);
+        // TEMPORARILY DISABLED - Plan filtering removed until schema is updated
+        // const userPlanType = (user as any).planType || 'free';
+        // const filteredBiomarkerValues = limitBiomarkersForPlan(rawBiomarkerValues, userPlanType);
+        // console.log(`🔒 Plan filtering applied for ${userPlanType} plan: ${rawBiomarkerValues.length} → ${filteredBiomarkerValues.length} biomarkers`);
         
-        console.log(`🔒 Plan filtering applied for ${userPlanType} plan: ${rawBiomarkerValues.length} → ${filteredBiomarkerValues.length} biomarkers`);
-        
-        // Use filtered biomarkers for calculations but keep track of both counts
-        biomarkerValues = filteredBiomarkerValues;
+        // Use all biomarkers for now (no plan filtering)
+        biomarkerValues = rawBiomarkerValues;
+        console.log(`📊 Using all biomarkers (no plan filtering): ${biomarkerValues.length}`);
 
         console.log(`📊 Found ${totalBiomarkerCount} total biomarker records`);
         console.log(
@@ -393,14 +394,14 @@ export async function GET(request: Request) {
               biomarkerValues[0]?.createdAt?.toISOString() ||
               fileUploads[0]?.createdAt?.toISOString() ||
               null,
-            // Add plan filtering info for dashboard components
-            _planFiltering: {
-              totalAvailable: totalBiomarkerCount,
-              displayedCount: biomarkerValues.length,
-              planType: userPlanType,
-              isFiltered: totalBiomarkerCount > biomarkerValues.length,
-              allowedByPlan: biomarkerValues.length
-            }
+            // TEMPORARILY DISABLED - Plan filtering info removed
+            // _planFiltering: {
+            //   totalAvailable: totalBiomarkerCount,
+            //   displayedCount: biomarkerValues.length,
+            //   planType: userPlanType,
+            //   isFiltered: totalBiomarkerCount > biomarkerValues.length,
+            //   allowedByPlan: biomarkerValues.length
+            // }
           },
           bodyComposition: {
             totalScans: bodyCompositionUploads,
@@ -519,28 +520,22 @@ export async function GET(request: Request) {
           },
         };
 
-        // Add plan status for frontend display (gracefully handle missing fields)
-        try {
-          const planStatus = await getUserPlanStatus(userId);
-          realStats.planStatus = planStatus;
-          console.log(`📊 Added plan status: ${planStatus.currentPlan}, uploads used: ${planStatus.uploadsUsed}`);
-        } catch (planError) {
-          console.warn("⚠️ Could not fetch plan status (likely missing DB fields):", planError.message);
-          // Provide default plan status for users without the new fields
-          realStats.planStatus = {
-            currentPlan: 'free',
-            uploadsUsed: 0,
-            uploadsRemaining: 1,
-            canUpload: true,
-            needsUpgrade: false,
-            limits: {
-              maxUploads: 1,
-              maxBiomarkers: 3,
-              hasHealthOptimization: true, // Allow free users to access these features
-              hasAdvancedAnalytics: false,
-            },
-          };
-        }
+        // TEMPORARILY DISABLED - Plan status removed until schema is updated
+        // Add default plan status for compatibility
+        realStats.planStatus = {
+          currentPlan: 'free',
+          uploadsUsed: 0,
+          uploadsRemaining: 1,
+          canUpload: true,
+          needsUpgrade: false,
+          limits: {
+            maxUploads: 1,
+            maxBiomarkers: 999, // Show all biomarkers temporarily
+            hasHealthOptimization: true,
+            hasAdvancedAnalytics: false,
+          },
+        };
+        console.log(`📊 Added default plan status (plan fields temporarily disabled)`);
 
         return NextResponse.json(realStats);
       } else {
