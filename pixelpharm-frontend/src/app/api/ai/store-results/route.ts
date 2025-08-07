@@ -87,32 +87,9 @@ export async function POST(request: NextRequest) {
       }
     } catch (fallbackError) {
       console.error("❌ Fallback user creation failed:", fallbackError);
-      console.log("⚠️ Retrying with plan fields (for updated schema)...");
-      
-      // If fallback fails, try with plan fields (for future when DB is migrated)
-      try {
-        await prisma.user.upsert({
-          where: { userId },
-          update: {
-            // Increment uploads used for existing users
-            uploadsUsed: {
-              increment: 1
-            }
-          },
-          create: {
-            userId,
-            email: `user-${userId}@temp.com`,
-            provider: "google",
-            planType: "FREE",
-            uploadsUsed: 1,
-            upgradePromptShown: false,
-          },
-        });
-        console.log("✅ User ensured (with plan fields)");
-      } catch (planFieldsError) {
-        console.error("❌ Both user creation methods failed:", planFieldsError);
-        throw planFieldsError;
-      }
+      console.log("⚠️ This should not happen - user creation without plan fields failed");
+      console.log("⚠️ Possible database connectivity or permission issue");
+      throw fallbackError;
     }
 
     // Step 2: Parse test date
