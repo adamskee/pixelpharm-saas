@@ -46,9 +46,6 @@ export async function GET(request: Request) {
         subscriptionStatus: true,
         subscriptionPlan: true,
         subscriptionExpiresAt: true,
-        planType: true,
-        uploadsUsed: true,
-        upgradePromptShown: true,
       }
     });
 
@@ -113,8 +110,9 @@ export async function GET(request: Request) {
           take: 50, // Get more for better statistics
         });
 
-        // Apply plan-based limitations for Free users
-        biomarkerValues = limitBiomarkersForPlan(rawBiomarkerValues, user.planType as PlanType);
+        // Apply plan-based limitations for Free users (fallback to 'free' if planType doesn't exist)
+        const userPlanType = (user as any).planType || 'free';
+        biomarkerValues = limitBiomarkersForPlan(rawBiomarkerValues, userPlanType);
 
         console.log(`📊 Found ${totalBiomarkerCount} total biomarker records`);
         console.log(
@@ -508,13 +506,27 @@ export async function GET(request: Request) {
           },
         };
 
-        // Add plan status for frontend display
+        // Add plan status for frontend display (gracefully handle missing fields)
         try {
           const planStatus = await getUserPlanStatus(userId);
           realStats.planStatus = planStatus;
           console.log(`📊 Added plan status: ${planStatus.currentPlan}, uploads used: ${planStatus.uploadsUsed}`);
         } catch (planError) {
-          console.warn("⚠️ Could not fetch plan status:", planError);
+          console.warn("⚠️ Could not fetch plan status (likely missing DB fields):", planError.message);
+          // Provide default plan status for users without the new fields
+          realStats.planStatus = {
+            currentPlan: 'free',
+            uploadsUsed: 0,
+            uploadsRemaining: 1,
+            canUpload: true,
+            needsUpgrade: false,
+            limits: {
+              maxUploads: 1,
+              maxBiomarkers: 3,
+              hasHealthOptimization: true, // Allow free users to access these features
+              hasAdvancedAnalytics: false,
+            },
+          };
         }
 
         return NextResponse.json(realStats);

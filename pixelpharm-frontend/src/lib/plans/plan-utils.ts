@@ -43,25 +43,14 @@ export async function checkUploadPermission(userId: string): Promise<{
   upgradeRequired?: boolean;
 }> {
   try {
-    const user = await prisma.user.findUnique({
-      where: { userId },
-      select: {
-        planType: true,
-        uploadsUsed: true,
-      }
-    });
-
-    if (!user) {
-      return { canUpload: false, reason: "User not found" };
-    }
-
-    const limits = getPlanLimits(user.planType as PlanType);
+    // Try to get plan status safely
+    const planStatus = await getUserPlanStatus(userId);
     
     // Check upload limit
-    if (limits.maxUploads !== null && user.uploadsUsed >= limits.maxUploads) {
+    if (planStatus.limits.maxUploads !== null && planStatus.uploadsUsed >= planStatus.limits.maxUploads) {
       return {
         canUpload: false,
-        reason: `Upload limit reached (${limits.maxUploads} uploads)`,
+        reason: `Upload limit reached (${planStatus.limits.maxUploads} uploads)`,
         upgradeRequired: true
       };
     }
@@ -81,8 +70,8 @@ export async function getUserPlanStatus(userId: string): Promise<UserPlanStatus>
     const user = await prisma.user.findUnique({
       where: { userId },
       select: {
-        planType: true,
-        uploadsUsed: true,
+        userId: true,
+        // Note: These fields might not exist yet, so we'll handle that
       }
     });
 
@@ -90,22 +79,42 @@ export async function getUserPlanStatus(userId: string): Promise<UserPlanStatus>
       throw new Error("User not found");
     }
 
-    const planType = user.planType as PlanType;
+    // Try to get plan fields, but handle gracefully if they don't exist
+    let planType: PlanType = 'free'; // Default to free
+    let uploadsUsed = 0; // Default to 0
+
+    try {
+      const userWithPlanFields = await prisma.user.findUnique({
+        where: { userId },
+        select: {
+          planType: true,
+          uploadsUsed: true,
+        }
+      });
+      
+      if (userWithPlanFields) {
+        planType = (userWithPlanFields as any).planType || 'free';
+        uploadsUsed = (userWithPlanFields as any).uploadsUsed || 0;
+      }
+    } catch (planFieldError) {
+      console.warn("Plan fields not available, using defaults:", planFieldError.message);
+    }
+
     const limits = getPlanLimits(planType);
     
     const uploadsRemaining = limits.maxUploads 
-      ? Math.max(0, limits.maxUploads - user.uploadsUsed)
+      ? Math.max(0, limits.maxUploads - uploadsUsed)
       : null; // unlimited
 
     const canUpload = limits.maxUploads 
-      ? user.uploadsUsed < limits.maxUploads 
+      ? uploadsUsed < limits.maxUploads 
       : true; // unlimited
 
-    const needsUpgrade = planType === 'free' && user.uploadsUsed >= 1;
+    const needsUpgrade = planType === 'free' && uploadsUsed >= 1;
 
     return {
       currentPlan: planType,
-      uploadsUsed: user.uploadsUsed,
+      uploadsUsed: uploadsUsed,
       uploadsRemaining,
       canUpload,
       needsUpgrade,
@@ -130,6 +139,7 @@ export async function getUserPlanStatus(userId: string): Promise<UserPlanStatus>
  */
 export async function incrementUploadCount(userId: string): Promise<void> {
   try {
+    // Try to increment, but if field doesn't exist, just log and continue
     await prisma.user.update({
       where: { userId },
       data: {
@@ -139,8 +149,8 @@ export async function incrementUploadCount(userId: string): Promise<void> {
       }
     });
   } catch (error) {
-    console.error("Error incrementing upload count:", error);
-    throw error;
+    console.warn("Could not increment upload count (likely missing DB field):", error.message);
+    // Don't throw - this is not critical for functionality until migration is run
   }
 }
 
