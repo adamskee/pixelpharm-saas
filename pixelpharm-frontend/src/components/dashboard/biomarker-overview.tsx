@@ -236,6 +236,8 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
   const [biomarkerData, setBiomarkerData] = useState<BiomarkerData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [planStatus, setPlanStatus] = useState<any>(null);
+  const [totalBiomarkers, setTotalBiomarkers] = useState<number>(0);
 
   const fetchBiomarkerData = async () => {
     if (!user?.userId || medicalReview?.biomarkers?.totalBiomarkers === 0) {
@@ -256,14 +258,17 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
       }
 
       const data = await response.json();
-      console.log("🔬 Received all biomarker data:", data);
+      console.log("🔬 Received biomarker data:", data);
 
       if (data.biomarkers && Array.isArray(data.biomarkers)) {
         setBiomarkerData(data.biomarkers);
-        console.log(`✅ Loaded ${data.biomarkers.length} biomarkers`);
+        setTotalBiomarkers(data.totalCount || data.biomarkers.length);
+        setPlanStatus(data.planStatus);
+        console.log(`✅ Loaded ${data.biomarkers.length} biomarkers (${data.totalCount || data.biomarkers.length} total available)`);
       } else {
         console.log("⚠️ No biomarker array in response");
         setBiomarkerData([]);
+        setTotalBiomarkers(0);
       }
     } catch (err) {
       console.error("❌ Error fetching biomarker data:", err);
@@ -710,8 +715,43 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
             {biomarkerData.length > 0 && (
               <div className="text-center pt-4 border-t border-gray-200">
                 <p className="text-sm text-gray-600">
-                  Total: {biomarkerData.length} biomarker records loaded
+                  Showing: {biomarkerData.length} biomarker records
+                  {totalBiomarkers > biomarkerData.length && ` (${totalBiomarkers} total available)`}
                 </p>
+              </div>
+            )}
+
+            {/* Free Plan Upgrade Prompt */}
+            {planStatus?.currentPlan === 'free' && totalBiomarkers > biomarkerData.length && (
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <Activity className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-blue-900 mb-2">
+                      Unlock All Your Biomarker Data
+                    </h4>
+                    <p className="text-sm text-blue-700 mb-3">
+                      You have {totalBiomarkers} biomarkers available, but your Free Plan only shows the first {biomarkerData.length}. 
+                      Upgrade to see all your biomarkers with detailed analysis and trends.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Link href="/pricing">
+                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                          <TrendingUp className="h-4 w-4 mr-2" />
+                          Upgrade to See All {totalBiomarkers} Biomarkers
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                        onClick={() => window.open('/pricing', '_blank')}
+                      >
+                        Compare Plans
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>

@@ -377,17 +377,24 @@ export async function GET(request: Request) {
             lastAnalysisDate: fileUploads[0]?.createdAt?.toISOString() || null,
           },
           biomarkers: {
-            // FIXED: Show total biomarker records, not just sample
-            totalBiomarkers: totalBiomarkerCount, // This is the key fix!
+            // Show plan-filtered biomarker count for dashboard display
+            totalBiomarkers: biomarkerValues.length, // Show filtered count for free users
             uniqueBiomarkers: uniqueBiomarkerNames.length,
             abnormalCount: abnormalBiomarkers,
             criticalCount: criticalBiomarkers,
-            normalCount: normalBiomarkers,
+            normalCount: biomarkerValues.length - abnormalBiomarkers - criticalBiomarkers, // Recalculate based on filtered data
             lastTestDate:
               bloodTestResults[0]?.testDate?.toISOString() ||
               biomarkerValues[0]?.createdAt?.toISOString() ||
               fileUploads[0]?.createdAt?.toISOString() ||
               null,
+            // Add debug info about filtering
+            _planFiltering: {
+              totalAvailable: totalBiomarkerCount,
+              displayedCount: biomarkerValues.length,
+              planType: userPlanType,
+              isFiltered: totalBiomarkerCount > biomarkerValues.length
+            }
           },
           bodyComposition: {
             totalScans: bodyCompositionUploads,

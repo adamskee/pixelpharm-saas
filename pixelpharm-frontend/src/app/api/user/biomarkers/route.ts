@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/auth-config";
 import { getUserBiomarkers } from "@/lib/database/user-operations";
+import { limitBiomarkersForPlan, getUserPlanStatus } from "@/lib/plans/plan-utils";
 
 export async function GET(request: Request) {
   try {
@@ -39,10 +40,27 @@ export async function GET(request: Request) {
       dateTo,
     });
 
+    // Apply plan-based filtering for free users
+    let filteredBiomarkers = biomarkers;
+    let planStatus = null;
+
+    try {
+      planStatus = await getUserPlanStatus(userId);
+      filteredBiomarkers = limitBiomarkersForPlan(biomarkers, planStatus.currentPlan);
+      
+      console.log(`🔬 Biomarker filtering applied for ${planStatus.currentPlan} plan: ${biomarkers.length} → ${filteredBiomarkers.length}`);
+    } catch (planError) {
+      console.warn("⚠️ Could not apply plan filtering (likely missing DB fields):", planError.message);
+      // For users without plan fields, default to free plan filtering
+      filteredBiomarkers = limitBiomarkersForPlan(biomarkers, 'free');
+    }
+
     return NextResponse.json({
-      biomarkers,
-      count: biomarkers.length,
+      biomarkers: filteredBiomarkers,
+      count: filteredBiomarkers.length,
+      totalCount: biomarkers.length, // Include original count for debugging
       userId: userId,
+      planStatus: planStatus,
     });
   } catch (error) {
     console.error("Error fetching user biomarkers:", error);
