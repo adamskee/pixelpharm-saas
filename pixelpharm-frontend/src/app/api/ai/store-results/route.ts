@@ -67,19 +67,27 @@ export async function POST(request: NextRequest) {
     
     // Always try the fallback approach first since production DB doesn't have new plan fields
     try {
-      await prisma.user.upsert({
+      // Check if user already exists first
+      const existingUser = await prisma.user.findUnique({
         where: { userId },
-        update: {}, // Don't update any plan fields in fallback mode
-        create: {
-          userId,
-          email: `user-${userId}@temp.com`,
-          provider: "google",
-        },
       });
-      console.log("✅ User ensured (using fallback - no plan fields)");
+
+      if (existingUser) {
+        console.log("✅ User already exists, no need to create");
+      } else {
+        // Create user without any plan fields
+        await prisma.user.create({
+          data: {
+            userId,
+            email: `user-${userId}@temp.com`,
+            provider: "google",
+          },
+        });
+        console.log("✅ User created (using fallback - no plan fields)");
+      }
     } catch (fallbackError) {
-      console.error("❌ User upsert failed:", fallbackError);
-      console.log("⚠️ Retrying user upsert with plan fields (for updated schema)...");
+      console.error("❌ Fallback user creation failed:", fallbackError);
+      console.log("⚠️ Retrying with plan fields (for updated schema)...");
       
       // If fallback fails, try with plan fields (for future when DB is migrated)
       try {
@@ -102,7 +110,7 @@ export async function POST(request: NextRequest) {
         });
         console.log("✅ User ensured (with plan fields)");
       } catch (planFieldsError) {
-        console.error("❌ Both user upsert methods failed:", planFieldsError);
+        console.error("❌ Both user creation methods failed:", planFieldsError);
         throw planFieldsError;
       }
     }
