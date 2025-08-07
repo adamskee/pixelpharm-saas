@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log("🔍 Store-Results API called");
 
+    const body = await request.json();
     const {
       userId,
       uploadId,
@@ -19,15 +20,18 @@ export async function POST(request: NextRequest) {
       uploadType = "BLOOD_TESTS",
       originalFormat,
       confidence,
-    } = await request.json();
+    } = body;
 
-    console.log("📦 Received data:", {
+    console.log("📦 Received full request body:", JSON.stringify(body, null, 2));
+    console.log("📦 Parsed data:", {
       userId,
       uploadId,
       fileKey,
       biomarkersCount: biomarkers?.length,
       uploadType,
       originalFormat,
+      testInfo: testInfo ? Object.keys(testInfo) : null,
+      biomarkersPreview: biomarkers?.slice(0, 2)
     });
 
     // Validate required fields
@@ -116,6 +120,7 @@ export async function POST(request: NextRequest) {
     let fileUpload;
 
     try {
+      console.log("📁 Searching for existing FileUpload with uploadId:", uploadId);
       // Try to find existing FileUpload by uploadId
       fileUpload = await prisma.fileUpload.findUnique({
         where: { uploadId },
@@ -153,6 +158,13 @@ export async function POST(request: NextRequest) {
 
     // Step 4: Create BloodTestResult
     console.log("🩸 Creating BloodTestResult...");
+    console.log("🩸 BloodTestResult data:", {
+      userId,
+      uploadId,
+      testDate,
+      labName: testInfo?.labName || null,
+      biomarkersCount: biomarkers.length
+    });
     let bloodTestResult;
 
     try {
@@ -176,6 +188,7 @@ export async function POST(request: NextRequest) {
 
     // Step 5: Create individual BiomarkerValue records
     console.log("💾 Creating BiomarkerValues...");
+    console.log("💾 About to create", biomarkers.length, "biomarker records");
     const biomarkerIds = [];
     let successCount = 0;
 
@@ -290,10 +303,25 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("❌ Store-Results API error:", error);
+    console.error("❌ Error name:", error.name);
+    console.error("❌ Error message:", error.message);
+    console.error("❌ Error stack:", error.stack);
+    
+    // Log additional Prisma-specific error details
+    if (error.code) {
+      console.error("❌ Prisma error code:", error.code);
+    }
+    if (error.meta) {
+      console.error("❌ Prisma error meta:", error.meta);
+    }
+    
     return NextResponse.json(
       {
         error: "Internal server error",
         details: error.message,
+        errorName: error.name,
+        prismaCode: error.code || null,
+        prismaMeta: error.meta || null,
         stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       },
       { status: 500 }
