@@ -12,6 +12,7 @@ export default function AuthForms() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -35,8 +36,8 @@ export default function AuthForms() {
           throw new Error("Password must be at least 6 characters");
         }
 
-        // For sign up, pass additional data to signIn
-        await signIn(email, password, firstName, lastName);
+        // For sign up, pass additional data to signIn including anonymous flag
+        await signIn(email, password, firstName, lastName, isAnonymous);
         console.log("Sign up successful for:", { email, firstName, lastName });
       } else {
         // Sign in
@@ -62,6 +63,7 @@ export default function AuthForms() {
     setConfirmPassword("");
     setFirstName("");
     setLastName("");
+    setIsAnonymous(false);
   };
 
   return (
@@ -189,6 +191,27 @@ export default function AuthForms() {
                   placeholder="Confirm your password"
                   required={isSignUp}
                 />
+              </div>
+            )}
+
+            {isSignUp && (
+              <div className="flex items-start space-x-3">
+                <input
+                  id="isAnonymous"
+                  type="checkbox"
+                  checked={isAnonymous}
+                  onChange={(e) => setIsAnonymous(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <div className="text-sm">
+                  <label htmlFor="isAnonymous" className="font-medium text-gray-700">
+                    Create Anonymous Account
+                  </label>
+                  <p className="text-gray-500 text-xs mt-1">
+                    Your name and personal info won't be displayed. Only a user ID will be shown for privacy.
+                    Perfect for sensitive medical data.
+                  </p>
+                </div>
               </div>
             )}
 

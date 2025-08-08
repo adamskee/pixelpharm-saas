@@ -31,6 +31,7 @@ model User {
   subscriptionExpiresAt  DateTime?               @map("subscription_expires_at")
   subscriptionPlan       String?                 @map("subscription_plan")
   subscriptionStatus     String?                 @map("subscription_status")
+  isAnonymous            Boolean                 @default(false) @map("is_anonymous")
   // TEMPORARILY COMMENTED OUT - PRODUCTION DB DOESN'T HAVE THESE COLUMNS YET
   // planType               PlanType                @default(FREE) @map("plan_type")
   // uploadsUsed            Int                     @default(0) @map("uploads_used")

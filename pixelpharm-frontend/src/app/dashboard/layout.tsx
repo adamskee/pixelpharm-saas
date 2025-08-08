@@ -32,9 +32,13 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const user = session.user;
   console.log("🔧 DashboardContent rendering with user:", user);
 
-  const userInitials = user
-    ? `${user.name?.[0] || ""}${user.name?.split(" ")[1]?.[0] || ""}`
-    : "U";
+  // For anonymous accounts, use different display logic
+  const displayName = user?.isAnonymous ? user.id || user.userId : (user?.name || "User");
+  const displayEmail = user?.isAnonymous ? `ID: ${user.id || user.userId}` : user?.email;
+  
+  const userInitials = user?.isAnonymous 
+    ? user.id?.substring(0, 2).toUpperCase() || "AN"
+    : (user ? `${user.name?.[0] || ""}${user.name?.split(" ")[1]?.[0] || ""}` : "U");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -97,9 +101,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 </div>
                 <div className="hidden md:block">
                   <p className="text-sm font-medium text-gray-900">
-                    {user.name || "User"}
+                    {displayName}
                   </p>
-                  <p className="text-xs text-gray-600">{user.email}</p>
+                  <p className="text-xs text-gray-600">{displayEmail}</p>
                 </div>
               </div>
               <Button

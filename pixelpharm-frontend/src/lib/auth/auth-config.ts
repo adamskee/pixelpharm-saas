@@ -45,6 +45,10 @@ export const authOptions: NextAuthOptions = {
           label: "Last Name",
           type: "text",
         },
+        isAnonymous: {
+          label: "Anonymous Account",
+          type: "text", // "true" or "false"
+        },
       },
       async authorize(credentials) {
         console.log("🔐 Credentials auth attempt:", {
@@ -57,7 +61,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Email and password are required");
         }
 
-        const { email, password, action, firstName, lastName } = credentials;
+        const { email, password, action, firstName, lastName, isAnonymous } = credentials;
 
         // Validate inputs
         if (!email.includes("@")) {
@@ -112,6 +116,7 @@ export const authOptions: NextAuthOptions = {
                 passwordHash: hashedPassword,
                 provider: "credentials",
                 emailVerified: null,
+                isAnonymous: isAnonymous === "true",
               },
             });
 

@@ -15,6 +15,7 @@ interface User {
   provider?: string;
   dateOfBirth?: Date;
   gender?: string;
+  isAnonymous?: boolean;
 }
 
 interface AuthContextType {
@@ -26,8 +27,16 @@ interface AuthContextType {
     password: string,
     isSignUp?: boolean,
     firstName?: string,
-    lastName?: string
+    lastName?: string,
+    isAnonymous?: boolean
   ) => Promise<{ success: boolean; error?: string }>;
+  signIn: (
+    email: string,
+    password: string,
+    firstName?: string,
+    lastName?: string,
+    isAnonymous?: boolean
+  ) => Promise<void>;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
   session: Session | null;
@@ -62,6 +71,7 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
           provider: session.user.provider || "unknown",
           dateOfBirth: session.user.dateOfBirth || undefined,
           gender: session.user.gender || undefined,
+          isAnonymous: session.user.isAnonymous || false,
         }
       : null;
   }, [
@@ -74,7 +84,8 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
     session?.user?.lastName,
     session?.user?.provider,
     session?.user?.dateOfBirth,
-    session?.user?.gender
+    session?.user?.gender,
+    session?.user?.isAnonymous
   ]);
 
   const handleGoogleSignIn = async () => {
@@ -96,7 +107,8 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
     password: string,
     isSignUp: boolean = false,
     firstName?: string,
-    lastName?: string
+    lastName?: string,
+    isAnonymous?: boolean
   ): Promise<{ success: boolean; error?: string }> => {
     console.log("🔑 Initiating credentials auth:", { email, isSignUp });
 
@@ -107,6 +119,7 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
         action: isSignUp ? "signup" : "signin",
         firstName,
         lastName,
+        isAnonymous,
         redirect: false,
       });
 
@@ -128,6 +141,29 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Wrapper function for auth-forms component compatibility
+  const handleSignIn = async (
+    email: string,
+    password: string,
+    firstName?: string,
+    lastName?: string,
+    isAnonymous?: boolean
+  ): Promise<void> => {
+    const isSignUp = !!(firstName && lastName);
+    const result = await handleCredentialsSignIn(
+      email,
+      password,
+      isSignUp,
+      firstName,
+      lastName,
+      isAnonymous
+    );
+    
+    if (!result.success) {
+      throw new Error(result.error || "Authentication failed");
+    }
+  };
+
   const handleSignOut = async () => {
     console.log("👋 Initiating sign out...");
     try {
@@ -145,6 +181,7 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
     loading,
     signInWithGoogle: handleGoogleSignIn,
     signInWithCredentials: handleCredentialsSignIn,
+    signIn: handleSignIn,
     signOut: handleSignOut,
     isAuthenticated: !!session && !!user,
     session,
@@ -192,6 +229,7 @@ declare module "next-auth" {
       provider?: string;
       dateOfBirth?: Date;
       gender?: string;
+      isAnonymous?: boolean;
     };
   }
 
@@ -206,6 +244,7 @@ declare module "next-auth" {
     provider?: string;
     dateOfBirth?: Date;
     gender?: string;
+    isAnonymous?: boolean;
   }
 }
 
