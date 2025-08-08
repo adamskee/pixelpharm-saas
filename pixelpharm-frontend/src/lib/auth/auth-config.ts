@@ -76,13 +76,16 @@ export const authOptions: NextAuthOptions = {
         const normalizedEmail = email.toLowerCase().trim();
 
         try {
-          // Debug database connection in production
-          if (process.env.NODE_ENV === "production") {
-            console.log("🔍 Production DB Debug:", {
-              hasDbUrl: !!process.env.DATABASE_URL,
-              dbUrlStart: process.env.DATABASE_URL?.substring(0, 20) || 'NOT SET',
-            });
-          }
+          // Debug database connection and prisma client
+          console.log("🔍 Auth Debug:", {
+            nodeEnv: process.env.NODE_ENV,
+            hasPrisma: !!prisma,
+            prismaType: typeof prisma,
+            hasDbUrl: !!process.env.DATABASE_URL,
+            dbUrlStart: process.env.DATABASE_URL?.substring(0, 20) || 'NOT SET',
+            prismaUser: typeof prisma?.user,
+            prismaMethods: prisma ? Object.keys(prisma) : 'PRISMA_UNDEFINED'
+          });
 
           if (action === "signup") {
             // Handle signup

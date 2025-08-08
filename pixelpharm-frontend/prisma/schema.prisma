@@ -20,7 +20,7 @@ model accounts {
   scope               String?
   id_token            String?
   session_state       String?
-  users               users   @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  users               User   @relation(fields: [user_id], references: [userId], onDelete: Cascade)
 
   @@unique([provider, provider_account_id])
 }
@@ -37,7 +37,7 @@ model ai_processing_results {
   created_at        DateTime         @default(now())
   processed_at      DateTime?
   file_uploads      file_uploads     @relation(fields: [upload_id], references: [upload_id], onDelete: Cascade)
-  users             users            @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  users             User            @relation(fields: [user_id], references: [userId], onDelete: Cascade)
 }
 
 model biomarker_references {
@@ -69,7 +69,7 @@ model biomarker_values {
   test_date          DateTime           @db.Date
   created_at         DateTime           @default(now())
   blood_test_results blood_test_results @relation(fields: [result_id], references: [result_id], onDelete: Cascade)
-  users              users              @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  users              User              @relation(fields: [user_id], references: [userId], onDelete: Cascade)
 
   @@index([user_id, biomarker_name, test_date])
 }
@@ -85,7 +85,7 @@ model blood_test_results {
   updated_at       DateTime
   biomarker_values biomarker_values[]
   file_uploads     file_uploads       @relation(fields: [upload_id], references: [upload_id], onDelete: Cascade)
-  users            users              @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  users            User              @relation(fields: [user_id], references: [userId], onDelete: Cascade)
 }
 
 model body_composition_results {
@@ -102,7 +102,7 @@ model body_composition_results {
   created_at           DateTime     @default(now())
   updated_at           DateTime
   file_uploads         file_uploads @relation(fields: [upload_id], references: [upload_id], onDelete: Cascade)
-  users                users        @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  users                User        @relation(fields: [user_id], references: [userId], onDelete: Cascade)
 }
 
 model file_uploads {
@@ -119,7 +119,7 @@ model file_uploads {
   ai_processing_results    ai_processing_results[]
   blood_test_results       blood_test_results[]
   body_composition_results body_composition_results[]
-  users                    users                      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  users                    User                      @relation(fields: [user_id], references: [userId], onDelete: Cascade)
   fitness_activities       fitness_activities[]
 }
 
@@ -138,7 +138,7 @@ model fitness_activities {
   created_at       DateTime     @default(now())
   updated_at       DateTime
   file_uploads     file_uploads @relation(fields: [upload_id], references: [upload_id], onDelete: Cascade)
-  users            users        @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  users            User        @relation(fields: [user_id], references: [userId], onDelete: Cascade)
 }
 
 model health_insights {
@@ -154,7 +154,7 @@ model health_insights {
   expires_at    DateTime?
   created_at    DateTime    @default(now())
   updated_at    DateTime
-  users         users       @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  users         User       @relation(fields: [user_id], references: [userId], onDelete: Cascade)
 }
 
 model medical_reviews {
@@ -171,7 +171,7 @@ model medical_reviews {
   analysis_version     String
   created_at           DateTime @default(now())
   updated_at           DateTime
-  users                users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  users                User    @relation(fields: [user_id], references: [userId], onDelete: Cascade)
 }
 
 model sessions {
@@ -179,37 +179,37 @@ model sessions {
   session_token String   @unique
   user_id       String
   expires       DateTime
-  users         users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  users         User    @relation(fields: [user_id], references: [userId], onDelete: Cascade)
 }
 
-model users {
-  user_id                  String                     @id
-  cognito_sub              String?                    @unique
+model User {
+  userId                   String                     @id @map("user_id")
+  cognitoSub               String?                    @unique @map("cognito_sub")
   email                    String                     @unique
-  first_name               String?
-  last_name                String?
-  date_of_birth            DateTime?                  @db.Date
+  firstName                String?                    @map("first_name")
+  lastName                 String?                    @map("last_name")
+  dateOfBirth              DateTime?                  @db.Date @map("date_of_birth")
   gender                   Gender?
   timezone                 String?                    @default("UTC")
   name                     String?
   image                    String?
-  email_verified           DateTime?
-  password_hash            String?
+  emailVerified            DateTime?                  @map("email_verified")
+  passwordHash             String?                    @map("password_hash")
   provider                 String?                    @default("google")
-  created_at               DateTime                   @default(now())
-  updated_at               DateTime
+  createdAt                DateTime                   @default(now()) @map("created_at")
+  updatedAt                DateTime                   @updatedAt @map("updated_at")
   bio                      String?
   height                   Decimal?                   @db.Decimal(5, 2)
   weight                   Decimal?                   @db.Decimal(5, 2)
-  stripe_customer_id       String?                    @unique
-  stripe_subscription_id   String?                    @unique
-  subscription_expires_at  DateTime?
-  subscription_plan        String?
-  subscription_status      String?
-  is_anonymous             Boolean                    @default(false)
-  plan_type                PlanType                   @default(FREE)
-  uploads_used             Int                        @default(0)
-  upgrade_prompt_shown     Boolean                    @default(false)
+  stripeCustomerId         String?                    @unique @map("stripe_customer_id")
+  stripeSubscriptionId     String?                    @unique @map("stripe_subscription_id")
+  subscriptionExpiresAt    DateTime?                  @map("subscription_expires_at")
+  subscriptionPlan         String?                    @map("subscription_plan")
+  subscriptionStatus       String?                    @map("subscription_status")
+  isAnonymous              Boolean                    @default(false) @map("is_anonymous")
+  planType                 PlanType                   @default(FREE) @map("plan_type")
+  uploadsUsed              Int                        @default(0) @map("uploads_used")
+  upgradePromptShown       Boolean                    @default(false) @map("upgrade_prompt_shown")
   accounts                 accounts[]
   ai_processing_results    ai_processing_results[]
   biomarker_values         biomarker_values[]
@@ -220,6 +220,8 @@ model users {
   health_insights          health_insights[]
   medical_reviews          medical_reviews[]
   sessions                 sessions[]
+
+  @@map("users")
 }
 
 model verificationtokens {
