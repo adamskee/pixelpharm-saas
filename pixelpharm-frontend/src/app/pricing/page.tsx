@@ -165,7 +165,7 @@ export default function PricingPage() {
               <Link href="/auth/signin">
                 <Button variant="outline">Sign In</Button>
               </Link>
-              <Link href="/auth/signup">
+              <Link href="/auth/signin">
                 <Button>Get Started</Button>
               </Link>
             </div>
@@ -410,7 +410,7 @@ export default function PricingPage() {
               decisions
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/auth/signup">
+              <Link href="/auth/signin">
                 <Button
                   size="lg"
                   className="bg-white text-blue-600 hover:bg-gray-100"
@@ -470,7 +470,7 @@ export default function PricingPage() {
                 </li>
                 <li>
                   <Link
-                    href="/auth/signup"
+                    href="/auth/signin"
                     className="text-gray-300 hover:text-white"
                   >
                     Get Started

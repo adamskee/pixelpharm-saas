@@ -104,7 +104,7 @@ export default function AboutPage() {
               <Link href="/auth/signin">
                 <Button variant="outline">Sign In</Button>
               </Link>
-              <Link href="/auth/signup">
+              <Link href="/auth/signin">
                 <Button>Get Started</Button>
               </Link>
             </div>
@@ -336,7 +336,7 @@ export default function AboutPage() {
               help you make informed decisions about your wellness.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/auth/signup">
+              <Link href="/auth/signin">
                 <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
                   Start Now!
                   <ArrowRight className="h-5 w-5 ml-2" />
@@ -389,7 +389,7 @@ export default function AboutPage() {
                 </li>
                 <li>
                   <Link
-                    href="/auth/signup"
+                    href="/auth/signin"
                     className="text-gray-300 hover:text-white"
                   >
                     Get Started

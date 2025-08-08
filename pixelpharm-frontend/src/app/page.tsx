@@ -1064,7 +1064,7 @@ export default function PixelPharmHomepage(): JSX.Element {
                 </li>
                 <li>
                   <Link
-                    href="/auth/signup"
+                    href="/auth/signin"
                     className="hover:text-white transition-colors"
                   >
                     Get Started

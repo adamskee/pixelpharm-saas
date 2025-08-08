@@ -39,7 +39,7 @@ export default function PrivacyPage() {
               <Link href="/auth/signin">
                 <Button variant="outline">Sign In</Button>
               </Link>
-              <Link href="/auth/signup">
+              <Link href="/auth/signin">
                 <Button>Get Started</Button>
               </Link>
             </div>
@@ -364,7 +364,7 @@ export default function PrivacyPage() {
               <ul className="space-y-2">
                 <li><Link href="/pricing" className="text-gray-300 hover:text-white">Pricing</Link></li>
                 <li><Link href="/auth/signin" className="text-gray-300 hover:text-white">Sign In</Link></li>
-                <li><Link href="/auth/signup" className="text-gray-300 hover:text-white">Get Started</Link></li>
+                <li><Link href="/auth/signin" className="text-gray-300 hover:text-white">Get Started</Link></li>
               </ul>
             </div>
             <div>
