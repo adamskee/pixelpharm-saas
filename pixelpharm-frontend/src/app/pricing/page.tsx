@@ -376,6 +376,18 @@ export default function PricingPage() {
 
               <div>
                 <h3 className="text-lg font-semibold mb-2">
+                  Can I create an anonymous account?
+                </h3>
+                <p className="text-gray-600">
+                  Yes! When signing up with email/password (not Google), you can choose to create an anonymous account. 
+                  Your personal information won't be displayed anywhere in the app - instead, only a unique user ID is shown. 
+                  This is perfect for users who want maximum privacy when uploading sensitive medical data. 
+                  You'll still have full access to all features, but your identity remains completely protected.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-2">
                   What file formats do you support?
                 </h3>
                 <p className="text-gray-600">

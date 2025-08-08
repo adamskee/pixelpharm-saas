@@ -568,6 +568,104 @@ export default function PixelPharmHomepage(): JSX.Element {
         </div>
       </section>
 
+      {/* Anonymous Account Privacy Section */}
+      <section className="py-20 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Left Column - Content */}
+            <div>
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mb-6">
+                <Shield className="h-4 w-4 mr-2" />
+                Maximum Privacy Protection
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6">
+                Complete Medical Privacy with{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                  Anonymous Accounts
+                </span>
+              </h2>
+              <p className="text-xl text-slate-600 mb-8 leading-relaxed">
+                Concerned about uploading sensitive medical data? We understand. 
+                That's why we offer anonymous accounts that completely protect your identity 
+                while still providing full access to our AI-powered health insights.
+              </p>
+              
+              <div className="space-y-6">
+                <div className="flex items-start space-x-4">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 mb-1">No Personal Information Displayed</h3>
+                    <p className="text-slate-600">Only a unique user ID is shown throughout the platform - your name and email remain completely hidden.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-4">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 mb-1">Full Feature Access</h3>
+                    <p className="text-slate-600">Anonymous accounts have access to all the same powerful health analytics and AI insights as regular accounts.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-4">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 mb-1">Perfect for Sensitive Data</h3>
+                    <p className="text-slate-600">Ideal for users uploading highly sensitive medical information who want maximum privacy protection.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-blue-800 text-sm">
+                  <strong>Note:</strong> Anonymous accounts are available when signing up with email/password. 
+                  Simply check the "Create Anonymous Account" option during registration.
+                </p>
+              </div>
+            </div>
+
+            {/* Right Column - Visual */}
+            <div className="relative">
+              <div className="bg-white rounded-2xl shadow-2xl p-8 border border-slate-200">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg mx-auto mb-4">
+                    AN
+                  </div>
+                  <h4 className="font-semibold text-slate-900">Anonymous User</h4>
+                  <p className="text-slate-500 text-sm">ID: user-1704567890</p>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <span className="text-green-800 font-medium">Identity Protected</span>
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <span className="text-green-800 font-medium">Full AI Analysis</span>
+                    <Brain className="h-5 w-5 text-green-600" />
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <span className="text-green-800 font-medium">Complete Privacy</span>
+                    <Shield className="h-5 w-5 text-green-600" />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Background decoration */}
+              <div className="absolute -z-10 top-4 left-4 w-full h-full bg-gradient-to-r from-blue-100 to-purple-100 rounded-2xl"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Purchase Incentive CTA Section */}
       <section className="py-20 bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 relative overflow-hidden">
         <div
