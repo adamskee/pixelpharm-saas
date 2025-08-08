@@ -7,281 +7,233 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  userId                 String                  @id @default(cuid()) @map("user_id")
-  cognitoSub             String?                 @unique @map("cognito_sub")
-  email                  String                  @unique
-  firstName              String?                 @map("first_name")
-  lastName               String?                 @map("last_name")
-  dateOfBirth            DateTime?               @map("date_of_birth") @db.Date
-  gender                 Gender?
-  timezone               String?                 @default("UTC")
-  name                   String?
-  image                  String?
-  emailVerified          DateTime?               @map("email_verified")
-  passwordHash           String?                 @map("password_hash")
-  provider               String?                 @default("google")
-  createdAt              DateTime                @default(now()) @map("created_at")
-  updatedAt              DateTime                @updatedAt @map("updated_at")
-  bio                    String?                 @map("bio")
-  height                 Decimal?                @map("height") @db.Decimal(5, 2)
-  weight                 Decimal?                @map("weight") @db.Decimal(5, 2)
-  stripeCustomerId       String?                 @unique @map("stripe_customer_id")
-  stripeSubscriptionId   String?                 @unique @map("stripe_subscription_id")
-  subscriptionExpiresAt  DateTime?               @map("subscription_expires_at")
-  subscriptionPlan       String?                 @map("subscription_plan")
-  subscriptionStatus     String?                 @map("subscription_status")
-  // TEMPORARILY COMMENTED OUT - PRODUCTION DB DOESN'T HAVE THESE COLUMNS YET
-  // isAnonymous            Boolean                 @default(false) @map("is_anonymous")
-  // planType               PlanType                @default(FREE) @map("plan_type")
-  // uploadsUsed            Int                     @default(0) @map("uploads_used")
-  // upgradePromptShown     Boolean                 @default(false) @map("upgrade_prompt_shown")
-  accounts               Account[]
-  aiProcessingResults    AiProcessingResult[]
-  biomarkerValues        BiomarkerValue[]
-  bloodTestResults       BloodTestResult[]
-  bodyCompositionResults BodyCompositionResult[]
-  fileUploads            FileUpload[]
-  fitnessActivities      FitnessActivity[]
-  healthInsights         HealthInsight[]
-  medicalReviews         MedicalReview[]
-  sessions               Session[]
+model accounts {
+  id                  String  @id
+  user_id             String
+  type                String
+  provider            String
+  provider_account_id String
+  refresh_token       String?
+  access_token        String?
+  expires_at          Int?
+  token_type          String?
+  scope               String?
+  id_token            String?
+  session_state       String?
+  users               users   @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
-  @@map("users")
+  @@unique([provider, provider_account_id])
 }
 
-model MedicalReview {
-  id                 String   @id @default(cuid()) @map("id")
-  userId             String   @map("user_id")
-  overallHealthScore Int      @map("overall_health_score")
-  healthGrade        String   @map("health_grade")
-  riskLevel          String   @map("risk_level")
-  primaryRisks       String[] @map("primary_risks")
-  criticalFindings   Int      @map("critical_findings")
-  abnormalFindings   Int      @map("abnormal_findings")
-  dataCompleteness   Float    @map("data_completeness")
-  nextReviewDate     DateTime @map("next_review_date")
-  analysisVersion    String   @map("analysis_version")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
-  user               User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
-  @@map("medical_reviews")
+model ai_processing_results {
+  processing_id     String           @id
+  upload_id         String
+  user_id           String
+  processing_type   ProcessingType
+  raw_results       Json
+  confidence_score  Decimal?         @db.Decimal(5, 4)
+  processing_status ProcessingStatus @default(PENDING)
+  error_message     String?
+  created_at        DateTime         @default(now())
+  processed_at      DateTime?
+  file_uploads      file_uploads     @relation(fields: [upload_id], references: [upload_id], onDelete: Cascade)
+  users             users            @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String  @map("user_id")
-  type              String
-  provider          String
-  providerAccountId String  @map("provider_account_id")
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+model biomarker_references {
+  reference_id   String   @id
+  biomarker_name String
+  gender         Gender   @default(ALL)
+  age_min        Int?
+  age_max        Int?
+  normal_min     Decimal? @db.Decimal(10, 3)
+  normal_max     Decimal? @db.Decimal(10, 3)
+  optimal_min    Decimal? @db.Decimal(10, 3)
+  optimal_max    Decimal? @db.Decimal(10, 3)
+  unit           String
+  source         String?
+  updated_at     DateTime
 
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
+  @@unique([biomarker_name, gender, age_min, age_max])
 }
 
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique @map("session_token")
-  userId       String   @map("user_id")
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+model biomarker_values {
+  value_id           String             @id
+  user_id            String
+  result_id          String
+  biomarker_name     String
+  value              Decimal            @db.Decimal(10, 3)
+  unit               String
+  reference_range    String?
+  is_abnormal        Boolean            @default(false)
+  test_date          DateTime           @db.Date
+  created_at         DateTime           @default(now())
+  blood_test_results blood_test_results @relation(fields: [result_id], references: [result_id], onDelete: Cascade)
+  users              users              @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
-  @@map("sessions")
+  @@index([user_id, biomarker_name, test_date])
 }
 
-model VerificationToken {
+model blood_test_results {
+  result_id        String             @id
+  user_id          String
+  upload_id        String
+  test_date        DateTime           @db.Date
+  lab_name         String?
+  biomarkers       Json
+  created_at       DateTime           @default(now())
+  updated_at       DateTime
+  biomarker_values biomarker_values[]
+  file_uploads     file_uploads       @relation(fields: [upload_id], references: [upload_id], onDelete: Cascade)
+  users            users              @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model body_composition_results {
+  composition_id       String       @id
+  user_id              String
+  upload_id            String
+  test_date            DateTime     @db.Date
+  total_weight         Decimal?     @db.Decimal(5, 2)
+  body_fat_percentage  Decimal?     @db.Decimal(5, 2)
+  skeletal_muscle_mass Decimal?     @db.Decimal(5, 2)
+  visceral_fat_level   Int?
+  bmr                  Int?
+  raw_data             Json?
+  created_at           DateTime     @default(now())
+  updated_at           DateTime
+  file_uploads         file_uploads @relation(fields: [upload_id], references: [upload_id], onDelete: Cascade)
+  users                users        @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model file_uploads {
+  upload_id                String                     @id
+  user_id                  String
+  file_key                 String
+  original_filename        String
+  file_type                String
+  upload_type              UploadType
+  file_size                BigInt
+  upload_status            UploadStatus               @default(UPLOADED)
+  created_at               DateTime                   @default(now())
+  updated_at               DateTime
+  ai_processing_results    ai_processing_results[]
+  blood_test_results       blood_test_results[]
+  body_composition_results body_composition_results[]
+  users                    users                      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  fitness_activities       fitness_activities[]
+}
+
+model fitness_activities {
+  activity_id      String       @id
+  user_id          String
+  upload_id        String
+  activity_date    DateTime     @db.Date
+  activity_type    String
+  duration_minutes Int?
+  calories_burned  Int?
+  avg_heart_rate   Int?
+  max_heart_rate   Int?
+  distance_km      Decimal?     @db.Decimal(8, 3)
+  raw_data         Json?
+  created_at       DateTime     @default(now())
+  updated_at       DateTime
+  file_uploads     file_uploads @relation(fields: [upload_id], references: [upload_id], onDelete: Cascade)
+  users            users        @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model health_insights {
+  insight_id    String      @id
+  user_id       String
+  insight_type  InsightType
+  title         String
+  description   String
+  priority      Priority
+  data_sources  Json?
+  ai_confidence Decimal?    @db.Decimal(5, 4)
+  is_read       Boolean     @default(false)
+  expires_at    DateTime?
+  created_at    DateTime    @default(now())
+  updated_at    DateTime
+  users         users       @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model medical_reviews {
+  id                   String   @id
+  user_id              String
+  overall_health_score Int
+  health_grade         String
+  risk_level           String
+  primary_risks        String[]
+  critical_findings    Int
+  abnormal_findings    Int
+  data_completeness    Float
+  next_review_date     DateTime
+  analysis_version     String
+  created_at           DateTime @default(now())
+  updated_at           DateTime
+  users                users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model sessions {
+  id            String   @id
+  session_token String   @unique
+  user_id       String
+  expires       DateTime
+  users         users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model users {
+  user_id                  String                     @id
+  cognito_sub              String?                    @unique
+  email                    String                     @unique
+  first_name               String?
+  last_name                String?
+  date_of_birth            DateTime?                  @db.Date
+  gender                   Gender?
+  timezone                 String?                    @default("UTC")
+  name                     String?
+  image                    String?
+  email_verified           DateTime?
+  password_hash            String?
+  provider                 String?                    @default("google")
+  created_at               DateTime                   @default(now())
+  updated_at               DateTime
+  bio                      String?
+  height                   Decimal?                   @db.Decimal(5, 2)
+  weight                   Decimal?                   @db.Decimal(5, 2)
+  stripe_customer_id       String?                    @unique
+  stripe_subscription_id   String?                    @unique
+  subscription_expires_at  DateTime?
+  subscription_plan        String?
+  subscription_status      String?
+  is_anonymous             Boolean                    @default(false)
+  plan_type                PlanType                   @default(FREE)
+  uploads_used             Int                        @default(0)
+  upgrade_prompt_shown     Boolean                    @default(false)
+  accounts                 accounts[]
+  ai_processing_results    ai_processing_results[]
+  biomarker_values         biomarker_values[]
+  blood_test_results       blood_test_results[]
+  body_composition_results body_composition_results[]
+  file_uploads             file_uploads[]
+  fitness_activities       fitness_activities[]
+  health_insights          health_insights[]
+  medical_reviews          medical_reviews[]
+  sessions                 sessions[]
+}
+
+model verificationtokens {
   identifier String
   token      String   @unique
   expires    DateTime
 
   @@unique([identifier, token])
-  @@map("verificationtokens")
-}
-
-model FileUpload {
-  uploadId               String                  @id @default(cuid()) @map("upload_id")
-  userId                 String                  @map("user_id")
-  fileKey                String                  @map("file_key")
-  originalFilename       String                  @map("original_filename")
-  fileType               String                  @map("file_type")
-  uploadType             UploadType              @map("upload_type")
-  fileSize               BigInt                  @map("file_size")
-  uploadStatus           UploadStatus            @default(UPLOADED) @map("upload_status")
-  createdAt              DateTime                @default(now()) @map("created_at")
-  updatedAt              DateTime                @updatedAt @map("updated_at")
-  aiProcessingResults    AiProcessingResult[]
-  bloodTestResults       BloodTestResult[]
-  bodyCompositionResults BodyCompositionResult[]
-  user                   User                    @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  fitnessActivities      FitnessActivity[]
-
-  @@map("file_uploads")
-}
-
-model AiProcessingResult {
-  processingId     String           @id @default(cuid()) @map("processing_id")
-  uploadId         String           @map("upload_id")
-  userId           String           @map("user_id")
-  processingType   ProcessingType   @map("processing_type")
-  rawResults       Json             @map("raw_results")
-  confidenceScore  Decimal?         @map("confidence_score") @db.Decimal(5, 4)
-  processingStatus ProcessingStatus @default(PENDING) @map("processing_status")
-  errorMessage     String?          @map("error_message")
-  createdAt        DateTime         @default(now()) @map("created_at")
-  processedAt      DateTime?        @map("processed_at")
-  upload           FileUpload       @relation(fields: [uploadId], references: [uploadId], onDelete: Cascade)
-  user             User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
-  @@map("ai_processing_results")
-}
-
-model BloodTestResult {
-  resultId        String           @id @default(cuid()) @map("result_id")
-  userId          String           @map("user_id")
-  uploadId        String           @map("upload_id")
-  testDate        DateTime         @map("test_date") @db.Date
-  labName         String?          @map("lab_name")
-  biomarkers      Json             @map("biomarkers")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-  biomarkerValues BiomarkerValue[]
-  upload          FileUpload       @relation(fields: [uploadId], references: [uploadId], onDelete: Cascade)
-  user            User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
-  @@map("blood_test_results")
-}
-
-model BiomarkerValue {
-  valueId        String          @id @default(cuid()) @map("value_id")
-  userId         String          @map("user_id")
-  resultId       String          @map("result_id")
-  biomarkerName  String          @map("biomarker_name")
-  value          Decimal         @map("value") @db.Decimal(10, 3)
-  unit           String          @map("unit")
-  referenceRange String?         @map("reference_range")
-  isAbnormal     Boolean         @default(false) @map("is_abnormal")
-  testDate       DateTime        @map("test_date") @db.Date
-  createdAt      DateTime        @default(now()) @map("created_at")
-  result         BloodTestResult @relation(fields: [resultId], references: [resultId], onDelete: Cascade)
-  user           User            @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
-  @@index([userId, biomarkerName, testDate])
-  @@map("biomarker_values")
-}
-
-model BodyCompositionResult {
-  compositionId      String     @id @default(cuid()) @map("composition_id")
-  userId             String     @map("user_id")
-  uploadId           String     @map("upload_id")
-  testDate           DateTime   @map("test_date") @db.Date
-  totalWeight        Decimal?   @map("total_weight") @db.Decimal(5, 2)
-  bodyFatPercentage  Decimal?   @map("body_fat_percentage") @db.Decimal(5, 2)
-  skeletalMuscleMass Decimal?   @map("skeletal_muscle_mass") @db.Decimal(5, 2)
-  visceralFatLevel   Int?       @map("visceral_fat_level")
-  bmr                Int?       @map("bmr")
-  rawData            Json?      @map("raw_data")
-  createdAt          DateTime   @default(now()) @map("created_at")
-  updatedAt          DateTime   @updatedAt @map("updated_at")
-  upload             FileUpload @relation(fields: [uploadId], references: [uploadId], onDelete: Cascade)
-  user               User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
-  @@map("body_composition_results")
-}
-
-model FitnessActivity {
-  activityId      String     @id @default(cuid()) @map("activity_id")
-  userId          String     @map("user_id")
-  uploadId        String     @map("upload_id")
-  activityDate    DateTime   @map("activity_date") @db.Date
-  activityType    String     @map("activity_type")
-  durationMinutes Int?       @map("duration_minutes")
-  caloriesBurned  Int?       @map("calories_burned")
-  avgHeartRate    Int?       @map("avg_heart_rate")
-  maxHeartRate    Int?       @map("max_heart_rate")
-  distanceKm      Decimal?   @map("distance_km") @db.Decimal(8, 3)
-  rawData         Json?      @map("raw_data")
-  createdAt       DateTime   @default(now()) @map("created_at")
-  updatedAt       DateTime   @updatedAt @map("updated_at")
-  upload          FileUpload @relation(fields: [uploadId], references: [uploadId], onDelete: Cascade)
-  user            User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
-  @@map("fitness_activities")
-}
-
-model HealthInsight {
-  insightId    String      @id @default(cuid()) @map("insight_id")
-  userId       String      @map("user_id")
-  insightType  InsightType @map("insight_type")
-  title        String      @map("title")
-  description  String      @map("description")
-  priority     Priority    @map("priority")
-  dataSources  Json?       @map("data_sources")
-  aiConfidence Decimal?    @map("ai_confidence") @db.Decimal(5, 4)
-  isRead       Boolean     @default(false) @map("is_read")
-  expiresAt    DateTime?   @map("expires_at")
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
-  user         User        @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
-  @@map("health_insights")
-}
-
-model BiomarkerReference {
-  referenceId   String   @id @default(cuid()) @map("reference_id")
-  biomarkerName String   @map("biomarker_name")
-  gender        Gender   @default(ALL) @map("gender")
-  ageMin        Int?     @map("age_min")
-  ageMax        Int?     @map("age_max")
-  normalMin     Decimal? @map("normal_min") @db.Decimal(10, 3)
-  normalMax     Decimal? @map("normal_max") @db.Decimal(10, 3)
-  optimalMin    Decimal? @map("optimal_min") @db.Decimal(10, 3)
-  optimalMax    Decimal? @map("optimal_max") @db.Decimal(10, 3)
-  unit          String   @map("unit")
-  source        String?  @map("source")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  @@unique([biomarkerName, gender, ageMin, ageMax])
-  @@map("biomarker_references")
 }
 
 enum Gender {
   MALE
   FEMALE
   ALL
-}
-
-enum UploadType {
-  BLOOD_TESTS
-  BODY_COMPOSITION
-  FITNESS_ACTIVITIES
-}
-
-enum UploadStatus {
-  UPLOADED
-  PROCESSING
-  PROCESSED
-  FAILED
-}
-
-enum ProcessingType {
-  OCR
-  HEALTH_ANALYSIS
-  RECOMMENDATIONS
-}
-
-enum ProcessingStatus {
-  PENDING
-  COMPLETED
-  FAILED
 }
 
 enum InsightType {
@@ -298,9 +250,33 @@ enum Priority {
   URGENT
 }
 
-// TEMPORARILY COMMENTED OUT - PRODUCTION DB DOESN'T HAVE PLAN FIELDS YET
-// enum PlanType {
-//   FREE
-//   BASIC
-//   PRO
-// }
+enum ProcessingStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum ProcessingType {
+  OCR
+  HEALTH_ANALYSIS
+  RECOMMENDATIONS
+}
+
+enum UploadStatus {
+  UPLOADED
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum UploadType {
+  BLOOD_TESTS
+  BODY_COMPOSITION
+  FITNESS_ACTIVITIES
+}
+
+enum PlanType {
+  FREE
+  BASIC
+  PRO
+}

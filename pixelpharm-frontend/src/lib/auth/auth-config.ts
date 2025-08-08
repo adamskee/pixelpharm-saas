@@ -116,8 +116,7 @@ export const authOptions: NextAuthOptions = {
                 passwordHash: hashedPassword,
                 provider: "credentials",
                 emailVerified: null,
-                // TODO: Add isAnonymous after database migration
-                // isAnonymous: isAnonymous === "true",
+                isAnonymous: isAnonymous === "true",
               },
             });
 
@@ -133,6 +132,7 @@ export const authOptions: NextAuthOptions = {
               firstName: newUser.firstName,
               lastName: newUser.lastName,
               provider: "credentials",
+              isAnonymous: newUser.isAnonymous,
             };
           } else {
             // Handle signin
@@ -171,6 +171,7 @@ export const authOptions: NextAuthOptions = {
               firstName: user.firstName,
               lastName: user.lastName,
               provider: "credentials",
+              isAnonymous: user.isAnonymous,
             };
           }
         } catch (error: any) {
@@ -253,6 +254,7 @@ export const authOptions: NextAuthOptions = {
         session.user.provider = token.provider as string;
         session.user.firstName = token.firstName as string;
         session.user.lastName = token.lastName as string;
+        session.user.isAnonymous = token.isAnonymous as boolean;
       }
 
       return session;
@@ -270,6 +272,7 @@ export const authOptions: NextAuthOptions = {
         token.provider = account.provider;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
+        token.isAnonymous = user.isAnonymous;
 
         console.log("🔑 New JWT token created:", {
           sub: token.sub,
