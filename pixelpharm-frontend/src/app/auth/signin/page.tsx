@@ -16,6 +16,7 @@ export default function SignInPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -50,8 +51,9 @@ export default function SignInPage() {
         email: formData.email,
         password: formData.password,
         action: isSignUp ? "signup" : "signin",
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+        firstName: isAnonymous ? "" : formData.firstName,
+        lastName: isAnonymous ? "" : formData.lastName,
+        isAnonymous: isAnonymous.toString(),
         redirect: false,
       });
 
@@ -108,6 +110,7 @@ export default function SignInPage() {
     setIsSignUp(!isSignUp);
     setError("");
     setSuccess("");
+    setIsAnonymous(false);
     // Keep email but clear other fields when switching modes
     setFormData((prev) => ({
       email: prev.email,
@@ -189,32 +192,64 @@ export default function SignInPage() {
 
           <form onSubmit={handleCredentialsAuth} className="space-y-4">
             {isSignUp && (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    name="firstName"
-                    type="text"
-                    placeholder="First Name"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    className="pl-10"
-                    required={isSignUp}
+              <>
+                <div className="flex items-start space-x-3">
+                  <input
+                    id="isAnonymous"
+                    type="checkbox"
+                    checked={isAnonymous}
+                    onChange={(e) => {
+                      setIsAnonymous(e.target.checked);
+                      // Clear name fields when switching to anonymous
+                      if (e.target.checked) {
+                        setFormData(prev => ({
+                          ...prev,
+                          firstName: "",
+                          lastName: ""
+                        }));
+                      }
+                    }}
+                    className="mt-0.5 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
+                  <div className="text-sm">
+                    <label htmlFor="isAnonymous" className="font-medium text-gray-700">
+                      Create Anonymous Account
+                    </label>
+                    <p className="text-gray-500 text-xs mt-1">
+                      Your name won't be displayed. Only a user ID will be shown for maximum privacy.
+                    </p>
+                  </div>
                 </div>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    name="lastName"
-                    type="text"
-                    placeholder="Last Name"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    className="pl-10"
-                    required={isSignUp}
-                  />
-                </div>
-              </div>
+                
+                {!isAnonymous && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        name="firstName"
+                        type="text"
+                        placeholder="First Name"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        className="pl-10"
+                        required={isSignUp && !isAnonymous}
+                      />
+                    </div>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        name="lastName"
+                        type="text"
+                        placeholder="Last Name"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        className="pl-10"
+                        required={isSignUp && !isAnonymous}
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             <div className="relative">
