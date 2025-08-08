@@ -116,7 +116,8 @@ export const authOptions: NextAuthOptions = {
                 passwordHash: hashedPassword,
                 provider: "credentials",
                 emailVerified: null,
-                isAnonymous: isAnonymous === "true",
+                // TODO: Add isAnonymous after database migration
+                // isAnonymous: isAnonymous === "true",
               },
             });
 
