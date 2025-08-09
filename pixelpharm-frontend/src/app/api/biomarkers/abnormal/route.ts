@@ -21,14 +21,14 @@ export async function GET(request: Request) {
     console.log("🔬 Fetching abnormal biomarkers for userId:", userId);
 
     // Get abnormal biomarkers
-    const abnormalBiomarkers = await prisma.biomarkerValue.findMany({
+    const abnormalBiomarkers = await prisma.biomarker_values.findMany({
       where: { 
-        userId,
-        isAbnormal: true 
+        user_id: userId,
+        is_abnormal: true 
       },
       orderBy: [
-        { testDate: "desc" },
-        { biomarkerName: "asc" }
+        { test_date: "desc" },
+        { biomarker_name: "asc" }
       ],
       take: 50,
     });
@@ -52,19 +52,21 @@ export async function GET(request: Request) {
     // Transform to expected format with additional metadata
     const abnormalResults = abnormalBiomarkers.map((bv) => {
       const value = parseFloat(bv.value.toString());
-      const isCritical = determineIfCritical(bv.biomarkerName, value);
+      const biomarkerName = bv.biomarker_name || "Unknown Biomarker"; // Safety fallback
+      const isCritical = determineIfCritical(biomarkerName, value);
       
       return {
-        name: bv.biomarkerName,
+        name: biomarkerName,
+        biomarkerName: biomarkerName, // Include camelCase version for compatibility
         value: value,
         unit: bv.unit || "",
-        referenceRange: bv.referenceRange || "N/A",
-        testDate: bv.testDate.toISOString(),
-        isAbnormal: bv.isAbnormal,
+        referenceRange: bv.reference_range || "N/A",
+        testDate: bv.test_date.toISOString(),
+        isAbnormal: bv.is_abnormal || false, // Safety fallback
         isCritical: isCritical,
         severity: isCritical ? "CRITICAL" : "ABNORMAL",
-        category: getCategoryFromBiomarkerName(bv.biomarkerName),
-        recommendations: getRecommendationsForBiomarker(bv.biomarkerName, isCritical)
+        category: getCategoryFromBiomarkerName(biomarkerName),
+        recommendations: getRecommendationsForBiomarker(biomarkerName, isCritical)
       };
     });
 
@@ -78,7 +80,7 @@ export async function GET(request: Request) {
       summary: {
         totalAbnormal: nonCriticalResults.length,
         totalCritical: criticalResults.length,
-        lastTestDate: abnormalBiomarkers.length > 0 ? abnormalBiomarkers[0].testDate : null
+        lastTestDate: abnormalBiomarkers.length > 0 ? abnormalBiomarkers[0].test_date : null
       },
       userId: userId,
     });
@@ -93,6 +95,9 @@ export async function GET(request: Request) {
 
 // Helper function to categorize biomarkers
 function getCategoryFromBiomarkerName(name: string): string {
+  if (!name || typeof name !== 'string') {
+    return 'Other';
+  }
   const biomarkerName = name.toLowerCase();
   
   if (biomarkerName.includes('cholesterol') || biomarkerName.includes('ldl') || biomarkerName.includes('hdl') || biomarkerName.includes('triglyceride')) {
@@ -125,6 +130,9 @@ function getCategoryFromBiomarkerName(name: string): string {
 
 // Helper function to provide basic recommendations
 function getRecommendationsForBiomarker(name: string, isCritical: boolean): string[] {
+  if (!name || typeof name !== 'string') {
+    return ['Consult with your healthcare provider for evaluation'];
+  }
   const biomarkerName = name.toLowerCase();
   const urgency = isCritical ? "urgent" : "routine";
   

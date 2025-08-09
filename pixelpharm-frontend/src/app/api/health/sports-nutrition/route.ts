@@ -68,9 +68,9 @@ export async function GET(request: Request) {
     // Get latest biomarker data
     let biomarkerValues;
     try {
-      biomarkerValues = await prisma.biomarkerValue.findMany({
-        where: { userId },
-        orderBy: { testDate: "desc" },
+      biomarkerValues = await prisma.biomarker_values.findMany({
+        where: { user_id: userId },
+        orderBy: { test_date: "desc" },
         take: 50,
       });
       console.log(`📊 Found ${biomarkerValues.length} biomarker records for user: ${userId}`);
@@ -86,9 +86,9 @@ export async function GET(request: Request) {
     // Get body composition for metabolic calculations
     let bodyComposition = null;
     try {
-      bodyComposition = await prisma.bodyCompositionResult.findFirst({
-        where: { userId },
-        orderBy: { testDate: "desc" },
+      bodyComposition = await prisma.body_composition_results.findFirst({
+        where: { user_id: userId },
+        orderBy: { test_date: "desc" },
       });
       console.log(`🏋️ Body composition data found: ${bodyComposition ? 'Yes' : 'No'}`);
     } catch (dbError) {
@@ -123,7 +123,7 @@ export async function GET(request: Request) {
 
     // Extract nutrition-relevant biomarkers
     const nutritionBiomarkers = biomarkerValues.filter(b => {
-      const name = b.biomarkerName.toLowerCase();
+      const name = b.biomarker_name.toLowerCase();
       return (
         // Vitamin & Mineral Status
         name.includes('vitamin d') ||
@@ -188,21 +188,21 @@ export async function GET(request: Request) {
       ? Math.floor((Date.now() - new Date(user.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
       : null;
 
-    const weight = bodyComposition?.totalWeight 
-      ? parseFloat(bodyComposition.totalWeight.toString())
+    const weight = bodyComposition?.total_weight 
+      ? parseFloat(bodyComposition.total_weight.toString())
       : user?.weight 
         ? parseFloat(user.weight.toString())
         : null;
 
     const height = user?.height ? parseFloat(user.height.toString()) : null;
     const bmi = weight && height ? weight / Math.pow(height / 100, 2) : null;
-    const bodyFat = bodyComposition?.bodyFatPercentage 
-      ? parseFloat(bodyComposition.bodyFatPercentage.toString())
+    const bodyFat = bodyComposition?.body_fat_percentage 
+      ? parseFloat(bodyComposition.body_fat_percentage.toString())
       : null;
     const leanMass = weight && bodyFat 
       ? weight * (1 - bodyFat / 100)
-      : bodyComposition?.skeletalMuscleMass 
-        ? parseFloat(bodyComposition.skeletalMuscleMass.toString()) * 1.4 // Estimate total lean mass
+      : bodyComposition?.skeletal_muscle_mass 
+        ? parseFloat(bodyComposition.skeletal_muscle_mass.toString()) * 1.4 // Estimate total lean mass
         : null;
 
     // Create comprehensive nutrition analysis prompt
@@ -220,7 +220,7 @@ ATHLETE PROFILE:
 
 BIOMARKER ANALYSIS (${nutritionBiomarkers.length} markers):
 ${nutritionBiomarkers.map(b => 
-  `- ${b.biomarkerName}: ${b.value}${b.unit} (${b.isAbnormal ? 'ABNORMAL' : 'NORMAL'}) [Ref: ${b.referenceRange || 'N/A'}]`
+  `- ${b.biomarker_name}: ${b.value}${b.unit} (${b.is_abnormal ? 'ABNORMAL' : 'NORMAL'}) [Ref: ${b.reference_range || 'N/A'}]`
 ).join('\n')}
 
 ANALYSIS REQUIREMENTS:
@@ -319,7 +319,7 @@ FORMAT AS JSON:
           weight,
           height,
           bmi: bmi?.toFixed(1),
-          bodyFatPercentage: bodyFat,
+          body_fat_percentage: bodyFat,
           leanMass: leanMass?.toFixed(1),
           bmr: bodyComposition?.bmr,
         }
@@ -362,7 +362,7 @@ FORMAT AS JSON:
         weight,
         height,
         bmi: bmi?.toFixed(1),
-        bodyFatPercentage: bodyFat,
+        body_fat_percentage: bodyFat,
         leanMass: leanMass?.toFixed(1),
         bmr: bodyComposition?.bmr,
       }
@@ -386,7 +386,7 @@ function generateBasicNutritionProtocol(
   bmr: number | null,
   gender: string | null
 ): NutritionProtocol {
-  const deficientMarkers = biomarkers.filter(b => b.isAbnormal).length;
+  const deficientMarkers = biomarkers.filter(b => b.is_abnormal).length;
   const nutritionScore = Math.max(30, 100 - (deficientMarkers * 8));
   
   let deficiencyRisk: "LOW" | "MODERATE" | "HIGH" | "CRITICAL" = "LOW";
@@ -437,8 +437,8 @@ function generateBasicNutritionProtocol(
 
   // Add deficiency-specific supplements
   biomarkers.forEach(b => {
-    const name = b.biomarkerName.toLowerCase();
-    if (b.isAbnormal) {
+    const name = b.biomarker_name.toLowerCase();
+    if (b.is_abnormal) {
       if (name.includes('iron') || name.includes('ferritin')) {
         basicSupplements.push({
           name: "Iron Bisglycinate",
@@ -448,7 +448,7 @@ function generateBasicNutritionProtocol(
           priority: "ESSENTIAL",
           contraindications: ["Hemochromatosis"],
           food_interactions: ["Avoid with calcium, coffee, tea"],
-          biomarker_rationale: `Low ${b.biomarkerName}: ${b.value}${b.unit}`
+          biomarker_rationale: `Low ${b.biomarker_name}: ${b.value}${b.unit}`
         });
       }
       
@@ -461,7 +461,7 @@ function generateBasicNutritionProtocol(
           priority: "BENEFICIAL",
           contraindications: ["Kidney disease"],
           food_interactions: ["Better absorbed away from fiber"],
-          biomarker_rationale: `Suboptimal ${b.biomarkerName}: ${b.value}${b.unit}`
+          biomarker_rationale: `Suboptimal ${b.biomarker_name}: ${b.value}${b.unit}`
         });
       }
     }
@@ -513,9 +513,9 @@ function generateBasicNutritionProtocol(
       ]
     },
     biomarker_based_adjustments: biomarkers
-      .filter(b => b.isAbnormal)
+      .filter(b => b.is_abnormal)
       .slice(0, 5)
-      .map(b => `Address ${b.biomarkerName} deficiency through targeted nutrition and supplementation`),
+      .map(b => `Address ${b.biomarker_name} deficiency through targeted nutrition and supplementation`),
     monitoring_biomarkers: [
       "Vitamin D", "Iron/Ferritin", "Vitamin B12", "Magnesium", "Inflammatory markers (CRP)",
       "Testosterone (if male)", "Thyroid panel", "Complete metabolic panel"

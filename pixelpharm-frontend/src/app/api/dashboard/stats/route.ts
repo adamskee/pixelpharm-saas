@@ -15,46 +15,46 @@ export async function GET(request: NextRequest) {
     }
 
     // Get basic upload statistics
-    const totalUploads = await prisma.fileUpload.count({
-      where: { userId },
+    const totalUploads = await prisma.file_uploads.count({
+      where: { user_id: userId },
     });
 
-    const bloodTestUploads = await prisma.fileUpload.count({
+    const bloodTestUploads = await prisma.file_uploads.count({
       where: {
-        userId,
-        uploadType: "BLOOD_TESTS",
+        user_id: userId,
+        upload_type: "BLOOD_TESTS",
       },
     });
 
-    const bodyCompositionUploads = await prisma.fileUpload.count({
+    const bodyCompositionUploads = await prisma.file_uploads.count({
       where: {
-        userId,
-        uploadType: "BODY_COMPOSITION",
+        user_id: userId,
+        upload_type: "BODY_COMPOSITION",
       },
     });
 
-    const fitnessActivityUploads = await prisma.fileUpload.count({
+    const fitnessActivityUploads = await prisma.file_uploads.count({
       where: {
-        userId,
-        uploadType: "FITNESS_ACTIVITIES",
+        user_id: userId,
+        upload_type: "FITNESS_ACTIVITIES",
       },
     });
 
     // Get biomarker count
-    const biomarkersTracked = await prisma.biomarkerValue.count({
-      where: { userId },
+    const biomarkersTracked = await prisma.biomarker_values.count({
+      where: { user_id: userId },
     });
 
     // Get AI analyses count
-    const aiAnalysesRun = await prisma.aiProcessingResult.count({
-      where: { userId },
+    const aiAnalysesRun = await prisma.ai_processing_results.count({
+      where: { user_id: userId },
     });
 
     // Get last upload date
-    const lastUpload = await prisma.fileUpload.findFirst({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      select: { createdAt: true },
+    const lastUpload = await prisma.file_uploads.findFirst({
+      where: { user_id: userId },
+      orderBy: { created_at: "desc" },
+      select: { created_at: true },
     });
 
     const stats = {
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       fitnessActivityUploads,
       biomarkersTracked,
       aiAnalysesRun,
-      lastUploadDate: lastUpload?.createdAt?.toISOString() || null,
+      lastUploadDate: lastUpload?.created_at?.toISOString() || null,
     };
 
     return NextResponse.json(stats);

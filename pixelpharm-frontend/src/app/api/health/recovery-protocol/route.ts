@@ -45,9 +45,9 @@ export async function GET(request: Request) {
     // Get latest biomarker data
     let biomarkerValues;
     try {
-      biomarkerValues = await prisma.biomarkerValue.findMany({
-        where: { userId },
-        orderBy: { testDate: "desc" },
+      biomarkerValues = await prisma.biomarker_values.findMany({
+        where: { user_id: userId },
+        orderBy: { test_date: "desc" },
         take: 50, // Get recent values
       });
       console.log(`📊 Found ${biomarkerValues.length} biomarker records for user: ${userId}`);
@@ -63,9 +63,9 @@ export async function GET(request: Request) {
     // Get latest body composition for metabolic status
     let bodyComposition = null;
     try {
-      bodyComposition = await prisma.bodyCompositionResult.findFirst({
-        where: { userId },
-        orderBy: { testDate: "desc" },
+      bodyComposition = await prisma.body_composition_results.findFirst({
+        where: { user_id: userId },
+        orderBy: { test_date: "desc" },
       });
       console.log(`🏋️ Body composition data found: ${bodyComposition ? 'Yes' : 'No'}`);
     } catch (dbError) {
@@ -100,7 +100,7 @@ export async function GET(request: Request) {
 
     // Extract relevant biomarkers for recovery analysis
     const relevantBiomarkers = biomarkerValues.filter(b => {
-      const name = b.biomarkerName.toLowerCase();
+      const name = b.biomarker_name.toLowerCase();
       return (
         // Inflammatory markers
         name.includes('crp') || 
@@ -145,8 +145,8 @@ export async function GET(request: Request) {
       ? Math.floor((Date.now() - new Date(user.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
       : null;
 
-    const bmi = user?.height && bodyComposition?.totalWeight
-      ? parseFloat((parseFloat(bodyComposition.totalWeight.toString()) / 
+    const bmi = user?.height && bodyComposition?.total_weight
+      ? parseFloat((parseFloat(bodyComposition.total_weight.toString()) / 
           Math.pow(parseFloat(user.height.toString()) / 100, 2)).toFixed(1))
       : null;
 
@@ -157,12 +157,12 @@ ATHLETE PROFILE:
 - Age: ${age || 'Unknown'}
 - Gender: ${user?.gender || 'Unknown'}
 - BMI: ${bmi || 'Unknown'}
-- Body Fat: ${bodyComposition?.bodyFatPercentage || 'Unknown'}%
-- Muscle Mass: ${bodyComposition?.skeletalMuscleMass || 'Unknown'} kg
+- Body Fat: ${bodyComposition?.body_fat_percentage || 'Unknown'}%
+- Muscle Mass: ${bodyComposition?.skeletal_muscle_mass || 'Unknown'} kg
 
 BIOMARKER DATA (${relevantBiomarkers.length} markers analyzed):
 ${relevantBiomarkers.map(b => 
-  `- ${b.biomarkerName}: ${b.value}${b.unit} (${b.isAbnormal ? 'ABNORMAL' : 'NORMAL'}) [Ref: ${b.referenceRange || 'N/A'}]`
+  `- ${b.biomarker_name}: ${b.value}${b.unit} (${b.is_abnormal ? 'ABNORMAL' : 'NORMAL'}) [Ref: ${b.reference_range || 'N/A'}]`
 ).join('\n')}
 
 ANALYSIS REQUIREMENTS:
@@ -228,8 +228,8 @@ FORMAT AS JSON:
           age,
           gender: user?.gender,
           bmi,
-          bodyFatPercentage: bodyComposition?.bodyFatPercentage,
-          muscleMass: bodyComposition?.skeletalMuscleMass,
+          bodyFatPercentage: bodyComposition?.body_fat_percentage,
+          muscleMass: bodyComposition?.skeletal_muscle_mass,
         }
       });
     }
@@ -262,8 +262,8 @@ FORMAT AS JSON:
         age,
         gender: user?.gender,
         bmi,
-        bodyFatPercentage: bodyComposition?.bodyFatPercentage,
-        muscleMass: bodyComposition?.skeletalMuscleMass,
+        bodyFatPercentage: bodyComposition?.body_fat_percentage,
+        muscleMass: bodyComposition?.skeletal_muscle_mass,
       }
     });
 
@@ -279,7 +279,7 @@ FORMAT AS JSON:
 
 // Fallback function for basic recovery protocol
 function generateBasicRecoveryProtocol(biomarkers: any[], age: number | null, bmi: number | null): RecoveryProtocol {
-  const abnormalCount = biomarkers.filter(b => b.isAbnormal).length;
+  const abnormalCount = biomarkers.filter(b => b.is_abnormal).length;
   const totalMarkers = biomarkers.length;
   
   // Calculate basic recovery score
@@ -326,9 +326,9 @@ function generateBasicRecoveryProtocol(biomarkers: any[], age: number | null, bm
       inflammation_level: abnormalCount > 3 ? "MODERATE" : "LOW",
       recovery_timeline: stressLevel === "HIGH" ? "2-4 weeks with protocol adherence" : "1-2 weeks",
       risk_factors: biomarkers
-        .filter(b => b.isAbnormal)
+        .filter(b => b.is_abnormal)
         .slice(0, 3)
-        .map(b => `Elevated ${b.biomarkerName}`)
+        .map(b => `Elevated ${b.biomarker_name}`)
     },
     actionable_steps: [
       "Implement stress management techniques (meditation, breathing exercises)",

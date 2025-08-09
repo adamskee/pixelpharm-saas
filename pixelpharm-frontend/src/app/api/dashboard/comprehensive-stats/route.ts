@@ -79,9 +79,9 @@ export async function GET(request: Request) {
 
     try {
       // Get file uploads using correct field names from your schema
-      const fileUploads = await prisma.fileUpload.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
+      const fileUploads = await prisma.file_uploads.findMany({
+        where: { user_id: userId },
+        orderBy: { created_at: "desc" },
         take: 10,
       });
 
@@ -92,22 +92,22 @@ export async function GET(request: Request) {
 
       try {
         // Get total count of ALL biomarker records
-        totalBiomarkerCount = await prisma.biomarkerValue.count({
-          where: { userId },
+        totalBiomarkerCount = await prisma.biomarker_values.count({
+          where: { user_id: userId },
         });
 
         // Get unique biomarker names
-        const uniqueMarkers = await prisma.biomarkerValue.findMany({
-          where: { userId },
-          select: { biomarkerName: true },
-          distinct: ["biomarkerName"],
+        const uniqueMarkers = await prisma.biomarker_values.findMany({
+          where: { user_id: userId },
+          select: { biomarker_name: true },
+          distinct: ["biomarker_name"],
         });
-        uniqueBiomarkerNames = uniqueMarkers.map((m) => m.biomarkerName);
+        uniqueBiomarkerNames = uniqueMarkers.map((m) => m.biomarker_name);
 
         // Get sample biomarker values for statistics
-        const rawBiomarkerValues = await prisma.biomarkerValue.findMany({
-          where: { userId },
-          orderBy: { createdAt: "desc" },
+        const rawBiomarkerValues = await prisma.biomarker_values.findMany({
+          where: { user_id: userId },
+          orderBy: { created_at: "desc" },
           take: 50, // Get more for better statistics
         });
 
@@ -117,8 +117,8 @@ export async function GET(request: Request) {
         // Get unique biomarkers first, then limit
         const uniqueBiomarkersByName = new Map();
         rawBiomarkerValues.forEach(biomarker => {
-          if (!uniqueBiomarkersByName.has(biomarker.biomarkerName)) {
-            uniqueBiomarkersByName.set(biomarker.biomarkerName, biomarker);
+          if (!uniqueBiomarkersByName.has(biomarker.biomarker_name)) {
+            uniqueBiomarkersByName.set(biomarker.biomarker_name, biomarker);
           }
         });
         
@@ -138,7 +138,7 @@ export async function GET(request: Request) {
         );
         console.log(
           `📊 Sample biomarkers:`,
-          biomarkerValues.slice(0, 5).map((b) => b.biomarkerName)
+          biomarkerValues.slice(0, 5).map((b) => b.biomarker_name)
         );
       } catch (biomarkerError) {
         console.log(
@@ -150,9 +150,9 @@ export async function GET(request: Request) {
       // Get blood test results count
       let bloodTestResults = [];
       try {
-        bloodTestResults = await prisma.bloodTestResult.findMany({
-          where: { userId },
-          orderBy: { testDate: "desc" },
+        bloodTestResults = await prisma.blood_test_results.findMany({
+          where: { user_id: userId },
+          orderBy: { test_date: "desc" },
         });
       } catch (error) {
         console.log("⚠️ bloodTestResult table not accessible:", error.message);
@@ -175,17 +175,17 @@ export async function GET(request: Request) {
 
         // Calculate real statistics
         const bloodTestUploads = fileUploads.filter(
-          (f) => f.uploadType === "BLOOD_TESTS"
+          (f) => f.upload_type === "BLOOD_TESTS"
         ).length;
 
         console.log(`📁 File uploads debug:`, fileUploads.map(f => ({
-          uploadType: f.uploadType,
-          filename: f.originalFilename,
-          createdAt: f.createdAt
+          uploadType: f.upload_type,
+          filename: f.original_filename,
+          createdAt: f.created_at
         })));
 
         const bodyCompositionUploads = fileUploads.filter(
-          (f) => f.uploadType === "BODY_COMPOSITION"
+          (f) => f.upload_type === "BODY_COMPOSITION"
         ).length;
         
         console.log(`🏋️ Body composition uploads found:`, bodyCompositionUploads);
@@ -193,27 +193,27 @@ export async function GET(request: Request) {
         // Get body composition data
         let latestBodyComposition = null;
         try {
-          latestBodyComposition = await prisma.bodyCompositionResult.findFirst({
-            where: { userId },
-            orderBy: { testDate: "desc" },
+          latestBodyComposition = await prisma.body_composition_results.findFirst({
+            where: { user_id: userId },
+            orderBy: { test_date: "desc" },
           });
           console.log(`🏋️ Body composition data found:`, latestBodyComposition ? 'Yes' : 'No');
           if (latestBodyComposition) {
             console.log(`🏋️ Body composition basic values:`, {
-              weight: latestBodyComposition.totalWeight?.toString(),
-              bodyFat: latestBodyComposition.bodyFatPercentage?.toString(),
-              muscleMass: latestBodyComposition.skeletalMuscleMass?.toString(),
-              testDate: latestBodyComposition.testDate
+              weight: latestBodyComposition.total_weight?.toString(),
+              bodyFat: latestBodyComposition.body_fat_percentage?.toString(),
+              muscleMass: latestBodyComposition.skeletal_muscle_mass?.toString(),
+              testDate: latestBodyComposition.test_date
             });
             
             // Debug rawData structure
-            if (latestBodyComposition.rawData) {
-              console.log(`🏋️ RawData structure available:`, Object.keys(latestBodyComposition.rawData));
-              if (latestBodyComposition.rawData.bodyComposition) {
-                console.log(`🏋️ Body composition detailed data:`, Object.keys(latestBodyComposition.rawData.bodyComposition));
+            if (latestBodyComposition.raw_data) {
+              console.log(`🏋️ RawData structure available:`, Object.keys(latestBodyComposition.raw_data));
+              if (latestBodyComposition.raw_data.bodyComposition) {
+                console.log(`🏋️ Body composition detailed data:`, Object.keys(latestBodyComposition.raw_data.bodyComposition));
                 
                 // Show sample values
-                const bc = latestBodyComposition.rawData.bodyComposition;
+                const bc = latestBodyComposition.raw_data.bodyComposition;
                 console.log(`🏋️ Sample detailed metrics:`, {
                   totalWeight: bc.totalWeight,
                   bodyFatPercentage: bc.bodyFatPercentage,
@@ -235,15 +235,15 @@ export async function GET(request: Request) {
         }
 
         const abnormalBiomarkers = biomarkerValues.filter(
-          (b) => b.isAbnormal
+          (b) => b.is_abnormal
         ).length;
 
         // For critical, check for high-risk biomarker values
         const criticalBiomarkers = biomarkerValues.filter((b) => {
-          if (!b.isAbnormal) return false;
+          if (!b.is_abnormal) return false;
 
           // Define critical thresholds based on biomarker name and value
-          const name = b.biomarkerName.toLowerCase();
+          const name = b.biomarker_name.toLowerCase();
           const value = parseFloat(b.value.toString());
 
           if (name.includes("cholesterol") && value > 7.0) return true;
@@ -268,9 +268,9 @@ export async function GET(request: Request) {
           console.log('🏋️ Including body composition in health score calculation');
           
           // BMI scoring (if we have height from user profile)
-          if (user?.height && latestBodyComposition.totalWeight) {
+          if (user?.height && latestBodyComposition.total_weight) {
             const height = parseFloat(user.height.toString()) / 100; // convert cm to m
-            const weight = parseFloat(latestBodyComposition.totalWeight.toString());
+            const weight = parseFloat(latestBodyComposition.total_weight.toString());
             const bmi = weight / (height * height);
             
             console.log(`🏋️ BMI calculation: ${bmi.toFixed(1)}`);
@@ -283,8 +283,8 @@ export async function GET(request: Request) {
           }
           
           // Body fat percentage scoring
-          if (latestBodyComposition.bodyFatPercentage && user?.gender) {
-            const bodyFat = parseFloat(latestBodyComposition.bodyFatPercentage.toString());
+          if (latestBodyComposition.body_fat_percentage && user?.gender) {
+            const bodyFat = parseFloat(latestBodyComposition.body_fat_percentage.toString());
             const gender = user.gender.toLowerCase();
             
             console.log(`🏋️ Body fat: ${bodyFat}% (${gender})`);
@@ -305,8 +305,8 @@ export async function GET(request: Request) {
           }
           
           // Muscle mass scoring (if available)
-          if (latestBodyComposition.skeletalMuscleMass) {
-            const muscleMass = parseFloat(latestBodyComposition.skeletalMuscleMass.toString());
+          if (latestBodyComposition.skeletal_muscle_mass) {
+            const muscleMass = parseFloat(latestBodyComposition.skeletal_muscle_mass.toString());
             console.log(`🏋️ Muscle mass: ${muscleMass}kg`);
             
             // Higher muscle mass is generally positive for health
@@ -325,8 +325,8 @@ export async function GET(request: Request) {
         
         // Check body composition risk factors
         if (latestBodyComposition && user?.height) {
-          const weight = latestBodyComposition.totalWeight ? parseFloat(latestBodyComposition.totalWeight.toString()) : null;
-          const bodyFat = latestBodyComposition.bodyFatPercentage ? parseFloat(latestBodyComposition.bodyFatPercentage.toString()) : null;
+          const weight = latestBodyComposition.total_weight ? parseFloat(latestBodyComposition.total_weight.toString()) : null;
+          const bodyFat = latestBodyComposition.body_fat_percentage ? parseFloat(latestBodyComposition.body_fat_percentage.toString()) : null;
           
           if (weight) {
             const height = parseFloat(user.height.toString()) / 100;
@@ -364,9 +364,9 @@ export async function GET(request: Request) {
         // Body composition completeness (25% of total score)
         if (latestBodyComposition) {
           let bodyCompositionFields = 0;
-          if (latestBodyComposition.totalWeight) bodyCompositionFields++;
-          if (latestBodyComposition.bodyFatPercentage) bodyCompositionFields++;
-          if (latestBodyComposition.skeletalMuscleMass) bodyCompositionFields++;
+          if (latestBodyComposition.total_weight) bodyCompositionFields++;
+          if (latestBodyComposition.body_fat_percentage) bodyCompositionFields++;
+          if (latestBodyComposition.skeletal_muscle_mass) bodyCompositionFields++;
           
           const bodyCompleteness = (bodyCompositionFields / 3) * 25;
           completenessScore += bodyCompleteness;
@@ -392,7 +392,7 @@ export async function GET(request: Request) {
             totalReports: bloodTestResults.length || bloodTestUploads,
             latestHealthScore: healthScore,
             riskLevel,
-            lastAnalysisDate: fileUploads[0]?.createdAt?.toISOString() || null,
+            lastAnalysisDate: fileUploads[0]?.created_at?.toISOString() || null,
           },
           biomarkers: {
             // Show total available biomarker count (not filtered) so component knows data exists
@@ -402,9 +402,9 @@ export async function GET(request: Request) {
             criticalCount: criticalBiomarkers,
             normalCount: biomarkerValues.length - abnormalBiomarkers - criticalBiomarkers, // Based on filtered analysis
             lastTestDate:
-              bloodTestResults[0]?.testDate?.toISOString() ||
-              biomarkerValues[0]?.createdAt?.toISOString() ||
-              fileUploads[0]?.createdAt?.toISOString() ||
+              bloodTestResults[0]?.test_date?.toISOString() ||
+              biomarkerValues[0]?.created_at?.toISOString() ||
+              fileUploads[0]?.created_at?.toISOString() ||
               null,
             // TEMPORARILY DISABLED - Plan filtering info removed
             // _planFiltering: {
@@ -421,55 +421,55 @@ export async function GET(request: Request) {
             latestBMI: user?.weight && user?.height 
               ? parseFloat((parseFloat(user.weight.toString()) / 
                   Math.pow(parseFloat(user.height.toString()) / 100, 2)).toFixed(1))
-              : latestBodyComposition?.totalWeight && user?.height 
-                ? parseFloat((parseFloat(latestBodyComposition.totalWeight.toString()) / 
+              : latestBodyComposition?.total_weight && user?.height 
+                ? parseFloat((parseFloat(latestBodyComposition.total_weight.toString()) / 
                     Math.pow(parseFloat(user.height.toString()) / 100, 2)).toFixed(1))
                 : null,
-            bodyFatPercentage: latestBodyComposition?.bodyFatPercentage 
-              ? parseFloat(latestBodyComposition.bodyFatPercentage.toString())
+            bodyFatPercentage: latestBodyComposition?.body_fat_percentage 
+              ? parseFloat(latestBodyComposition.body_fat_percentage.toString())
               : null,
-            muscleMass: latestBodyComposition?.skeletalMuscleMass 
-              ? parseFloat(latestBodyComposition.skeletalMuscleMass.toString())
+            muscleMass: latestBodyComposition?.skeletal_muscle_mass 
+              ? parseFloat(latestBodyComposition.skeletal_muscle_mass.toString())
               : null,
-            lastScanDate: latestBodyComposition?.testDate?.toISOString() ||
+            lastScanDate: latestBodyComposition?.test_date?.toISOString() ||
               fileUploads
-                .find((f) => f.uploadType === "BODY_COMPOSITION")
-                ?.createdAt?.toISOString() || null,
+                .find((f) => f.upload_type === "BODY_COMPOSITION")
+                ?.created_at?.toISOString() || null,
             
             // Extract all detailed metrics from rawData
-            ...(latestBodyComposition?.rawData?.bodyComposition ? {
+            ...(latestBodyComposition?.raw_data?.bodyComposition ? {
               // Basic metrics (may override above if more detailed data available)
-              totalWeight: latestBodyComposition.rawData.bodyComposition.totalWeight || latestBodyComposition.totalWeight,
-              bodyFatPercentage: latestBodyComposition.rawData.bodyComposition.bodyFatPercentage || latestBodyComposition.bodyFatPercentage,
-              skeletalMuscleMass: latestBodyComposition.rawData.bodyComposition.skeletalMuscleMass || latestBodyComposition.skeletalMuscleMass,
-              visceralFatLevel: latestBodyComposition.rawData.bodyComposition.visceralFatLevel || latestBodyComposition.visceralFatLevel,
-              bmr: latestBodyComposition.rawData.bodyComposition.bmr || latestBodyComposition.bmr,
+              totalWeight: latestBodyComposition.raw_data.bodyComposition.totalWeight || latestBodyComposition.total_weight,
+              bodyFatPercentage: latestBodyComposition.raw_data.bodyComposition.bodyFatPercentage || latestBodyComposition.body_fat_percentage,
+              skeletalMuscleMass: latestBodyComposition.raw_data.bodyComposition.skeletalMuscleMass || latestBodyComposition.skeletal_muscle_mass,
+              visceralFatLevel: latestBodyComposition.raw_data.bodyComposition.visceralFatLevel || latestBodyComposition.visceral_fat_level,
+              bmr: latestBodyComposition.raw_data.bodyComposition.bmr || latestBodyComposition.bmr,
               
               // Advanced composition metrics
-              bodyFatMass: latestBodyComposition.rawData.bodyComposition.fat?.bodyFatMass,
-              leanMass: latestBodyComposition.rawData.bodyComposition.muscle?.dryLeanMass,
+              bodyFatMass: latestBodyComposition.raw_data.bodyComposition.fat?.bodyFatMass,
+              leanMass: latestBodyComposition.raw_data.bodyComposition.muscle?.dryLeanMass,
               
               // Hydration & minerals
-              totalBodyWater: latestBodyComposition.rawData.bodyComposition.water?.totalBodyWater,
-              proteinMass: latestBodyComposition.rawData.bodyComposition.metabolic?.proteinMass,
-              boneMineralContent: latestBodyComposition.rawData.bodyComposition.mineral?.boneMineralContent,
+              totalBodyWater: latestBodyComposition.raw_data.bodyComposition.water?.totalBodyWater,
+              proteinMass: latestBodyComposition.raw_data.bodyComposition.metabolic?.proteinMass,
+              boneMineralContent: latestBodyComposition.raw_data.bodyComposition.mineral?.boneMineralContent,
               
               // Segmental analysis
-              rightArmMuscle: latestBodyComposition.rawData.bodyComposition.muscle?.rightArm,
-              leftArmMuscle: latestBodyComposition.rawData.bodyComposition.muscle?.leftArm,
-              trunkMuscle: latestBodyComposition.rawData.bodyComposition.muscle?.trunk,
-              rightLegMuscle: latestBodyComposition.rawData.bodyComposition.muscle?.rightLeg,
-              leftLegMuscle: latestBodyComposition.rawData.bodyComposition.muscle?.leftLeg,
+              rightArmMuscle: latestBodyComposition.raw_data.bodyComposition.muscle?.rightArm,
+              leftArmMuscle: latestBodyComposition.raw_data.bodyComposition.muscle?.leftArm,
+              trunkMuscle: latestBodyComposition.raw_data.bodyComposition.muscle?.trunk,
+              rightLegMuscle: latestBodyComposition.raw_data.bodyComposition.muscle?.rightLeg,
+              leftLegMuscle: latestBodyComposition.raw_data.bodyComposition.muscle?.leftLeg,
               
               // Advanced InBody metrics
-              phaseAngle: latestBodyComposition.rawData.bodyComposition.phaseAngle,
-              ecwTbwRatio: latestBodyComposition.rawData.bodyComposition.ecwTbwRatio,
-              intracellularWater: latestBodyComposition.rawData.bodyComposition.water?.intracellularWater,
-              extracellularWater: latestBodyComposition.rawData.bodyComposition.water?.extracellularWater,
+              phaseAngle: latestBodyComposition.raw_data.bodyComposition.phaseAngle,
+              ecwTbwRatio: latestBodyComposition.raw_data.bodyComposition.ecwTbwRatio,
+              intracellularWater: latestBodyComposition.raw_data.bodyComposition.water?.intracellularWater,
+              extracellularWater: latestBodyComposition.raw_data.bodyComposition.water?.extracellularWater,
               
               // Device information
-              deviceModel: latestBodyComposition.rawData.deviceInfo?.deviceModel,
-              facilityName: latestBodyComposition.rawData.deviceInfo?.facilityName,
+              deviceModel: latestBodyComposition.raw_data.deviceInfo?.deviceModel,
+              facilityName: latestBodyComposition.raw_data.deviceInfo?.facilityName,
             } : {}),
           },
           trends: {
@@ -485,11 +485,11 @@ export async function GET(request: Request) {
           },
           recentActivity: fileUploads.slice(0, 5).map((upload) => ({
             type:
-              upload.uploadType?.toLowerCase().replace("_", "_") || "general",
-            date: upload.createdAt.toISOString(),
+              upload.upload_type?.toLowerCase().replace("_", "_") || "general",
+            date: upload.created_at.toISOString(),
             description: `${
-              upload.uploadType?.replace("_", " ").toLowerCase() || "file"
-            } uploaded: ${upload.originalFilename}`,
+              upload.upload_type?.replace("_", " ").toLowerCase() || "file"
+            } uploaded: ${upload.original_filename}`,
             status: "completed",
           })),
           recommendations: {
@@ -525,9 +525,9 @@ export async function GET(request: Request) {
             uniqueBiomarkerTypes: uniqueBiomarkerNames.length, // Unique types
             bloodTestResults: bloodTestResults.length,
             userId: userId,
-            mostRecentUpload: fileUploads[0]?.originalFilename || "None",
+            mostRecentUpload: fileUploads[0]?.original_filename || "None",
             mostRecentUploadDate:
-              fileUploads[0]?.createdAt?.toISOString() || "None",
+              fileUploads[0]?.created_at?.toISOString() || "None",
             sampleBiomarkers: uniqueBiomarkerNames.slice(0, 10), // Show sample names
           },
         };

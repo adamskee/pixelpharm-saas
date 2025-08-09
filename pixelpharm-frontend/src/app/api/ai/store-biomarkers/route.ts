@@ -81,26 +81,26 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Check if upload exists, create if missing (THIS IS THE KEY FIX!)
     console.log("📁 Checking upload record...");
-    let upload = await prisma.fileUpload.findUnique({
-      where: { uploadId },
+    let upload = await prisma.file_uploads.findUnique({
+      where: { upload_id: uploadId },
     });
 
     if (!upload) {
       console.log("⚠️ Upload record not found, creating fallback record...");
       try {
-        upload = await prisma.fileUpload.create({
+        upload = await prisma.file_uploads.create({
           data: {
-            uploadId,
-            userId,
-            fileKey: `uploads/${userId}/BLOOD_TESTS/biomarker-storage-${Date.now()}.pdf`,
-            originalFilename: "blood-test-auto-created.pdf",
-            fileType: "application/pdf",
-            uploadType: "BLOOD_TESTS",
-            fileSize: BigInt(1024),
-            uploadStatus: "PROCESSED",
+            upload_id: uploadId,
+            user_id: userId,
+            file_key: `uploads/${userId}/BLOOD_TESTS/biomarker-storage-${Date.now()}.pdf`,
+            original_filename: "blood-test-auto-created.pdf",
+            file_type: "application/pdf",
+            upload_type: "BLOOD_TESTS",
+            file_size: BigInt(1024),
+            upload_status: "PROCESSED",
           },
         });
-        console.log("✅ Fallback upload created:", upload.uploadId);
+        console.log("✅ Fallback upload created:", upload.upload_id);
       } catch (uploadError) {
         console.log("❌ Failed to create upload record:", uploadError);
         return NextResponse.json(
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
         );
       }
     } else {
-      console.log("✅ Upload record found:", upload.uploadId);
+      console.log("✅ Upload record found:", upload.upload_id);
     }
 
     const parsedTestDate = parseTestDate(testDate);
@@ -120,16 +120,19 @@ export async function POST(request: NextRequest) {
 
     // Step 3: Create BloodTestResult
     console.log("🩸 Creating BloodTestResult...");
-    const bloodTestResult = await prisma.bloodTestResult.create({
+    const resultId = `result_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const bloodTestResult = await prisma.blood_test_results.create({
       data: {
-        userId,
-        uploadId,
-        testDate: parsedTestDate,
-        labName: labName || "Unknown Lab",
+        result_id: resultId,
+        user_id: userId,
+        upload_id: uploadId,
+        test_date: parsedTestDate,
+        lab_name: labName || "Unknown Lab",
         biomarkers: biomarkers,
+        updated_at: new Date(),
       },
     });
-    console.log("✅ BloodTestResult created:", bloodTestResult.resultId);
+    console.log("✅ BloodTestResult created:", bloodTestResult.result_id);
 
     // Step 4: Create BiomarkerValue records
     console.log(`💾 Creating ${biomarkers.length} biomarker values...`);
@@ -150,15 +153,17 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        const biomarkerValue = await prisma.biomarkerValue.create({
+        const valueId = `value_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`;
+        const biomarkerValue = await prisma.biomarker_values.create({
           data: {
-            userId,
-            resultId: bloodTestResult.resultId,
-            biomarkerName: biomarker.name,
+            value_id: valueId,
+            user_id: userId,
+            result_id: bloodTestResult.result_id,
+            biomarker_name: biomarker.name,
             value: numericValue,
             unit: biomarker.unit || "",
-            isAbnormal: false,
-            testDate: parsedTestDate,
+            is_abnormal: false,
+            test_date: parsedTestDate,
           },
         });
 
@@ -166,7 +171,7 @@ export async function POST(request: NextRequest) {
         console.log(
           `✅ Biomarker ${i + 1}/${biomarkers.length}: ${biomarker.name} = ${
             biomarker.value
-          } (ID: ${biomarkerValue.valueId})`
+          } (ID: ${biomarkerValue.value_id})`
         );
       } catch (biomarkerError) {
         const errorMsg =
@@ -189,7 +194,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: `Successfully stored ${successCount} biomarkers`,
       data: {
-        bloodTestResultId: bloodTestResult.resultId,
+        bloodTestResultId: bloodTestResult.result_id,
         storedBiomarkers: successCount,
         totalBiomarkers: biomarkers.length,
         uploadCreated: !upload,

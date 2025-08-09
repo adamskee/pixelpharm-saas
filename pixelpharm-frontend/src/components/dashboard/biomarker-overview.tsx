@@ -315,6 +315,12 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
   };
 
   const getBiomarkerInfo = (biomarkerName: string): BiomarkerInfo => {
+    // Safety check: ensure biomarkerName is a string
+    if (!biomarkerName || typeof biomarkerName !== 'string') {
+      console.warn('⚠️ Invalid biomarkerName passed to getBiomarkerInfo:', biomarkerName);
+      biomarkerName = 'Unknown Biomarker';
+    }
+    
     // Handle common variations in biomarker names
     const normalizedName = biomarkerName.replace(/^25-hydroxy\s+/i, '25-hydroxy ');
     
@@ -604,6 +610,12 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
             
             <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
               {biomarkerData.map((biomarker) => {
+                // Safety check: ensure biomarker has required properties
+                if (!biomarker || !biomarker.valueId) {
+                  console.warn('⚠️ Invalid biomarker data:', biomarker);
+                  return null;
+                }
+                
                 const info = getBiomarkerInfo(biomarker.biomarkerName);
                 return (
                   <div
@@ -620,7 +632,7 @@ export function BiomarkerOverviewSection({ medicalReview, user }: BiomarkerOverv
                         {getCategoryIcon(info.category)}
                         <div>
                           <h5 className="font-semibold text-gray-900 text-lg">
-                            {biomarker.biomarkerName}
+                            {biomarker.biomarkerName || 'Unknown Biomarker'}
                           </h5>
                           <p className="text-sm text-gray-600 font-medium">
                             {info.category}

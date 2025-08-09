@@ -414,7 +414,7 @@ export default function PixelPharmHomepage(): JSX.Element {
             <div className="relative w-full" style={{ paddingBottom: '50.625%' /* 16:9 aspect ratio */ }}>
               <iframe
                 className="absolute top-0 left-0 w-full h-full rounded-2xl shadow-2xl"
-                src="https://www.youtube.com/embed/PsAyhIn2BUI?si=zI30mLey7D2tBhQi&rel=0&modestbranding=1"
+                src="https://www.youtube.com/embed/YsvGxc98pEs?si=TyTID4KkoVE6XRSQ&rel=0&modestbranding=1"
                 title="PixelPharm Health Platform Demo"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -736,13 +736,13 @@ export default function PixelPharmHomepage(): JSX.Element {
             <div className="mb-8">
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-6 py-3 rounded-full font-bold text-lg mb-4">
                 <Star className="h-5 w-5 fill-current" />
-                Special Launch Pricing
+                Limited Time Offer
               </div>
               <div className="text-6xl md:text-7xl font-bold text-white mb-2">
                 50% OFF
               </div>
               <p className="text-2xl text-white/90 mb-6">
-                First 1000 customers only •{" "}
+                Early Access Pricing •{" "}
                 <span className="line-through opacity-60">$49</span> Now just
                 $24.99
               </p>

@@ -4,6 +4,13 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -167,6 +174,7 @@ export default function EnhancedHealthAnalyticsDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [detailedBiomarkers, setDetailedBiomarkers] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState("overview");
 
   // Fetch detailed biomarker data for clinical review
   const fetchDetailedBiomarkers = async () => {
@@ -934,15 +942,15 @@ Date: ${currentDate}
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-6 py-8 max-w-7xl">
+      <div className="w-full px-0 sm:px-2 py-4 sm:py-8">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-8 mx-2 sm:mx-0">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900 mb-1">
+              <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-1">
                 Health Analytics Dashboard
               </h1>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500">
                 Welcome {user?.firstName || user?.email} • Last updated{" "}
                 {medicalReview.healthMetrics.lastAnalysisDate
                   ? safeDate(
@@ -951,7 +959,7 @@ Date: ${currentDate}
                   : "Never"}
               </p>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <Badge variant="outline" className="text-xs">
                 {dataSourceBadge}
               </Badge>
@@ -974,50 +982,68 @@ Date: ${currentDate}
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <TabsList className="grid w-full grid-cols-6 bg-gray-50 border-b border-gray-200 rounded-t-lg">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mx-2 sm:mx-0">
+            {/* Mobile Tab Selector */}
+            <div className="lg:hidden p-4 border-b border-gray-200">
+              <Select value={activeTab} onValueChange={setActiveTab}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="overview">Overview</SelectItem>
+                  <SelectItem value="clinical">Clinical Review</SelectItem>
+                  <SelectItem value="systems">System Health</SelectItem>
+                  <SelectItem value="actions">Actions & Export</SelectItem>
+                  <SelectItem value="trends">Health Trends</SelectItem>
+                  <SelectItem value="insights">Data Insights</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Desktop Tab List */}
+            <TabsList className="hidden lg:grid w-full grid-cols-6 bg-gray-50 border-b border-gray-200 rounded-t-lg gap-0">
               <TabsTrigger
                 value="overview"
-                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all"
+                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all text-sm"
               >
                 Overview
               </TabsTrigger>
               <TabsTrigger
                 value="clinical"
-                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all"
+                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all text-sm"
               >
                 Clinical
               </TabsTrigger>
               <TabsTrigger
                 value="systems"
-                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all"
+                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all text-sm"
               >
                 Systems
               </TabsTrigger>
               <TabsTrigger
                 value="actions"
-                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all"
+                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all text-sm"
               >
                 Actions
               </TabsTrigger>
               <TabsTrigger 
                 value="trends"
-                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all"
+                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all text-sm"
               >
                 Trends
               </TabsTrigger>
               <TabsTrigger
                 value="insights"
-                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all"
+                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 font-medium px-4 py-3 border-b-2 border-transparent transition-all text-sm"
               >
                 Data Insights
               </TabsTrigger>
             </TabsList>
 
           {/* Overview Tab */}
-          <TabsContent value="overview" className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <TabsContent value="overview" className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {/* Health Score */}
               <Card>
                 <CardHeader>
@@ -1171,7 +1197,7 @@ Date: ${currentDate}
           </TabsContent>
 
           {/* Clinical Tab */}
-          <TabsContent value="clinical" className="p-6 space-y-6">
+          <TabsContent value="clinical" className="p-3 sm:p-6 space-y-4 sm:space-y-6">
             {/* Clinical Review */}
             <Card>
               <CardHeader>
@@ -1438,7 +1464,7 @@ Date: ${currentDate}
           </TabsContent>
 
           {/* Systems Tab */}
-          <TabsContent value="systems" className="p-6 space-y-6">
+          <TabsContent value="systems" className="p-3 sm:p-6 space-y-4 sm:space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>System Health Overview</CardTitle>
@@ -1502,7 +1528,7 @@ Date: ${currentDate}
           </TabsContent>
 
           {/* Actions Tab */}
-          <TabsContent value="actions" className="p-6 space-y-6">
+          <TabsContent value="actions" className="p-3 sm:p-6 space-y-4 sm:space-y-6">
             {/* Biomarker Export Section */}
             <Card>
               <CardHeader>
@@ -1575,7 +1601,7 @@ Date: ${currentDate}
           </TabsContent>
 
           {/* Trends Tab */}
-          <TabsContent value="trends" className="p-6 space-y-6">
+          <TabsContent value="trends" className="p-3 sm:p-6 space-y-4 sm:space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -1656,8 +1682,8 @@ Date: ${currentDate}
           </TabsContent>
 
           {/* Data Insights Tab */}
-          <TabsContent value="insights" className="p-6 space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TabsContent value="insights" className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Recent Activity */}
               <Card>
                 <CardHeader>

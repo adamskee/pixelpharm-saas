@@ -5,12 +5,14 @@ import { useSession } from "next-auth/react";
 import GoogleSignIn from "@/components/auth/google-signin";
 import Link from "next/link";
 import Image from "next/image";
-import { Heart, User, Settings, Bell, LogOut, Zap } from "lucide-react";
+import { Heart, User, Settings, Bell, LogOut, Zap, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const loading = status === "loading";
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Show loading state
   if (loading) {
@@ -50,9 +52,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 <Image 
                   src="/pp_logo.png" 
                   alt="PixelPharm Health Logo" 
-                  width={280} 
-                  height={66}
-                  className="h-auto max-h-[66px]"
+                  width={200} 
+                  height={47}
+                  className="h-auto max-h-[47px] md:max-h-[66px]"
                   priority
                 />
               </Link>
@@ -86,7 +88,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               </Link>
             </nav>
 
-            <div className="flex items-center space-x-4">
+            {/* Desktop Actions */}
+            <div className="hidden md:flex items-center space-x-4">
               <Button variant="ghost" size="sm">
                 <Bell className="h-4 w-4" />
               </Button>
@@ -99,7 +102,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
                   {userInitials}
                 </div>
-                <div className="hidden md:block">
+                <div className="hidden lg:block">
                   <p className="text-sm font-medium text-gray-900">
                     {displayName}
                   </p>
@@ -117,11 +120,94 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
+
+            {/* Mobile Menu Button */}
+            <div className="md:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+            </div>
           </div>
+
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="md:hidden mt-4 pb-4 border-t border-gray-200">
+              <div className="pt-4 space-y-1">
+                <Link
+                  href="/dashboard"
+                  className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/dashboard/health-analytics"
+                  className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Health Analytics
+                </Link>
+                <Link
+                  href="/dashboard/health-optimization"
+                  className="flex items-center space-x-2 px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Zap className="h-4 w-4" />
+                  <span>Health Optimization</span>
+                </Link>
+                <Link
+                  href="/upload"
+                  className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Upload
+                </Link>
+              </div>
+
+              <div className="pt-4 border-t border-gray-200 mt-4">
+                <div className="flex items-center px-3 py-2">
+                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium mr-3">
+                    {userInitials}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {displayName}
+                    </p>
+                    <p className="text-xs text-gray-600">{displayEmail}</p>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-1">
+                  <Link
+                    href="/dashboard/settings"
+                    className="flex items-center space-x-2 px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Settings</span>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      import("next-auth/react").then(({ signOut }) => signOut());
+                    }}
+                    className="flex items-center space-x-2 px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md w-full text-left"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-7xl">{children}</main>
+      <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 max-w-7xl">{children}</main>
       
       {/* Footer */}
       <footer className="bg-gray-900 text-white mt-16">

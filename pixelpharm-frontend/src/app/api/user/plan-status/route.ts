@@ -22,45 +22,122 @@ export async function GET(request: Request) {
 
     console.log(`📊 Getting plan status for user: ${userId}`);
 
-    // TEMPORARY FREE PLAN LOGIC - Check if user has uploaded before
-    const userFileUploads = await prisma.fileUpload.count({
-      where: { userId }
+    // PLAN-BASED LOGIC - Determine actual user plan
+    let userPlan = 'free'; // Default
+    let planType = 'free';
+    let uploadsUsed = 0;
+    
+    try {
+      // Get user details including plan and provider info
+      const user = await prisma.user.findUnique({
+        where: { userId },
+        select: {
+          planType: true,
+          uploadsUsed: true,
+          isAnonymous: true,
+          provider: true,
+          email: true
+        }
+      });
+      
+      if (user) {
+        // Set plan based on user data
+        if (user.planType) {
+          userPlan = user.planType.toLowerCase();
+          planType = user.planType.toLowerCase();
+        } else {
+          // For existing Google OAuth users like adampiro@gmail.com, give them PRO access
+          if (user.provider === 'google' && !user.isAnonymous) {
+            userPlan = 'pro';
+            planType = 'pro';
+            console.log(`🎯 Google OAuth user detected (${user.email}), granting PRO access`);
+          } else {
+            userPlan = 'free';
+            planType = 'free';
+          }
+        }
+        uploadsUsed = user.uploadsUsed || 0;
+      }
+      
+      // Also count file uploads as backup
+      const userFileUploads = await prisma.file_uploads.count({
+        where: { user_id: userId }
+      });
+      
+      // Use the higher count (database field or actual uploads)
+      uploadsUsed = Math.max(uploadsUsed, userFileUploads);
+      
+    } catch (dbError) {
+      console.warn("⚠️ Could not fetch user plan from database:", dbError.message);
+      // Fallback - count uploads only
+      const userFileUploads = await prisma.file_uploads.count({
+        where: { user_id: userId }
+      });
+      uploadsUsed = userFileUploads;
+    }
+    
+    const userBiomarkers = await prisma.biomarker_values.count({
+      where: { user_id: userId }
     });
     
-    const userBiomarkers = await prisma.biomarkerValue.count({
-      where: { userId }
+    const uniqueBiomarkers = await prisma.biomarker_values.findMany({
+      where: { user_id: userId },
+      select: { biomarker_name: true },
+      distinct: ['biomarker_name']
     });
     
-    const uniqueBiomarkers = await prisma.biomarkerValue.findMany({
-      where: { userId },
-      select: { biomarkerName: true },
-      distinct: ['biomarkerName']
-    });
+    console.log(`📊 User ${userId}: ${uploadsUsed} uploads, ${userBiomarkers} biomarkers, ${uniqueBiomarkers.length} unique, plan: ${userPlan.toUpperCase()}`);
     
-    console.log(`📊 User ${userId}: ${userFileUploads} uploads, ${userBiomarkers} biomarkers, ${uniqueBiomarkers.length} unique`);
-    
-    // Hardcoded free plan logic until schema is restored
+    // Calculate plan limits based on actual plan
     const FREE_PLAN_BIOMARKER_LIMIT = 3;
-    const hasUsedUpload = userFileUploads > 0;
+    let uploadLimit, biomarkerLimit, hasAdvancedAnalytics;
+    
+    if (userPlan === 'free') {
+      uploadLimit = 1;
+      biomarkerLimit = FREE_PLAN_BIOMARKER_LIMIT;
+      hasAdvancedAnalytics = false;
+    } else if (userPlan === 'basic') {
+      uploadLimit = 10; // Basic plan gets 10 uploads
+      biomarkerLimit = 999; // Unlimited biomarkers for basic
+      hasAdvancedAnalytics = true;
+    } else if (userPlan === 'pro') {
+      uploadLimit = 999; // Unlimited for pro users
+      biomarkerLimit = 999; // Unlimited for pro users
+      hasAdvancedAnalytics = true;
+    } else if (userPlan === 'elite') {
+      uploadLimit = 999; // Unlimited for elite users
+      biomarkerLimit = 999; // Unlimited for elite users  
+      hasAdvancedAnalytics = true;
+    } else {
+      // Unknown plan - treat as free for safety
+      uploadLimit = 1;
+      biomarkerLimit = FREE_PLAN_BIOMARKER_LIMIT;
+      hasAdvancedAnalytics = false;
+      userPlan = 'free';
+    }
+    
+    const uploadsRemaining = userPlan === 'free' ? Math.max(0, uploadLimit - uploadsUsed) : 999;
+    const canUpload = userPlan === 'free' ? uploadsUsed < uploadLimit : true;
+    const needsUpgrade = userPlan === 'free' && uniqueBiomarkers.length > biomarkerLimit;
     
     const planStatus = {
-      currentPlan: 'free',
-      uploadsUsed: hasUsedUpload ? 1 : 0,
-      uploadsRemaining: hasUsedUpload ? 0 : 1,
-      canUpload: !hasUsedUpload,
-      needsUpgrade: uniqueBiomarkers.length > FREE_PLAN_BIOMARKER_LIMIT,
+      currentPlan: userPlan,
+      uploadsUsed: uploadsUsed,
+      uploadsRemaining: uploadsRemaining,
+      canUpload: canUpload,
+      needsUpgrade: needsUpgrade,
       limits: {
-        maxUploads: 1,
-        maxBiomarkers: FREE_PLAN_BIOMARKER_LIMIT,
+        maxUploads: uploadLimit,
+        maxBiomarkers: biomarkerLimit,
         hasHealthOptimization: true,
-        hasAdvancedAnalytics: false,
+        hasAdvancedAnalytics: hasAdvancedAnalytics,
       }
     };
     
     const uploadPermission = {
-      canUpload: !hasUsedUpload,
-      reason: hasUsedUpload ? "Free plan upload limit reached (1 lifetime upload used)" : "Upload allowed",
-      upgradeRequired: hasUsedUpload
+      canUpload: canUpload,
+      reason: canUpload ? "Upload allowed" : `${userPlan.toUpperCase()} plan upload limit reached (${uploadsUsed} uploads used)`,
+      upgradeRequired: !canUpload && userPlan === 'free'
     };
 
     return NextResponse.json({

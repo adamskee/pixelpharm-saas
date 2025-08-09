@@ -29,20 +29,20 @@ export async function getUserWithHealthData(userId: string) {
     const user = await prisma.user.findUnique({
       where: { userId },
       include: {
-        biomarkerValues: {
-          orderBy: { testDate: "desc" },
+        biomarker_values: {
+          orderBy: { test_date: "desc" },
           take: 50,
         },
-        bodyCompositionResults: {
-          orderBy: { testDate: "desc" },
+        body_composition_results: {
+          orderBy: { test_date: "desc" },
           take: 10,
         },
-        healthInsights: {
-          orderBy: { createdAt: "desc" },
+        health_insights: {
+          orderBy: { created_at: "desc" },
           take: 20,
         },
-        fileUploads: {
-          orderBy: { createdAt: "desc" },
+        file_uploads: {
+          orderBy: { created_at: "desc" },
           take: 10,
         },
       },
@@ -65,7 +65,7 @@ export async function updateUserProfile(
       where: { userId },
       data: {
         ...data,
-        updatedAt: new Date(),
+        updated_at: new Date(),
       },
     });
 
@@ -93,31 +93,45 @@ export async function getUserBiomarkers(
   }
 ) {
   try {
-    const whereClause: any = { userId };
+    const whereClause: any = { user_id: userId };
 
     if (options?.biomarkerNames?.length) {
-      whereClause.biomarkerName = {
+      whereClause.biomarker_name = {
         in: options.biomarkerNames,
       };
     }
 
     if (options?.dateFrom || options?.dateTo) {
-      whereClause.testDate = {};
+      whereClause.test_date = {};
       if (options.dateFrom) {
-        whereClause.testDate.gte = options.dateFrom;
+        whereClause.test_date.gte = options.dateFrom;
       }
       if (options.dateTo) {
-        whereClause.testDate.lte = options.dateTo;
+        whereClause.test_date.lte = options.dateTo;
       }
     }
 
-    const biomarkers = await prisma.biomarkerValue.findMany({
+    const biomarkers = await prisma.biomarker_values.findMany({
       where: whereClause,
-      orderBy: { testDate: "desc" },
+      orderBy: { test_date: "desc" },
       take: options?.limit || 100,
     });
 
-    return biomarkers;
+    // Transform snake_case field names to camelCase for frontend compatibility
+    const transformedBiomarkers = biomarkers.map(biomarker => ({
+      valueId: biomarker.value_id,
+      userId: biomarker.user_id,
+      resultId: biomarker.result_id,
+      biomarkerName: biomarker.biomarker_name || 'Unknown Biomarker', // Safety fallback
+      value: biomarker.value,
+      unit: biomarker.unit || '', // Safety fallback
+      referenceRange: biomarker.reference_range || 'N/A', // Safety fallback
+      isAbnormal: biomarker.is_abnormal || false, // Safety fallback
+      testDate: biomarker.test_date,
+      createdAt: biomarker.created_at,
+    }));
+
+    return transformedBiomarkers;
   } catch (error) {
     console.error("Error fetching user biomarkers:", error);
     throw new Error("Failed to fetch biomarkers");
@@ -141,14 +155,21 @@ export async function createHealthInsight(
   }
 ) {
   try {
-    const insight = await prisma.healthInsight.create({
+    const insightId = `insight_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const insight = await prisma.health_insights.create({
       data: {
-        userId,
-        ...data,
+        insight_id: insightId,
+        user_id: userId,
+        insight_type: data.insightType,
+        title: data.title,
+        description: data.description,
+        priority: data.priority,
+        data_sources: data.dataSources || null,
+        ai_confidence: data.aiConfidence || null,
       },
     });
 
-    console.log("✅ Health insight created:", insight.insightId);
+    console.log("✅ Health insight created:", insight.insight_id);
     return insight;
   } catch (error) {
     console.error("Error creating health insight:", error);
@@ -161,19 +182,19 @@ export async function getUserHealthSummary(userId: string) {
   try {
     const [biomarkerCount, abnormalCount, lastUpload, recentInsights] =
       await Promise.all([
-        prisma.biomarkerValue.count({
-          where: { userId },
+        prisma.biomarker_values.count({
+          where: { user_id: userId },
         }),
-        prisma.biomarkerValue.count({
-          where: { userId, isAbnormal: true },
+        prisma.biomarker_values.count({
+          where: { user_id: userId, is_abnormal: true },
         }),
-        prisma.fileUpload.findFirst({
-          where: { userId },
-          orderBy: { createdAt: "desc" },
+        prisma.file_uploads.findFirst({
+          where: { user_id: userId },
+          orderBy: { created_at: "desc" },
         }),
-        prisma.healthInsight.findMany({
-          where: { userId },
-          orderBy: { createdAt: "desc" },
+        prisma.health_insights.findMany({
+          where: { user_id: userId },
+          orderBy: { created_at: "desc" },
           take: 5,
         }),
       ]);
@@ -183,7 +204,7 @@ export async function getUserHealthSummary(userId: string) {
       abnormalCount,
       abnormalPercentage:
         biomarkerCount > 0 ? (abnormalCount / biomarkerCount) * 100 : 0,
-      lastUploadDate: lastUpload?.createdAt,
+      lastUploadDate: lastUpload?.created_at,
       recentInsights,
       healthScore: Math.max(85 - abnormalCount * 5, 0), // Simple calculation
     };

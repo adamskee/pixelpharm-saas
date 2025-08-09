@@ -2,9 +2,7 @@
 // FIXED VERSION - Matches your exact Prisma schema
 
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/database/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -122,28 +120,30 @@ export async function POST(request: NextRequest) {
     try {
       console.log("📁 Searching for existing FileUpload with uploadId:", uploadId);
       // Try to find existing FileUpload by uploadId
-      fileUpload = await prisma.fileUpload.findUnique({
-        where: { uploadId },
+      fileUpload = await prisma.file_uploads.findUnique({
+        where: { upload_id: uploadId },
       });
 
       if (!fileUpload) {
         console.log("📁 Creating new FileUpload record...");
         // Create new FileUpload record
-        fileUpload = await prisma.fileUpload.create({
+        const now = new Date();
+        fileUpload = await prisma.file_uploads.create({
           data: {
-            uploadId,
-            userId,
-            fileKey,
-            originalFilename: fileKey.split("/").pop() || "unknown",
-            fileType: originalFormat || "application/pdf",
-            uploadType: "BLOOD_TESTS",
-            fileSize: BigInt(0), // We don't have file size here
-            uploadStatus: "PROCESSED",
+            upload_id: uploadId,
+            user_id: userId,
+            file_key: fileKey,
+            original_filename: fileKey.split("/").pop() || "unknown",
+            file_type: originalFormat || "application/pdf",
+            upload_type: "BLOOD_TESTS",
+            file_size: BigInt(0), // We don't have file size here
+            upload_status: "PROCESSED",
+            updated_at: now,
           },
         });
-        console.log("✅ Created FileUpload:", fileUpload.uploadId);
+        console.log("✅ Created FileUpload:", fileUpload.upload_id);
       } else {
-        console.log("✅ Using existing FileUpload:", fileUpload.uploadId);
+        console.log("✅ Using existing FileUpload:", fileUpload.upload_id);
       }
     } catch (error) {
       console.error("❌ FileUpload error:", error);
@@ -168,16 +168,20 @@ export async function POST(request: NextRequest) {
     let bloodTestResult;
 
     try {
-      bloodTestResult = await prisma.bloodTestResult.create({
+      const now = new Date();
+      const resultId = `result_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      bloodTestResult = await prisma.blood_test_results.create({
         data: {
-          userId,
-          uploadId,
-          testDate,
-          labName: testInfo?.labName || null,
+          result_id: resultId,
+          user_id: userId,
+          upload_id: uploadId,
+          test_date: testDate,
+          lab_name: testInfo?.labName || null,
           biomarkers: biomarkers, // Store as JSON
+          updated_at: now,
         },
       });
-      console.log("✅ BloodTestResult created:", bloodTestResult.resultId);
+      console.log("✅ BloodTestResult created:", bloodTestResult.result_id);
     } catch (error) {
       console.error("❌ BloodTestResult creation failed:", error);
       return NextResponse.json(
@@ -241,23 +245,25 @@ export async function POST(request: NextRequest) {
           biomarker.status === "H" ||
           biomarker.status === "L";
 
-        const biomarkerValue = await prisma.biomarkerValue.create({
+        const valueId = `value_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`;
+        const biomarkerValue = await prisma.biomarker_values.create({
           data: {
-            userId,
-            resultId: bloodTestResult.resultId,
-            biomarkerName: biomarker.name,
+            value_id: valueId,
+            user_id: userId,
+            result_id: bloodTestResult.result_id,
+            biomarker_name: biomarker.name,
             value: numericValue,
             unit: biomarker.unit || "",
-            referenceRange:
+            reference_range:
               biomarker.normalRange || biomarker.referenceRange || null,
-            isAbnormal: isAbnormal,
-            testDate,
+            is_abnormal: isAbnormal,
+            test_date: testDate,
           },
         });
 
-        biomarkerIds.push(biomarkerValue.valueId);
+        biomarkerIds.push(biomarkerValue.value_id);
         successCount++;
-        console.log(`✅ Stored biomarker ${i + 1}:`, biomarkerValue.valueId);
+        console.log(`✅ Stored biomarker ${i + 1}:`, biomarkerValue.value_id);
       } catch (error) {
         console.error(`❌ Failed to store biomarker ${i + 1}:`, error);
         // Continue with other biomarkers even if one fails
@@ -270,21 +276,23 @@ export async function POST(request: NextRequest) {
 
     // Step 6: Create AI Processing Result record
     try {
-      await prisma.aiProcessingResult.create({
+      const processingId = `proc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      await prisma.ai_processing_results.create({
         data: {
-          uploadId,
-          userId,
-          processingType: "OCR",
-          rawResults: {
+          processing_id: processingId,
+          upload_id: uploadId,
+          user_id: userId,
+          processing_type: "OCR",
+          raw_results: {
             biomarkers,
             testInfo,
             confidence,
             extractedText: testInfo?.extractedText || "",
           },
-          confidenceScore:
+          confidence_score:
             confidence === "high" ? 0.95 : confidence === "medium" ? 0.75 : 0.5,
-          processingStatus: "COMPLETED",
-          processedAt: new Date(),
+          processing_status: "COMPLETED",
+          processed_at: new Date(),
         },
       });
       console.log("✅ AI Processing Result created");
@@ -298,8 +306,8 @@ export async function POST(request: NextRequest) {
       message: `Successfully stored ${successCount} biomarkers`,
       biomarkersStored: successCount,
       biomarkerIds,
-      bloodTestResultId: bloodTestResult.resultId,
-      fileUploadId: fileUpload.uploadId,
+      bloodTestResultId: bloodTestResult.result_id,
+      fileUploadId: fileUpload.upload_id,
     });
   } catch (error) {
     console.error("❌ Store-Results API error:", error);
@@ -327,6 +335,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   } finally {
-    await prisma.$disconnect();
+    // Using shared prisma client, no need to disconnect
   }
 }

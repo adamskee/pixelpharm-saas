@@ -1,8 +1,6 @@
 // Admin API: Get all users with subscription and usage data
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/database/client';
 
 // Admin authentication middleware
 function verifyAdminAuth(request: NextRequest) {
@@ -42,16 +40,30 @@ export async function GET(request: NextRequest) {
     // Build where clause for filtering
     const where: any = {};
     
+    // Build complex where clause with AND conditions
+    const conditions = [];
+    
     if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } }
-      ];
+      conditions.push({
+        OR: [
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } }
+        ]
+      });
     }
 
     if (subscriptionFilter && subscriptionFilter !== 'all') {
-      where.subscriptionPlan = subscriptionFilter;
+      conditions.push({
+        OR: [
+          { planType: subscriptionFilter.toUpperCase() },
+          { subscriptionPlan: subscriptionFilter }
+        ]
+      });
+    }
+    
+    if (conditions.length > 0) {
+      where.AND = conditions;
     }
 
     // Get users with related data
@@ -62,20 +74,22 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { createdAt: 'desc' },
         select: {
-          id: true,
+          userId: true,
           email: true,
           firstName: true,
           lastName: true,
           provider: true,
           createdAt: true,
           updatedAt: true,
+          planType: true,
           subscriptionPlan: true,
           subscriptionExpiresAt: true,
+          uploadsUsed: true,
           _count: {
             select: {
-              FileUpload: true,
-              Biomarker: true,
-              BodyComposition: true
+              file_uploads: true,
+              biomarker_values: true,
+              body_composition_results: true
             }
           }
         }
@@ -87,32 +101,40 @@ export async function GET(request: NextRequest) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const userIds = users.map(user => user.id);
-    const recentUploads = await prisma.fileUpload.groupBy({
-      by: ['userId'],
+    const userIds = users.map(user => user.userId);
+    const recentUploads = await prisma.file_uploads.groupBy({
+      by: ['user_id'],
       where: {
-        userId: { in: userIds },
-        createdAt: { gte: thirtyDaysAgo }
+        user_id: { in: userIds },
+        created_at: { gte: thirtyDaysAgo }
       },
       _count: {
-        userId: true
+        user_id: true
       }
     });
 
     // Calculate usage and subscription info for each user
     const enrichedUsers = users.map(user => {
-      const uploadCount = recentUploads.find(u => u.userId === user.id)?._count.userId || 0;
-      const subscriptionPlan = user.subscriptionPlan || 'free';
+      const uploadCount = recentUploads.find(u => u.user_id === user.userId)?._count.user_id || 0;
+      
+      // Use planType first, then fall back to subscriptionPlan, then default to free
+      let subscriptionPlan = 'free';
+      if (user.planType) {
+        subscriptionPlan = user.planType.toLowerCase();
+      } else if (user.subscriptionPlan) {
+        subscriptionPlan = user.subscriptionPlan.toLowerCase();
+      }
       
       // Calculate remaining uploads based on plan
       const monthlyLimits = {
-        free: 3,
+        free: 1,
         basic: 15,
-        pro: 50
+        pro: 999, // Unlimited for pro
+        elite: 999 // Unlimited for elite
       };
 
-      const monthlyLimit = monthlyLimits[subscriptionPlan as keyof typeof monthlyLimits] || 3;
-      const remainingUploads = Math.max(0, monthlyLimit - uploadCount);
+      const monthlyLimit = monthlyLimits[subscriptionPlan as keyof typeof monthlyLimits] || 1;
+      const remainingUploads = subscriptionPlan === 'free' ? Math.max(0, monthlyLimit - (user.uploadsUsed || 0)) : 999;
 
       // Calculate days remaining for subscription
       let daysRemaining = null;
@@ -123,7 +145,7 @@ export async function GET(request: NextRequest) {
       }
 
       return {
-        id: user.id,
+        id: user.userId,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -135,13 +157,13 @@ export async function GET(request: NextRequest) {
         daysRemaining,
         uploads: {
           thisMonth: uploadCount,
-          total: user._count.FileUpload,
+          total: user._count.file_uploads,
           remaining: remainingUploads,
           limit: monthlyLimit
         },
         data: {
-          biomarkers: user._count.Biomarker,
-          bodyComposition: user._count.BodyComposition
+          biomarkers: user._count.biomarker_values,
+          bodyComposition: user._count.body_composition_results
         },
         status: daysRemaining !== null && daysRemaining <= 7 ? 'expiring' : 'active'
       };
@@ -207,6 +229,10 @@ export async function PATCH(request: NextRequest) {
     const updateData: any = {};
 
     if (subscriptionPlan) {
+      // Update planType (the primary field we're using)
+      updateData.planType = subscriptionPlan.toUpperCase();
+      
+      // Also update subscriptionPlan for backward compatibility
       updateData.subscriptionPlan = subscriptionPlan;
       
       // Set expiration date based on plan
@@ -220,11 +246,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: userId },
+      where: { userId: userId },
       data: updateData,
       select: {
-        id: true,
+        userId: true,
         email: true,
+        planType: true,
         subscriptionPlan: true,
         subscriptionExpiresAt: true
       }
