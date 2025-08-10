@@ -104,10 +104,14 @@ export default function SignInPage() {
     setError("");
 
     try {
-      console.log("🔐 Attempting Google auth...");
+      console.log("🔐 Attempting Google auth...", { isSignUp });
+
+      // For signup mode, redirect to payment page after OAuth
+      // For signin mode, redirect to dashboard
+      const callbackUrl = isSignUp ? "/auth/post-oauth-signup" : "/dashboard";
 
       const result = await signIn("google", {
-        callbackUrl: "/dashboard",
+        callbackUrl,
         redirect: true,
       });
 
