@@ -136,12 +136,44 @@ export default function SignInTestPage() {
     }
   };
 
+  const handleFixOAuthSession = async () => {
+    if (!email || !sessionId) {
+      alert('Please enter both email and session ID');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/debug/fix-oauth-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, sessionId }),
+      });
+
+      const data = await response.json();
+      setDebugResult({
+        status: response.status,
+        data,
+        timestamp: new Date().toLocaleString(),
+      });
+    } catch (error) {
+      setDebugResult({
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toLocaleString(),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-8">Sign In Debug Tool</h1>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Check Specific User</CardTitle>
@@ -234,6 +266,31 @@ export default function SignInTestPage() {
               </Button>
             </CardContent>
           </Card>
+
+          <Card className="border-green-200">
+            <CardHeader>
+              <CardTitle className="text-green-700">🎟️ OAuth Session Fix</CardTitle>
+              <p className="text-sm text-gray-600">Fix OAuth user subscription from Stripe session</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input
+                type="text"
+                placeholder="Stripe Session ID (cs_...)"
+                value={sessionId}
+                onChange={(e) => setSessionId(e.target.value)}
+              />
+              <div className="text-xs text-gray-500">
+                Enter email above ↑ and Stripe session ID from payment URL
+              </div>
+              <Button 
+                onClick={handleFixOAuthSession} 
+                disabled={loading}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                {loading ? 'Fixing...' : 'Fix OAuth Session'}
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
         {debugResult && (
@@ -260,6 +317,8 @@ export default function SignInTestPage() {
               <p><strong>Check Specific User:</strong> Enter the email of the user having signin issues to see their database record and password status.</p>
               <p><strong>Check All Users:</strong> See all users with credentials provider and their password hash status.</p>
               <p><strong>🚨 Recovery Tool:</strong> If a user paid via Stripe but doesn't exist in database (User not found error), use this to create their account.</p>
+              <p><strong>💳 OAuth Payment Fix:</strong> Fix subscription status for Google OAuth users who paid but subscription wasn't activated.</p>
+              <p><strong>🎟️ OAuth Session Fix:</strong> Fix subscription using Stripe session ID for OAuth users with 100% discount coupons.</p>
               <p><strong>Expected:</strong> Users should have a passwordHash field with a bcrypt hash (starts with $2b$).</p>
               <p><strong>Issues:</strong> Users missing passwordHash or with empty/null values cannot sign in.</p>
             </div>
