@@ -27,7 +27,15 @@ function PaymentSuccessContent() {
       setSigninAttempted(true);
 
       try {
-        // Get user info from the post-payment signin API
+        // If user is already signed in (Google OAuth), just verify their session and continue
+        if (session?.user) {
+          console.log('✅ User already authenticated via OAuth:', session.user.email);
+          setUserEmail(session.user.email);
+          setLoading(false);
+          return;
+        }
+
+        // For credentials-based users, get user info from the post-payment signin API
         const response = await fetch('/api/auth/post-payment-signin', {
           method: 'POST',
           headers: {
@@ -49,9 +57,19 @@ function PaymentSuccessContent() {
           }
         } else {
           console.error('❌ Failed to get user data:', data.error);
+          // If this fails but we have a session, it might be a Google OAuth user
+          if (session?.user) {
+            console.log('✅ Fallback: Using existing session data');
+            setUserEmail(session.user.email);
+          }
         }
       } catch (error) {
         console.error('❌ Error in post-payment auth:', error);
+        // If this fails but we have a session, it might be a Google OAuth user
+        if (session?.user) {
+          console.log('✅ Fallback: Using existing session data');
+          setUserEmail(session.user.email);
+        }
       } finally {
         setLoading(false);
       }

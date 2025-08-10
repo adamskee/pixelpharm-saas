@@ -88,14 +88,34 @@ async function handleCheckoutSessionCompleted(session: any) {
 
     const isNewUser = session.metadata?.newUser === 'true';
     const userId = session.metadata?.userId;
+    const userEmail = session.metadata?.userEmail || session.customer_details?.email;
     const planType = session.metadata?.planType || (session.mode === 'subscription' ? 'basic' : 'pro');
 
     if (isNewUser) {
-      // Handle new user signup with payment
+      // Handle new user signup with payment (credentials-based signup)
       await handleNewUserCheckout(session, planType);
-    } else {
-      // Handle existing user payment
+    } else if (userId && userEmail) {
+      // Handle existing user payment (Google OAuth users)
+      console.log('🔄 Handling existing user checkout for OAuth user:', userEmail);
       await handleExistingUserCheckout(session, userId, planType);
+    } else {
+      // Try to find user by customer email (fallback for OAuth users)
+      console.log('🔍 Trying to find user by customer email:', userEmail);
+      if (userEmail) {
+        const user = await prisma.user.findUnique({
+          where: { email: userEmail },
+          select: { userId: true }
+        });
+        
+        if (user) {
+          console.log('✅ Found user by email, updating subscription:', user.userId);
+          await handleExistingUserCheckout(session, user.userId, planType);
+        } else {
+          console.error('❌ No user found with email:', userEmail);
+        }
+      } else {
+        console.error('❌ No user identification available in checkout session');
+      }
     }
 
   } catch (error: any) {
