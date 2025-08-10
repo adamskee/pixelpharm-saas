@@ -168,12 +168,44 @@ export default function SignInTestPage() {
     }
   };
 
+  const handleCheckSubscription = async () => {
+    if (!email) {
+      alert('Please enter an email address');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/debug/check-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      setDebugResult({
+        status: response.status,
+        data,
+        timestamp: new Date().toLocaleString(),
+      });
+    } catch (error) {
+      setDebugResult({
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toLocaleString(),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-8">Sign In Debug Tool</h1>
         
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Check Specific User</CardTitle>
@@ -197,6 +229,24 @@ export default function SignInTestPage() {
                 className="w-full"
               >
                 {loading ? 'Checking...' : 'Check User'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Check Subscription</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-xs text-gray-500">
+                Uses email from left ←
+              </div>
+              <Button 
+                onClick={handleCheckSubscription} 
+                disabled={loading || !email}
+                className="w-full bg-purple-600 hover:bg-purple-700"
+              >
+                {loading ? 'Checking...' : 'Check Subscription Status'}
               </Button>
             </CardContent>
           </Card>
@@ -315,6 +365,7 @@ export default function SignInTestPage() {
           <CardContent>
             <div className="space-y-2 text-sm">
               <p><strong>Check Specific User:</strong> Enter the email of the user having signin issues to see their database record and password status.</p>
+              <p><strong>Check Subscription:</strong> Debug subscription status logic for any user to see exactly what the API returns.</p>
               <p><strong>Check All Users:</strong> See all users with credentials provider and their password hash status.</p>
               <p><strong>🚨 Recovery Tool:</strong> If a user paid via Stripe but doesn't exist in database (User not found error), use this to create their account.</p>
               <p><strong>💳 OAuth Payment Fix:</strong> Fix subscription status for Google OAuth users who paid but subscription wasn't activated.</p>
