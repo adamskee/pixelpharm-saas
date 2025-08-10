@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 export default function SignInTestPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [paymentIntentId, setPaymentIntentId] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [debugResult, setDebugResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -103,12 +104,44 @@ export default function SignInTestPage() {
     }
   };
 
+  const handleFixGoogleOAuthPayment = async () => {
+    if (!email) {
+      alert('Please enter an email address');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/debug/fix-google-oauth-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, paymentIntentId }),
+      });
+
+      const data = await response.json();
+      setDebugResult({
+        status: response.status,
+        data,
+        timestamp: new Date().toLocaleString(),
+      });
+    } catch (error) {
+      setDebugResult({
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toLocaleString(),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-8">Sign In Debug Tool</h1>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Check Specific User</CardTitle>
@@ -173,6 +206,31 @@ export default function SignInTestPage() {
                 className="w-full bg-red-600 hover:bg-red-700"
               >
                 {loading ? 'Creating...' : 'Create User from Stripe'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-blue-200">
+            <CardHeader>
+              <CardTitle className="text-blue-700">💳 Google OAuth Payment Fix</CardTitle>
+              <p className="text-sm text-gray-600">Fix subscription for paid Google OAuth users</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input
+                type="text"
+                placeholder="Payment Intent ID (pi_...)"
+                value={paymentIntentId}
+                onChange={(e) => setPaymentIntentId(e.target.value)}
+              />
+              <div className="text-xs text-gray-500">
+                Enter email above ↑ and payment intent ID
+              </div>
+              <Button 
+                onClick={handleFixGoogleOAuthPayment} 
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                {loading ? 'Fixing...' : 'Fix OAuth User Subscription'}
               </Button>
             </CardContent>
           </Card>
