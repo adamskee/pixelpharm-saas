@@ -323,12 +323,20 @@ export const authOptions: NextAuthOptions = {
     async redirect({ url, baseUrl }) {
       console.log("🔄 Redirect callback:", { url, baseUrl });
 
-      // Redirect to dashboard after successful sign in
+      // If url is relative to baseUrl, use it as-is
       if (url.startsWith(baseUrl)) {
+        console.log("🔄 Using provided URL:", url);
         return url;
       }
+      
+      // If url is a relative path, prepend baseUrl
+      if (url.startsWith("/")) {
+        console.log("🔄 Using relative path:", `${baseUrl}${url}`);
+        return `${baseUrl}${url}`;
+      }
 
-      // Default redirect to dashboard
+      // Default redirect to dashboard for external URLs or fallback
+      console.log("🔄 Using default dashboard redirect");
       return `${baseUrl}/dashboard`;
     },
   },
