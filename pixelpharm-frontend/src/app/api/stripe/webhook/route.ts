@@ -84,7 +84,20 @@ export async function POST(request: Request) {
 async function handleCheckoutSessionCompleted(session: any) {
   try {
     console.log('💳 Processing checkout session completed:', session.id);
+    console.log('📋 Session details:', {
+      id: session.id,
+      amount_total: session.amount_total,
+      payment_status: session.payment_status,
+      mode: session.mode,
+      customer_details: session.customer_details
+    });
     console.log('📋 Session metadata:', JSON.stringify(session.metadata, null, 2));
+
+    // Check if this is a 100% discount coupon (zero amount transaction)
+    const isZeroAmountTransaction = session.amount_total === 0 || session.payment_status === 'no_payment_required';
+    if (isZeroAmountTransaction) {
+      console.log('🎟️ Detected 100% discount coupon transaction (zero amount)');
+    }
 
     const isNewUser = session.metadata?.newUser === 'true';
     const userId = session.metadata?.userId;
@@ -112,6 +125,13 @@ async function handleCheckoutSessionCompleted(session: any) {
           await handleExistingUserCheckout(session, user.userId, planType);
         } else {
           console.error('❌ No user found with email:', userEmail);
+          
+          // For 100% discount coupons with OAuth users, they may not exist in metadata
+          // but we can still process the transaction if we have their email
+          if (isZeroAmountTransaction && userEmail) {
+            console.log('🎟️ Creating subscription for 100% discount OAuth user:', userEmail);
+            await handleZeroAmountOAuthCheckout(session, userEmail, planType);
+          }
         }
       } else {
         console.error('❌ No user identification available in checkout session');
@@ -354,6 +374,38 @@ async function handleSubscriptionDeleted(subscription: any) {
     console.log(`✅ Subscription canceled for user ${user.id}`);
   } catch (error: any) {
     console.error('❌ Error handling subscription deleted:', error);
+    throw error;
+  }
+}
+
+// Handle 100% discount checkout for Google OAuth users
+async function handleZeroAmountOAuthCheckout(session: any, userEmail: string, planType: string) {
+  try {
+    console.log('🎟️ Processing 100% discount checkout for OAuth user:', userEmail);
+
+    // Find user by email (they should exist from OAuth signup)
+    const user = await prisma.user.findUnique({
+      where: { email: userEmail.toLowerCase().trim() },
+      select: { 
+        userId: true, 
+        email: true, 
+        subscriptionStatus: true, 
+        subscriptionPlan: true 
+      }
+    });
+
+    if (user) {
+      console.log('✅ Found OAuth user for 100% discount:', user.userId);
+      await updateUserSubscription(user.userId, session, planType);
+    } else {
+      console.error('❌ OAuth user not found for 100% discount checkout:', userEmail);
+      
+      // This should not happen, but if it does, log for debugging
+      console.error('🚨 OAuth user should exist before payment - check authentication flow');
+    }
+
+  } catch (error: any) {
+    console.error('❌ Error handling zero amount OAuth checkout:', error);
     throw error;
   }
 }

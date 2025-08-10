@@ -31,6 +31,27 @@ function PaymentSuccessContent() {
         if (session?.user) {
           console.log('✅ User already authenticated via OAuth:', session.user.email);
           setUserEmail(session.user.email);
+          
+          // For OAuth users, we don't need the post-payment signin API
+          // Instead, let's verify their subscription was updated
+          try {
+            const verifyResponse = await fetch('/api/user/subscription-status');
+            const verifyData = await verifyResponse.json();
+            
+            if (verifyResponse.ok) {
+              console.log('✅ OAuth user subscription verified:', verifyData);
+              setSessionData({
+                mode: 'payment',
+                amount_total: 0, // Assume 100% discount for OAuth flow
+                user: session.user
+              });
+            } else {
+              console.warn('⚠️ Could not verify subscription status:', verifyData.error);
+            }
+          } catch (verifyError) {
+            console.warn('⚠️ Error verifying subscription:', verifyError);
+          }
+          
           setLoading(false);
           return;
         }
@@ -207,7 +228,11 @@ function PaymentSuccessContent() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Amount:</span>
                     <span className="font-medium">
-                      ${(sessionData.amount_total / 100).toFixed(2)}
+                      {sessionData.amount_total === 0 ? (
+                        <span className="text-green-600">Free (100% Discount)</span>
+                      ) : (
+                        `$${(sessionData.amount_total / 100).toFixed(2)}`
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-between">
