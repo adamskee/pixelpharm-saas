@@ -33,10 +33,12 @@ function PaymentCompleteContent() {
   const { data: session, status } = useSession();
   
   const planType = searchParams.get("plan") as PlanType;
-  const couponCode = searchParams.get("coupon") || "";
+  const initialCouponCode = searchParams.get("coupon") || "";
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
+  const [couponCode, setCouponCode] = useState(initialCouponCode);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [couponValidation, setCouponValidation] = useState<{
     isValid: boolean;
     discount: number;
@@ -57,11 +59,11 @@ function PaymentCompleteContent() {
       return;
     }
 
-    // Validate coupon if provided
-    if (couponCode && !couponValidation) {
-      validateCoupon(couponCode);
+    // Validate initial coupon if provided
+    if (initialCouponCode && !couponValidation && couponCode === initialCouponCode) {
+      validateCoupon(initialCouponCode);
     }
-  }, [planType, plan, router, couponCode]);
+  }, [planType, plan, router, initialCouponCode, couponValidation, couponCode]);
 
   useEffect(() => {
     // If user is not authenticated after a reasonable time, redirect back
@@ -73,7 +75,25 @@ function PaymentCompleteContent() {
     }
   }, [status, planType, router]);
 
+  const handleCouponChange = (value: string) => {
+    setCouponCode(value);
+    if (couponValidation) {
+      setCouponValidation(null);
+    }
+  };
+
+  const handleCouponBlur = () => {
+    validateCoupon(couponCode);
+  };
+
   const validateCoupon = async (code: string) => {
+    if (!code.trim()) {
+      setCouponValidation(null);
+      return;
+    }
+
+    setIsValidatingCoupon(true);
+    setError("");
     try {
       const response = await fetch("/api/stripe/validate-coupon", {
         method: "POST",
@@ -108,6 +128,8 @@ function PaymentCompleteContent() {
         discountType: 'percent',
         message: "Error validating coupon code",
       });
+    } finally {
+      setIsValidatingCoupon(false);
     }
   };
 
@@ -118,8 +140,34 @@ function PaymentCompleteContent() {
     setError("");
 
     try {
+      // Validate coupon if provided and not yet validated
+      let currentCouponValidation = couponValidation;
+      if (couponCode.trim() && !couponValidation) {
+        try {
+          const response = await fetch("/api/stripe/validate-coupon", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ code: couponCode.trim() }),
+          });
+          const data = await response.json();
+          if (response.ok) {
+            currentCouponValidation = {
+              isValid: true,
+              discount: data.discount,
+              discountType: data.discountType || 'percent',
+              message: data.message,
+            };
+            setCouponValidation(currentCouponValidation);
+          }
+        } catch (error) {
+          console.warn("Coupon validation failed, proceeding without coupon");
+        }
+      }
+
       // Create checkout session for Google OAuth user
-      const finalCouponCode = couponValidation?.isValid ? couponCode : undefined;
+      const finalCouponCode = currentCouponValidation?.isValid ? couponCode.trim() : undefined;
       
       const response = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
@@ -275,41 +323,47 @@ function PaymentCompleteContent() {
                   </div>
                 </div>
 
-                {couponCode && (
-                  <div className="space-y-2">
-                    <Label>Coupon Code</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={couponCode}
-                        disabled
-                        className={`${
-                          couponValidation?.isValid
-                            ? "border-green-500 bg-green-50"
-                            : couponValidation?.isValid === false
-                            ? "border-red-500 bg-red-50"
-                            : ""
-                        }`}
-                      />
-                      {couponValidation?.isValid && (
-                        <Check className="h-4 w-4 text-green-500" />
-                      )}
-                      {couponValidation?.isValid === false && (
-                        <AlertCircle className="h-4 w-4 text-red-500" />
-                      )}
-                    </div>
-                    {couponValidation && (
-                      <p
-                        className={`text-sm ${
-                          couponValidation.isValid
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {couponValidation.message}
-                      </p>
+                {/* Coupon Code Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="coupon">Coupon Code (Optional)</Label>
+                  <div className="relative">
+                    <Input
+                      id="coupon"
+                      placeholder="Enter coupon code"
+                      value={couponCode}
+                      onChange={(e) => handleCouponChange(e.target.value)}
+                      onBlur={handleCouponBlur}
+                      className={`pr-10 ${
+                        couponValidation?.isValid
+                          ? "border-green-500 focus:ring-green-500"
+                          : couponValidation?.isValid === false
+                          ? "border-red-500 focus:ring-red-500"
+                          : ""
+                      }`}
+                    />
+                    {isValidatingCoupon && (
+                      <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-gray-400" />
+                    )}
+                    {couponValidation?.isValid && (
+                      <Check className="absolute right-3 top-3 h-4 w-4 text-green-500" />
+                    )}
+                    {couponValidation?.isValid === false && (
+                      <AlertCircle className="absolute right-3 top-3 h-4 w-4 text-red-500" />
                     )}
                   </div>
-                )}
+                  {couponValidation && (
+                    <p
+                      className={`text-sm ${
+                        couponValidation.isValid
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {couponValidation.message}
+                    </p>
+                  )}
+                </div>
+
 
                 {error && (
                   <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
