@@ -60,21 +60,34 @@ export default function SignInPage() {
       console.log("🔐 SignIn result:", result);
 
       if (result?.error) {
-        setError(result.error);
+        console.error("🔐 SignIn error:", result.error);
+        if (result.error.includes("Invalid email or password")) {
+          setError("Invalid email or password. Please check your credentials and try again.");
+        } else if (result.error.includes("User not found")) {
+          setError("No account found with this email. Please sign up first or check your email address.");
+        } else if (result.error.includes("Google account")) {
+          setError("This email is associated with a Google account. Please sign in with Google instead.");
+        } else {
+          setError(result.error);
+        }
       } else if (result?.ok) {
         setSuccess(
           isSignUp
             ? "Account created! Redirecting..."
-            : "Signed in! Redirecting..."
+            : "Signed in successfully! Redirecting..."
         );
 
         // Wait a moment for session to be established
         setTimeout(async () => {
           const session = await getSession();
+          console.log("🔐 Session after signin:", session);
           if (session) {
             window.location.href = "/dashboard";
+          } else {
+            console.error("🔐 No session found after signin");
+            setError("Sign in succeeded but session not established. Please try again.");
           }
-        }, 1000);
+        }, 1500);
       } else {
         setError("Authentication failed. Please try again.");
       }

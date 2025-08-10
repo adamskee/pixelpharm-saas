@@ -2,9 +2,8 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { stripe } from '@/lib/stripe/server';
 import { STRIPE_CONFIG } from '@/lib/stripe/config';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/database/client';
+import { nanoid } from 'nanoid';
 
 // Stripe webhook events we want to handle
 const WEBHOOK_EVENTS = {
@@ -85,8 +84,113 @@ export async function POST(request: Request) {
 async function handleCheckoutSessionCompleted(session: any) {
   try {
     console.log('💳 Processing checkout session completed:', session.id);
+    console.log('📋 Session metadata:', JSON.stringify(session.metadata, null, 2));
 
+    const isNewUser = session.metadata?.newUser === 'true';
     const userId = session.metadata?.userId;
+    const planType = session.metadata?.planType || (session.mode === 'subscription' ? 'basic' : 'pro');
+
+    if (isNewUser) {
+      // Handle new user signup with payment
+      await handleNewUserCheckout(session, planType);
+    } else {
+      // Handle existing user payment
+      await handleExistingUserCheckout(session, userId, planType);
+    }
+
+  } catch (error: any) {
+    console.error('❌ Error handling checkout session completed:', error);
+    throw error;
+  }
+}
+
+// Handle checkout for new users (create account after payment)
+async function handleNewUserCheckout(session: any, planType: string) {
+  try {
+    const metadata = session.metadata;
+    const email = metadata?.email;
+    const hashedPassword = metadata?.hashedPassword;
+    const firstName = metadata?.firstName || '';
+    const lastName = metadata?.lastName || '';
+    const isAnonymous = metadata?.isAnonymous === 'true';
+    
+    if (!email || !hashedPassword) {
+      console.error('❌ Missing user data in checkout session metadata');
+      return;
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      console.log('👤 User already exists, updating subscription status');
+      await updateUserSubscription(existingUser.userId, session, planType);
+      return;
+    }
+
+    // Generate new user ID
+    const newUserId = nanoid();
+    const displayName = isAnonymous 
+      ? `Anonymous User ${newUserId.slice(-6)}` 
+      : `${firstName} ${lastName}`.trim();
+
+    // Determine subscription expiration
+    const expiresAt = session.mode === 'subscription' 
+      ? null // Subscriptions don't expire, managed by Stripe
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days for pro
+
+    // Create new user account
+    const newUser = await prisma.user.create({
+      data: {
+        userId: newUserId,
+        email,
+        passwordHash: hashedPassword,
+        firstName: isAnonymous ? null : firstName,
+        lastName: isAnonymous ? null : lastName,
+        name: displayName,
+        provider: 'credentials',
+        isAnonymous,
+        stripeCustomerId: session.customer as string,
+        subscriptionStatus: 'active',
+        subscriptionPlan: planType,
+        subscriptionExpiresAt: expiresAt,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    console.log(`✅ New user created and subscription activated:`, {
+      userId: newUser.userId,
+      email: newUser.email,
+      planType,
+      hasPasswordHash: !!newUser.passwordHash,
+      provider: newUser.provider,
+      isAnonymous: newUser.isAnonymous,
+      subscriptionStatus: newUser.subscriptionStatus,
+      subscriptionPlan: newUser.subscriptionPlan,
+    });
+
+    // For subscriptions, store the subscription ID
+    if (session.mode === 'subscription' && session.subscription) {
+      await prisma.user.update({
+        where: { userId: newUserId },
+        data: {
+          stripeSubscriptionId: session.subscription as string,
+        },
+      });
+    }
+
+  } catch (error: any) {
+    console.error('❌ Error creating new user from checkout:', error);
+    throw error;
+  }
+}
+
+// Handle checkout for existing users
+async function handleExistingUserCheckout(session: any, userId: string, planType: string) {
+  try {
     const userEmail = session.metadata?.userEmail;
 
     if (!userId || !userEmail) {
@@ -94,8 +198,18 @@ async function handleCheckoutSessionCompleted(session: any) {
       return;
     }
 
-    // Determine plan type based on session mode
-    const planType = session.mode === 'subscription' ? 'basic' : 'pro';
+    await updateUserSubscription(userId, session, planType);
+
+  } catch (error: any) {
+    console.error('❌ Error handling existing user checkout:', error);
+    throw error;
+  }
+}
+
+// Update user subscription status
+async function updateUserSubscription(userId: string, session: any, planType: string) {
+  try {
+    // Determine subscription expiration
     const expiresAt = session.mode === 'subscription' 
       ? null // Subscriptions don't expire, managed by Stripe
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days for pro
@@ -125,7 +239,7 @@ async function handleCheckoutSessionCompleted(session: any) {
     }
 
   } catch (error: any) {
-    console.error('❌ Error handling checkout session completed:', error);
+    console.error('❌ Error updating user subscription:', error);
     throw error;
   }
 }

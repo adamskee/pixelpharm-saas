@@ -84,7 +84,9 @@ export const authOptions: NextAuthOptions = {
             hasDbUrl: !!process.env.DATABASE_URL,
             dbUrlStart: process.env.DATABASE_URL?.substring(0, 20) || 'NOT SET',
             prismaUser: typeof prisma?.user,
-            prismaMethods: prisma ? Object.keys(prisma) : 'PRISMA_UNDEFINED'
+            prismaMethods: prisma ? Object.keys(prisma) : 'PRISMA_UNDEFINED',
+            action,
+            email: normalizedEmail,
           });
 
           if (action === "signup") {
@@ -144,6 +146,31 @@ export const authOptions: NextAuthOptions = {
             // Find user by email
             const user = await prisma.user.findUnique({
               where: { email: normalizedEmail },
+              select: {
+                userId: true,
+                email: true,
+                name: true,
+                firstName: true,
+                lastName: true,
+                passwordHash: true,
+                provider: true,
+                isAnonymous: true,
+                subscriptionStatus: true,
+                subscriptionPlan: true,
+                createdAt: true,
+              }
+            });
+
+            console.log("🔍 User lookup result:", {
+              found: !!user,
+              email: user?.email,
+              userId: user?.userId,
+              provider: user?.provider,
+              hasPasswordHash: !!user?.passwordHash,
+              passwordHashLength: user?.passwordHash?.length || 0,
+              subscriptionStatus: user?.subscriptionStatus,
+              subscriptionPlan: user?.subscriptionPlan,
+              createdAt: user?.createdAt,
             });
 
             if (!user) {
@@ -153,12 +180,17 @@ export const authOptions: NextAuthOptions = {
 
             // Check if user signed up with credentials (has password)
             if (!user.passwordHash) {
-              console.log("❌ User exists but has no password (OAuth user):", normalizedEmail);
+              console.log("❌ User exists but has no password (OAuth user):", normalizedEmail, {
+                provider: user.provider,
+                hasPasswordHash: !!user.passwordHash,
+              });
               throw new Error("This email is associated with a Google account. Please sign in with Google.");
             }
 
             // Verify password
+            console.log("🔐 Attempting password verification for:", normalizedEmail);
             const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+            console.log("🔐 Password verification result:", isValidPassword);
 
             if (!isValidPassword) {
               console.log("❌ Invalid password for user:", normalizedEmail);

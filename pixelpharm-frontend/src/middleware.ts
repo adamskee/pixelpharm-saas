@@ -30,9 +30,12 @@ export default withAuth(
           pathname.startsWith("/favicon") ||
           pathname.startsWith("/about") ||
           pathname.startsWith("/pricing") ||
+          pathname.startsWith("/payment") ||
+          pathname.startsWith("/checkout") ||
           pathname.startsWith("/support") ||
           pathname.startsWith("/privacy") ||
-          pathname.startsWith("/terms")
+          pathname.startsWith("/terms") ||
+          pathname.startsWith("/demo")
         ) {
           return true;
         }

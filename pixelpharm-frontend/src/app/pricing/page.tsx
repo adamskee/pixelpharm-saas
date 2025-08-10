@@ -38,24 +38,19 @@ export default function PricingPage() {
   const [loading, setLoading] = useState<PlanType | null>(null);
 
   const handlePurchase = async (planType: PlanType) => {
-    if (!session) {
-      router.push("/auth/signin");
-      return;
-    }
-
     setLoading(planType);
 
     try {
-      // Handle free plan - redirect directly to dashboard
+      // Handle free plan - redirect to signup
       if (planType === "free") {
-        router.push("/dashboard");
+        router.push("/auth/signin");
         return;
       }
       
-      // Redirect to checkout page with plan parameter for paid plans
-      router.push(`/checkout?plan=${planType}`);
+      // For paid plans, redirect to payment page with signup
+      router.push(`/payment?plan=${planType}`);
     } catch (error: any) {
-      console.error("Checkout error:", error);
+      console.error("Navigation error:", error);
       alert(`Navigation failed: ${error.message}`);
     } finally {
       setLoading(null);

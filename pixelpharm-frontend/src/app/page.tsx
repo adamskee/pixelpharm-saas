@@ -45,11 +45,11 @@ export default function PixelPharmHomepage(): JSX.Element {
   }>({ type: null, message: "" });
 
   const handleGetStarted = () => {
-    router.push("/auth/signin");
+    router.push("/pricing");
   };
 
   const handleUploadResults = () => {
-    router.push("/auth/signin");
+    router.push("/pricing");
   };
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
@@ -751,7 +751,7 @@ export default function PixelPharmHomepage(): JSX.Element {
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
               <Button
                 size="lg"
-                onClick={() => router.push("/checkout?plan=pro")}
+                onClick={() => router.push("/payment?plan=pro")}
                 className="bg-white text-slate-900 hover:bg-gray-100 text-xl px-10 py-6 shadow-2xl font-bold transform hover:scale-105 transition-all duration-200"
               >
                 <ArrowRight className="h-6 w-6 mr-3" />

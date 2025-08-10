@@ -3,6 +3,7 @@
 import { useAuth } from "@/lib/auth/auth-context";
 import { useSession } from "next-auth/react";
 import GoogleSignIn from "@/components/auth/google-signin";
+import SubscriptionGuard from "@/components/auth/subscription-guard";
 import Link from "next/link";
 import Image from "next/image";
 import { Heart, User, Settings, Bell, LogOut, Zap, Menu, X } from "lucide-react";
@@ -314,5 +315,9 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <DashboardContent>{children}</DashboardContent>;
+  return (
+    <SubscriptionGuard>
+      <DashboardContent>{children}</DashboardContent>
+    </SubscriptionGuard>
+  );
 }
