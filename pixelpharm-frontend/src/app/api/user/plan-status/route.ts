@@ -36,13 +36,19 @@ export async function GET(request: Request) {
           uploadsUsed: true,
           isAnonymous: true,
           provider: true,
-          email: true
+          email: true,
+          subscriptionPlan: true,
+          subscriptionStatus: true
         }
       });
       
       if (user) {
-        // Set plan based on user data
-        if (user.planType) {
+        // Check subscription plan first (for paid users), then planType enum, then fallback logic
+        if (user.subscriptionPlan && user.subscriptionStatus === 'active') {
+          userPlan = user.subscriptionPlan.toLowerCase();
+          planType = user.subscriptionPlan.toLowerCase();
+          console.log(`💳 Active subscription detected: ${user.subscriptionPlan} (${user.email})`);
+        } else if (user.planType) {
           userPlan = user.planType.toLowerCase();
           planType = user.planType.toLowerCase();
         } else {
@@ -101,7 +107,7 @@ export async function GET(request: Request) {
       biomarkerLimit = 999; // Unlimited biomarkers for basic
       hasAdvancedAnalytics = true;
     } else if (userPlan === 'pro') {
-      uploadLimit = 999; // Unlimited for pro users
+      uploadLimit = 20; // Pro plan gets 20 uploads
       biomarkerLimit = 999; // Unlimited for pro users
       hasAdvancedAnalytics = true;
     } else if (userPlan === 'elite') {
@@ -116,8 +122,8 @@ export async function GET(request: Request) {
       userPlan = 'free';
     }
     
-    const uploadsRemaining = userPlan === 'free' ? Math.max(0, uploadLimit - uploadsUsed) : 999;
-    const canUpload = userPlan === 'free' ? uploadsUsed < uploadLimit : true;
+    const uploadsRemaining = Math.max(0, uploadLimit - uploadsUsed);
+    const canUpload = uploadsUsed < uploadLimit;
     const needsUpgrade = userPlan === 'free' && uniqueBiomarkers.length > biomarkerLimit;
     
     const planStatus = {
@@ -136,7 +142,7 @@ export async function GET(request: Request) {
     
     const uploadPermission = {
       canUpload: canUpload,
-      reason: canUpload ? "Upload allowed" : `${userPlan.toUpperCase()} plan upload limit reached (${uploadsUsed} uploads used)`,
+      reason: canUpload ? "Upload allowed" : `${userPlan.toUpperCase()} plan upload limit reached (${uploadsUsed}/${uploadLimit} uploads used)`,
       upgradeRequired: !canUpload && userPlan === 'free'
     };
 
