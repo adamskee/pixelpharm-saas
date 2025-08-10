@@ -7,7 +7,12 @@ export async function POST(request: NextRequest) {
   try {
     const { sessionId, email, password } = await request.json();
 
-    console.log('🔧 Manual user creation from Stripe session:', { sessionId, email });
+    console.log('🔧 Manual user creation from Stripe session:', { 
+      sessionId: sessionId?.substring(0, 20) + '...',
+      sessionIdLength: sessionId?.length,
+      email,
+      hasPassword: !!password
+    });
 
     if (!stripe) {
       return NextResponse.json(
@@ -16,9 +21,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!sessionId) {
+    if (!sessionId || sessionId.length < 10) {
       return NextResponse.json(
-        { error: 'Session ID is required' },
+        { error: 'Valid Session ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate session ID format
+    if (!sessionId.startsWith('cs_')) {
+      return NextResponse.json(
+        { error: 'Invalid session ID format. Should start with cs_' },
         { status: 400 }
       );
     }
