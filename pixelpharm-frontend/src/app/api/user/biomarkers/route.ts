@@ -58,15 +58,20 @@ export async function GET(request: Request) {
           uploadsUsed: true,
           isAnonymous: true,
           provider: true,
-          email: true
+          email: true,
+          subscriptionPlan: true,
+          subscriptionStatus: true
         }
       });
       
       if (user) {
-        console.log(`🔍 User found: ${user.email}, planType: ${user.planType}, provider: ${user.provider}`);
+        console.log(`🔍 User found: ${user.email}, planType: ${user.planType}, subscriptionPlan: ${user.subscriptionPlan}, subscriptionStatus: ${user.subscriptionStatus}, provider: ${user.provider}`);
         
-        // Set plan based on user data
-        if (user.planType) {
+        // Check subscription plan first (for paid users), then planType enum, then fallback logic
+        if (user.subscriptionPlan && user.subscriptionStatus === 'active') {
+          userPlan = user.subscriptionPlan.toLowerCase();
+          console.log(`💳 Active subscription detected: ${user.subscriptionPlan} (${user.email})`);
+        } else if (user.planType) {
           userPlan = user.planType.toLowerCase();
           console.log(`✅ Using planType: ${user.planType} → ${userPlan}`);
         } else {
@@ -114,12 +119,21 @@ export async function GET(request: Request) {
       currentPlan = 'free';
     }
     
-    // Set plan status for frontend
+    // Set plan status for frontend (match plan-status API logic)
+    let uploadLimit = 1; // Default for free
+    if (currentPlan === 'basic') {
+      uploadLimit = 10;
+    } else if (currentPlan === 'pro') {
+      uploadLimit = 20;
+    } else if (currentPlan === 'elite') {
+      uploadLimit = 999;
+    }
+    
     planStatus = {
       currentPlan: currentPlan,
       uploadsUsed: uploadsUsed,
-      uploadsRemaining: currentPlan === 'free' ? Math.max(0, 1 - uploadsUsed) : 999, // Pro users get unlimited
-      canUpload: currentPlan === 'free' ? uploadsUsed < 1 : true, // Pro users can always upload
+      uploadsRemaining: Math.max(0, uploadLimit - uploadsUsed),
+      canUpload: uploadsUsed < uploadLimit,
       needsUpgrade: currentPlan === 'free' && biomarkers.length > FREE_PLAN_BIOMARKER_LIMIT,
     };
 
