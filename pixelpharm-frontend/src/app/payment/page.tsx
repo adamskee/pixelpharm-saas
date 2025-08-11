@@ -324,7 +324,7 @@ function PaymentPageContent() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Google OAuth Option */}
+              {/* Google OAuth temporarily disabled for production reliability
               <div className="space-y-4 mb-6">
                 <Button
                   type="button"
@@ -373,6 +373,7 @@ function PaymentPageContent() {
                   </div>
                 </div>
               </div>
+              */}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">

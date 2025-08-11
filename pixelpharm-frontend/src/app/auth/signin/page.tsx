@@ -167,6 +167,7 @@ export default function SignInPage() {
             </Alert>
           )}
 
+          {/* Google OAuth temporarily disabled for production reliability
           <Button
             onClick={handleGoogleAuth}
             disabled={googleLoading || loading}
@@ -206,6 +207,7 @@ export default function SignInPage() {
               <span className="bg-white px-3 text-gray-500">or</span>
             </div>
           </div>
+          */}
 
           <form onSubmit={handleCredentialsAuth} className="space-y-4">
             {isSignUp && (
