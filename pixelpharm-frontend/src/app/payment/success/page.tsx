@@ -87,8 +87,31 @@ function PaymentSuccessContent() {
           setUserEmail(data.user.email);
           setSessionData(data);
 
-          // If user is not already signed in, show sign-in instructions
-          if (status !== 'loading' && !session) {
+          // Automatically sign in the credentials user after successful payment
+          if (status !== 'loading' && !session && data.user.email && data.user.password) {
+            console.log('🔐 Attempting automatic signin for credentials user:', data.user.email);
+            try {
+              const signinResult = await signIn('credentials', {
+                email: data.user.email,
+                password: data.user.password,
+                action: 'signin',
+                redirect: false,
+              });
+              
+              if (signinResult?.ok) {
+                console.log('✅ Auto-signin successful, redirecting to dashboard');
+                // Small delay to ensure session is established
+                setTimeout(() => {
+                  router.push('/dashboard');
+                }, 1000);
+              } else {
+                console.log('❌ Auto-signin failed, showing manual signin instructions');
+              }
+            } catch (autoSigninError) {
+              console.error('❌ Auto-signin error:', autoSigninError);
+              console.log('👤 Fallback: User needs to sign in manually');
+            }
+          } else if (status !== 'loading' && !session) {
             console.log('👤 User needs to sign in manually');
           }
         } else {
@@ -98,11 +121,17 @@ function PaymentSuccessContent() {
             console.log('✅ Fallback: Using existing session data');
             setUserEmail(session.user.email);
           } else {
-            // For credentials users who aren't signed in, we need to show signin instructions
-            console.log('❌ No session and failed to get user data - user needs to sign in');
-            // We still have the sessionId, so we know a payment was made
-            // Set a placeholder email so we show the sign-in required message
-            if (sessionId) {
+            // For credentials users who aren't signed in, try to get user email from error response
+            console.log('❌ No session and failed to get user data - checking for user email in response');
+            
+            // Check if we got user email from the failed response
+            const responseUserEmail = data.user?.email;
+            if (responseUserEmail) {
+              console.log('📧 Found user email in error response:', responseUserEmail);
+              setUserEmail(responseUserEmail);
+              setSessionData(data);
+            } else if (sessionId) {
+              // Set a placeholder email so we show the sign-in required message
               setUserEmail('payment_completed_but_not_signed_in');
             }
           }
@@ -168,6 +197,15 @@ function PaymentSuccessContent() {
                   <>Your account (<strong>{userEmail}</strong>) has been created and your subscription is active. Please sign in using the password you set during checkout.</>
                 )}
               </p>
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-start">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
+                  <div className="text-sm">
+                    <p className="text-yellow-800 font-medium">Important:</p>
+                    <p className="text-yellow-700">You must sign in with your credentials to access the dashboard. Your payment was successful and your subscription is active.</p>
+                  </div>
+                </div>
+              </div>
               <Link href="/auth/signin">
                 <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
                   Sign In to Dashboard
