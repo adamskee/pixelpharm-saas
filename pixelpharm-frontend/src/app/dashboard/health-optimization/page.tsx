@@ -22,7 +22,7 @@ import {
   Award,
   Clock,
   User,
-  Walk,
+  Footprints,
   Dumbbell,
   Trophy
 } from 'lucide-react';
@@ -255,7 +255,7 @@ export default function HealthOptimizationPage() {
                         />
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-2">
-                            <Walk className="h-5 w-5 text-green-600" />
+                            <Footprints className="h-5 w-5 text-green-600" />
                             <span className="font-medium text-gray-800">Daily Walker</span>
                           </div>
                           <p className="text-xs text-gray-600">
