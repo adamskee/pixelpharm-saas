@@ -62,7 +62,9 @@ export async function getUserUploadUsage(userId: string): Promise<UploadUsage> {
   const monthlyUploads = await prisma.fileUpload.count({
     where: {
       userId,
-      uploadType: "BLOOD_TESTS",
+      uploadType: {
+        in: ["BLOOD_TESTS", "BODY_COMPOSITION", "FITNESS_ACTIVITIES"],
+      },
       createdAt: {
         gte: startOfMonth,
         lte: endOfMonth,
@@ -83,7 +85,9 @@ export async function getUserUploadUsage(userId: string): Promise<UploadUsage> {
     totalUploads = await prisma.fileUpload.count({
       where: {
         userId,
-        uploadType: "BLOOD_TESTS",
+        uploadType: {
+          in: ["BLOOD_TESTS", "BODY_COMPOSITION", "FITNESS_ACTIVITIES"],
+        },
         createdAt: {
           gte: uploadCountStartDate,
         },
