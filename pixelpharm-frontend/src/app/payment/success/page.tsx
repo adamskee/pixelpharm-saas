@@ -253,19 +253,17 @@ function PaymentSuccessContent() {
           <Card className="border-blue-200 bg-blue-50">
             <CardContent className="p-6 text-center">
               <h3 className="text-lg font-semibold text-blue-900 mb-4">
-                Need Help? Use Our Debug Tool
+                Still Having Issues?
               </h3>
               <p className="text-blue-800 text-sm mb-4">
-                If you can't access the dashboard, you can fix your subscription manually:
+                If you still can't access the dashboard after a few minutes, please contact our support team:
               </p>
-              <Link href="/debug/signin-test">
-                <Button variant="outline" className="border-blue-300 text-blue-800 hover:bg-blue-100">
-                  Open Debug Tool
-                </Button>
-              </Link>
-              <p className="text-xs text-blue-600 mt-2">
-                Use "OAuth Session Fix" with your email and session ID above
-              </p>
+              <div className="space-y-2">
+                <p className="text-blue-900 font-medium">support@pixelpharm.com</p>
+                <p className="text-xs text-blue-600">
+                  Include your session ID: {sessionId?.slice(-10)}
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>
