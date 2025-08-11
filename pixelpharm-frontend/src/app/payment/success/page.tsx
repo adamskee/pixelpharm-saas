@@ -6,7 +6,7 @@ import { useSession, signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, ArrowRight, Download, Star, Loader2 } from 'lucide-react';
+import { CheckCircle, ArrowRight, Download, Star, Loader2, User, AlertCircle } from 'lucide-react';
 
 function PaymentSuccessContent() {
   const searchParams = useSearchParams();
