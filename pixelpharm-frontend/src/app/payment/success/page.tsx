@@ -32,24 +32,39 @@ function PaymentSuccessContent() {
           console.log('✅ User already authenticated via OAuth:', session.user.email);
           setUserEmail(session.user.email);
           
-          // For OAuth users, we don't need the post-payment signin API
-          // Instead, let's verify their subscription was updated
+          // For OAuth users, verify their subscription was updated by the webhook
           try {
             const verifyResponse = await fetch('/api/user/subscription-status');
             const verifyData = await verifyResponse.json();
             
-            if (verifyResponse.ok) {
-              console.log('✅ OAuth user subscription verified:', verifyData);
+            if (verifyResponse.ok && verifyData.hasActiveSubscription) {
+              console.log('✅ OAuth user subscription verified and active:', verifyData);
               setSessionData({
                 mode: 'payment',
-                amount_total: 0, // Assume 100% discount for OAuth flow
-                user: session.user
+                amount_total: 0, // For 100% discount coupons
+                user: session.user,
+                subscriptionInfo: verifyData
               });
             } else {
-              console.warn('⚠️ Could not verify subscription status:', verifyData.error);
+              console.warn('⚠️ OAuth user subscription not active yet:', verifyData);
+              // For OAuth users whose webhook hasn't processed yet, show a message
+              console.log('💡 OAuth user needs subscription activation - use debug tool');
+              setSessionData({
+                mode: 'payment',
+                amount_total: 0,
+                user: session.user,
+                needsSubscriptionFix: true,
+                subscriptionInfo: verifyData
+              });
             }
           } catch (verifyError) {
-            console.warn('⚠️ Error verifying subscription:', verifyError);
+            console.warn('⚠️ Error verifying OAuth user subscription:', verifyError);
+            setSessionData({
+              mode: 'payment', 
+              amount_total: 0,
+              user: session.user,
+              needsSubscriptionFix: true
+            });
           }
           
           setLoading(false);
@@ -170,6 +185,89 @@ function PaymentSuccessContent() {
               </Link>
             </p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show OAuth subscription fix needed message
+  if (session?.user && sessionData?.needsSubscriptionFix) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50">
+        <div className="container mx-auto px-4 py-16 max-w-2xl">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-orange-100 rounded-full mb-6">
+              <CheckCircle className="h-10 w-10 text-orange-600" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Payment Received!
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+              Your payment was successful, but we need to activate your subscription. This usually happens automatically, but may take a moment.
+            </p>
+          </div>
+
+          <Card className="bg-orange-50 border-orange-200 mb-8">
+            <CardContent className="p-6">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0">
+                  {session.user.image ? (
+                    <img 
+                      src={session.user.image} 
+                      alt="Profile" 
+                      className="w-12 h-12 rounded-full"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                      <User className="h-6 w-6 text-white" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-grow">
+                  <h3 className="text-lg font-semibold text-orange-900 mb-2">
+                    Account: {session.user.name}
+                  </h3>
+                  <p className="text-orange-800 mb-4">
+                    Email: <strong>{session.user.email}</strong>
+                  </p>
+                  <p className="text-orange-700 text-sm mb-4">
+                    Your subscription is being activated. If this doesn't complete automatically, you can use our debug tool below.
+                  </p>
+                  
+                  <div className="space-y-2">
+                    <Link href="/dashboard">
+                      <Button className="w-full bg-orange-600 hover:bg-orange-700">
+                        Try Dashboard Access
+                        <ArrowRight className="h-5 w-5 ml-2" />
+                      </Button>
+                    </Link>
+                    <p className="text-xs text-orange-600 text-center">
+                      Session ID: {sessionId?.slice(-10)} (save this for support)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-6 text-center">
+              <h3 className="text-lg font-semibold text-blue-900 mb-4">
+                Need Help? Use Our Debug Tool
+              </h3>
+              <p className="text-blue-800 text-sm mb-4">
+                If you can't access the dashboard, you can fix your subscription manually:
+              </p>
+              <Link href="/debug/signin-test">
+                <Button variant="outline" className="border-blue-300 text-blue-800 hover:bg-blue-100">
+                  Open Debug Tool
+                </Button>
+              </Link>
+              <p className="text-xs text-blue-600 mt-2">
+                Use "OAuth Session Fix" with your email and session ID above
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );

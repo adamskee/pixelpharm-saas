@@ -78,6 +78,7 @@ export async function createCheckoutSession({
       metadata: {
         userId,
         userEmail,
+        planType: mode === 'subscription' ? 'basic' : 'pro',
         ...(couponCode && { couponCode }),
       },
       // Apply discount if coupon is valid
