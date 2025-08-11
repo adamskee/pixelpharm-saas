@@ -1,12 +1,13 @@
 // File: src/app/dashboard/health-optimization/page.tsx
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { RecoveryProtocol } from '@/components/health/recovery-protocol';
 import { SportsNutrition } from '@/components/health/sports-nutrition';
 import {
@@ -19,12 +20,19 @@ import {
   ArrowLeft,
   Sparkles,
   Award,
-  Clock
+  Clock,
+  User,
+  Walk,
+  Dumbbell,
+  Trophy
 } from 'lucide-react';
 import Link from 'next/link';
 
+type ActivityLevel = 'sedentary' | 'daily-walker' | 'gym-visitor' | 'elite-athlete';
+
 export default function HealthOptimizationPage() {
   const { user } = useAuth();
+  const [selectedActivityLevel, setSelectedActivityLevel] = useState<ActivityLevel>('daily-walker');
 
   if (!user) {
     return (
@@ -189,7 +197,132 @@ export default function HealthOptimizationPage() {
                   Evidence-based nutrition and supplementation strategies optimized for your biomarker profile
                 </p>
               </div>
-              <SportsNutrition userId={user.userId} />
+              
+              {/* Activity Level Selection */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Activity className="h-5 w-5 text-blue-600" />
+                    <span>Select Your Activity Level</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Choose your typical activity level to customize nutrition and supplement recommendations
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {/* Sedentary */}
+                    <div
+                      className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:bg-gray-50 ${
+                        selectedActivityLevel === 'sedentary'
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200'
+                      }`}
+                      onClick={() => setSelectedActivityLevel('sedentary')}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={selectedActivityLevel === 'sedentary'}
+                          onChange={() => {}}
+                          className="pointer-events-none"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <User className="h-5 w-5 text-gray-600" />
+                            <span className="font-medium text-gray-800">Sedentary</span>
+                          </div>
+                          <p className="text-xs text-gray-600">
+                            Little to no regular exercise, desk job, mostly sitting throughout the day
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Daily Walker */}
+                    <div
+                      className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:bg-gray-50 ${
+                        selectedActivityLevel === 'daily-walker'
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200'
+                      }`}
+                      onClick={() => setSelectedActivityLevel('daily-walker')}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={selectedActivityLevel === 'daily-walker'}
+                          onChange={() => {}}
+                          className="pointer-events-none"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Walk className="h-5 w-5 text-green-600" />
+                            <span className="font-medium text-gray-800">Daily Walker</span>
+                          </div>
+                          <p className="text-xs text-gray-600">
+                            Regular walking, light activities, occasional longer walks or hikes
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Gym Visitor */}
+                    <div
+                      className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:bg-gray-50 ${
+                        selectedActivityLevel === 'gym-visitor'
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200'
+                      }`}
+                      onClick={() => setSelectedActivityLevel('gym-visitor')}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={selectedActivityLevel === 'gym-visitor'}
+                          onChange={() => {}}
+                          className="pointer-events-none"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Dumbbell className="h-5 w-5 text-orange-600" />
+                            <span className="font-medium text-gray-800">Gym Visitor</span>
+                          </div>
+                          <p className="text-xs text-gray-600">
+                            Regular gym sessions 3-5x/week, strength training, cardio workouts
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Elite Athlete */}
+                    <div
+                      className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:bg-gray-50 ${
+                        selectedActivityLevel === 'elite-athlete'
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200'
+                      }`}
+                      onClick={() => setSelectedActivityLevel('elite-athlete')}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={selectedActivityLevel === 'elite-athlete'}
+                          onChange={() => {}}
+                          className="pointer-events-none"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Trophy className="h-5 w-5 text-purple-600" />
+                            <span className="font-medium text-gray-800">Elite Athlete</span>
+                          </div>
+                          <p className="text-xs text-gray-600">
+                            Training 6+ times/week, competitive sports, high-intensity workouts
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <SportsNutrition userId={user.userId} activityLevel={selectedActivityLevel} />
             </div>
           </TabsContent>
         </Tabs>

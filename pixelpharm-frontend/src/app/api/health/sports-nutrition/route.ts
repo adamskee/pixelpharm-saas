@@ -51,6 +51,58 @@ interface NutritionProtocol {
   reassessment_timeline: string;
 }
 
+// Helper function to get activity-specific parameters
+function getActivityParameters(activityLevel: string) {
+  switch (activityLevel) {
+    case 'sedentary':
+      return {
+        description: 'Sedentary (little to no exercise, desk job)',
+        activityFactor: 1.2,
+        proteinPerKg: 1.2,
+        carbsPerKg: 3,
+        trainingDays: 0,
+        recoveryNeeds: 'Basic',
+        supplementPriority: 'Foundation vitamins and minerals',
+        calorieModifier: -300
+      };
+    case 'daily-walker':
+      return {
+        description: 'Daily Walker (regular walking, light activities)',
+        activityFactor: 1.4,
+        proteinPerKg: 1.6,
+        carbsPerKg: 4,
+        trainingDays: 2,
+        recoveryNeeds: 'Moderate',
+        supplementPriority: 'Basic performance and recovery support',
+        calorieModifier: 0
+      };
+    case 'gym-visitor':
+      return {
+        description: 'Gym Visitor (3-5x/week strength training, cardio)',
+        activityFactor: 1.6,
+        proteinPerKg: 2.0,
+        carbsPerKg: 6,
+        trainingDays: 4,
+        recoveryNeeds: 'High',
+        supplementPriority: 'Performance, recovery, and adaptation focus',
+        calorieModifier: 200
+      };
+    case 'elite-athlete':
+      return {
+        description: 'Elite Athlete (6+ training sessions/week, competitive)',
+        activityFactor: 1.8,
+        proteinPerKg: 2.4,
+        carbsPerKg: 8,
+        trainingDays: 6,
+        recoveryNeeds: 'Maximum',
+        supplementPriority: 'Comprehensive performance optimization',
+        calorieModifier: 500
+      };
+    default:
+      return getActivityParameters('daily-walker');
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -62,8 +114,9 @@ export async function GET(request: Request) {
     const userId = searchParams.get("userId") || 
       session.user.id || 
       `user-${session.user.email.replace(/[^a-z0-9]/g, "")}`;
+    const activityLevel = searchParams.get("activityLevel") || 'daily-walker';
 
-    console.log(`🥗 Generating sports nutrition protocol for user: ${userId}`);
+    console.log(`🥗 Generating sports nutrition protocol for user: ${userId} (Activity: ${activityLevel})`);
 
     // Get latest biomarker data
     let biomarkerValues;
@@ -205,6 +258,9 @@ export async function GET(request: Request) {
         ? parseFloat(bodyComposition.skeletal_muscle_mass.toString()) * 1.4 // Estimate total lean mass
         : null;
 
+    // Activity level specific parameters
+    const activityParams = getActivityParameters(activityLevel);
+
     // Create comprehensive nutrition analysis prompt
     const nutritionPrompt = `You are an elite sports nutritionist and registered dietitian with expertise in performance optimization, supplement timing, and biomarker-based nutrition protocols. Analyze this athlete's profile and generate precise sports nutrition recommendations.
 
@@ -217,19 +273,26 @@ ATHLETE PROFILE:
 - Body Fat: ${bodyFat || 'Unknown'}%
 - Estimated Lean Mass: ${leanMass?.toFixed(1) || 'Unknown'} kg
 - BMR: ${bodyComposition?.bmr || 'Unknown'} kcal/day
+- ACTIVITY LEVEL: ${activityParams.description}
+- Training Frequency: ${activityParams.trainingDays} days/week
+- Recovery Needs: ${activityParams.recoveryNeeds}
+- Supplement Priority: ${activityParams.supplementPriority}
 
 BIOMARKER ANALYSIS (${nutritionBiomarkers.length} markers):
 ${nutritionBiomarkers.map(b => 
   `- ${b.biomarker_name}: ${b.value}${b.unit} (${b.is_abnormal ? 'ABNORMAL' : 'NORMAL'}) [Ref: ${b.reference_range || 'N/A'}]`
 ).join('\n')}
 
-ANALYSIS REQUIREMENTS:
-1. **MACRONUTRIENT OPTIMIZATION**: Calculate precise protein, carb, fat needs based on lean mass and performance goals
-2. **MICRONUTRIENT ASSESSMENT**: Identify deficiencies and optimal ranges for performance
-3. **SUPPLEMENT TIMING**: Provide specific timing, dosages, and synergistic combinations
-4. **MEAL TIMING**: Optimize nutrient timing around training and recovery
-5. **BIOMARKER MONITORING**: Recommend key markers to track progress
-6. **PERFORMANCE ENHANCEMENT**: Focus on evidence-based sports nutrition strategies
+ANALYSIS REQUIREMENTS FOR ${activityParams.description.toUpperCase()}:
+1. **MACRONUTRIENT OPTIMIZATION**: 
+   - Protein: ~${activityParams.proteinPerKg}g/kg body weight for this activity level
+   - Carbohydrates: ~${activityParams.carbsPerKg}g/kg on training days
+   - Adjust calories by ${activityParams.calorieModifier > 0 ? '+' : ''}${activityParams.calorieModifier} kcal from BMR baseline
+2. **ACTIVITY-SPECIFIC NEEDS**: Address ${activityParams.recoveryNeeds.toLowerCase()} recovery needs
+3. **SUPPLEMENT STRATEGY**: Focus on ${activityParams.supplementPriority.toLowerCase()}
+4. **TRAINING ADAPTATION**: Consider ${activityParams.trainingDays} training days per week
+5. **BIOMARKER MONITORING**: Recommend markers relevant to this activity level
+6. **LIFESTYLE INTEGRATION**: Practical recommendations for this activity pattern
 
 Consider:
 - Protein synthesis optimization (leucine threshold, timing)
@@ -303,7 +366,8 @@ FORMAT AS JSON:
         weight, 
         leanMass, 
         bodyComposition?.bmr || null,
-        user?.gender || null
+        user?.gender || null,
+        activityParams
       );
       return NextResponse.json({
         success: true,
@@ -344,7 +408,8 @@ FORMAT AS JSON:
         weight, 
         leanMass, 
         bodyComposition?.bmr || null,
-        user?.gender || null
+        user?.gender || null,
+        activityParams
       );
     }
 
@@ -384,7 +449,8 @@ function generateBasicNutritionProtocol(
   weight: number | null, 
   leanMass: number | null,
   bmr: number | null,
-  gender: string | null
+  gender: string | null,
+  activityParams: any
 ): NutritionProtocol {
   const deficientMarkers = biomarkers.filter(b => b.is_abnormal).length;
   const nutritionScore = Math.max(30, 100 - (deficientMarkers * 8));
@@ -394,12 +460,13 @@ function generateBasicNutritionProtocol(
   else if (deficientMarkers > 2) deficiencyRisk = "HIGH";
   else if (deficientMarkers > 0) deficiencyRisk = "MODERATE";
 
-  // Basic macronutrient calculations
-  const proteinPerKg = weight ? (2.0) : 1.8; // g/kg for athletes
-  const dailyProtein = weight ? Math.round(weight * proteinPerKg) : 140;
-  const dailyCarbs = weight ? Math.round(weight * 6) : 400; // 6g/kg for training days
-  const dailyFat = weight ? Math.round(weight * 1.2) : 80; // 1.2g/kg
-  const estimatedCalories = bmr ? Math.round(bmr * 1.6) : 2500; // Activity factor
+  // Activity-specific macronutrient calculations
+  const proteinPerKg = activityParams.proteinPerKg;
+  const dailyProtein = weight ? Math.round(weight * proteinPerKg) : Math.round(70 * proteinPerKg);
+  const dailyCarbs = weight ? Math.round(weight * activityParams.carbsPerKg) : Math.round(70 * activityParams.carbsPerKg);
+  const dailyFat = weight ? Math.round(weight * 1.2) : 80; // 1.2g/kg baseline
+  const baseBMR = bmr || (gender === 'male' ? 1800 : 1500); // Rough estimate if no BMR
+  const estimatedCalories = Math.round(baseBMR * activityParams.activityFactor) + activityParams.calorieModifier;
 
   // Generate basic supplement recommendations based on common deficiencies
   const basicSupplements: SupplementRecommendation[] = [
@@ -487,10 +554,10 @@ function generateBasicNutritionProtocol(
         "Rehydrate with 1.5L fluid per kg body weight lost"
       ],
       daily_requirements: {
-        protein: `${proteinPerKg}g/kg body weight (${dailyProtein}g daily)`,
-        carbohydrates: `5-7g/kg body weight for training days (${dailyCarbs}g)`,
+        protein: `${proteinPerKg}g/kg body weight (${dailyProtein}g daily) - ${activityParams.description}`,
+        carbohydrates: `${activityParams.carbsPerKg}g/kg body weight (${dailyCarbs}g) - adjusted for ${activityParams.trainingDays} training days/week`,
         fats: `1.2g/kg body weight (${dailyFat}g, ~25-30% calories)`,
-        calories: `${estimatedCalories - 200}-${estimatedCalories + 200} kcal/day`
+        calories: `${estimatedCalories - 200}-${estimatedCalories + 200} kcal/day (Activity Factor: ${activityParams.activityFactor})`
       }
     },
     supplement_recommendations: basicSupplements,

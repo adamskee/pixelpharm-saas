@@ -25,8 +25,11 @@ import {
   Utensils
 } from 'lucide-react';
 
+type ActivityLevel = 'sedentary' | 'daily-walker' | 'gym-visitor' | 'elite-athlete';
+
 interface SportsNutritionProps {
   userId: string;
+  activityLevel?: ActivityLevel;
 }
 
 interface SupplementRecommendation {
@@ -73,7 +76,7 @@ interface NutritionData {
   reassessment_timeline: string;
 }
 
-export function SportsNutrition({ userId }: SportsNutritionProps) {
+export function SportsNutrition({ userId, activityLevel = 'daily-walker' }: SportsNutritionProps) {
   const [loading, setLoading] = useState(false);
   const [nutritionData, setNutritionData] = useState<NutritionData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +87,7 @@ export function SportsNutrition({ userId }: SportsNutritionProps) {
     setError(null);
     
     try {
-      const response = await fetch(`/api/health/sports-nutrition?userId=${userId}&_timestamp=${Date.now()}`);
+      const response = await fetch(`/api/health/sports-nutrition?userId=${userId}&activityLevel=${activityLevel}&_timestamp=${Date.now()}`);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -108,7 +111,7 @@ export function SportsNutrition({ userId }: SportsNutritionProps) {
     if (userId) {
       fetchNutritionProtocol();
     }
-  }, [userId]);
+  }, [userId, activityLevel]);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600 bg-green-50 border-green-200";
@@ -195,10 +198,18 @@ export function SportsNutrition({ userId }: SportsNutritionProps) {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center space-x-2">
-              <Apple className="h-5 w-5 text-green-600" />
-              <span>Sports Nutrition Analysis</span>
-            </CardTitle>
+            <div className="space-y-2">
+              <CardTitle className="flex items-center space-x-2">
+                <Apple className="h-5 w-5 text-green-600" />
+                <span>Sports Nutrition Analysis</span>
+              </CardTitle>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">Activity Level:</span>
+                <Badge variant="outline" className="capitalize">
+                  {activityLevel.replace('-', ' ')}
+                </Badge>
+              </div>
+            </div>
             <Button 
               onClick={fetchNutritionProtocol} 
               variant="outline" 
