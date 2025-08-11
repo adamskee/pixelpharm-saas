@@ -1,8 +1,6 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth-config';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/database/client';
 
 export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'inactive';
 export type SubscriptionPlan = 'basic' | 'pro';

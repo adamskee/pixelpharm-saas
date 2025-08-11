@@ -1,7 +1,5 @@
 import { getUserSubscription } from "@/lib/auth/subscription-check";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/database/client";
 
 // Upload limits configuration
 export const UPLOAD_LIMITS = {
