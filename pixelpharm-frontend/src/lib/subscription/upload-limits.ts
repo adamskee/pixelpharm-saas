@@ -31,18 +31,23 @@ export interface UploadUsage {
 
 // Get current upload usage for a user
 export async function getUserUploadUsage(userId: string): Promise<UploadUsage> {
-  const subscription = await getUserSubscription(userId);
+  try {
+    console.log('📊 Getting subscription for user:', userId);
+    const subscription = await getUserSubscription(userId);
 
-  if (!subscription?.hasAccess) {
-    return {
-      currentMonth: 0,
-      totalUploads: 0,
-      remainingThisMonth: 0,
-      remainingTotal: 0,
-      canUpload: false,
-      limitType: "none",
-    };
-  }
+    console.log('📊 User subscription:', subscription);
+
+    if (!subscription?.hasAccess) {
+      console.log('📊 User has no subscription access, returning default limits');
+      return {
+        currentMonth: 0,
+        totalUploads: 0,
+        remainingThisMonth: 0,
+        remainingTotal: 0,
+        canUpload: false,
+        limitType: "none",
+      };
+    }
 
   const plan = subscription.plan || "inactive";
   const limits = UPLOAD_LIMITS[plan];
@@ -59,18 +64,20 @@ export async function getUserUploadUsage(userId: string): Promise<UploadUsage> {
     59
   );
 
-  const monthlyUploads = await prisma.fileUpload.count({
+  console.log('📊 Counting monthly uploads for:', { userId, startOfMonth, endOfMonth });
+  const monthlyUploads = await prisma.file_uploads.count({
     where: {
-      userId,
-      uploadType: {
+      user_id: userId,
+      upload_type: {
         in: ["BLOOD_TESTS", "BODY_COMPOSITION", "FITNESS_ACTIVITIES"],
       },
-      createdAt: {
+      created_at: {
         gte: startOfMonth,
         lte: endOfMonth,
       },
     },
   });
+  console.log('📊 Monthly uploads count:', monthlyUploads);
 
   // Get total uploads (for Pro plan or general tracking)
   let totalUploads = 0;
@@ -82,13 +89,13 @@ export async function getUserUploadUsage(userId: string): Promise<UploadUsage> {
     subscriptionStart.setDate(subscriptionStart.getDate() - 30); // 30 days ago
     uploadCountStartDate = subscriptionStart;
 
-    totalUploads = await prisma.fileUpload.count({
+    totalUploads = await prisma.file_uploads.count({
       where: {
-        userId,
-        uploadType: {
+        user_id: userId,
+        upload_type: {
           in: ["BLOOD_TESTS", "BODY_COMPOSITION", "FITNESS_ACTIVITIES"],
         },
-        createdAt: {
+        created_at: {
           gte: uploadCountStartDate,
         },
       },
@@ -146,6 +153,20 @@ export async function getUserUploadUsage(userId: string): Promise<UploadUsage> {
     resetDate:
       plan === "basic" ? endOfMonth : subscription.expiresAt || undefined,
   };
+  } catch (error: any) {
+    console.error('📊 Error in getUserUploadUsage:', error);
+    console.error('Error stack:', error.stack);
+    
+    // Return safe default values in case of error
+    return {
+      currentMonth: 0,
+      totalUploads: 0,
+      remainingThisMonth: 0,
+      remainingTotal: 0,
+      canUpload: false,
+      limitType: "none",
+    };
+  }
 }
 
 // Check if user can upload (quick check for API endpoints)

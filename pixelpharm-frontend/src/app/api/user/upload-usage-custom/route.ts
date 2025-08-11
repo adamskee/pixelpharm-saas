@@ -16,11 +16,15 @@ export async function POST(request: Request) {
 
     const uploadUsage = await getUserUploadUsage(userId);
 
+    console.log('📊 Upload usage result:', uploadUsage);
+
     return NextResponse.json(uploadUsage);
   } catch (error: any) {
     console.error('Error fetching upload usage for custom auth:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error message:', error.message);
     return NextResponse.json(
-      { error: 'Failed to fetch upload usage' },
+      { error: 'Failed to fetch upload usage', details: error.message },
       { status: 500 }
     );
   }
