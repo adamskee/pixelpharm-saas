@@ -335,9 +335,10 @@ export const authOptions: NextAuthOptions = {
         return `${baseUrl}${url}`;
       }
 
-      // Default redirect to dashboard for external URLs or fallback
-      console.log("🔄 Using default dashboard redirect");
-      return `${baseUrl}/dashboard`;
+      // Default redirect to signin for external URLs or fallback
+      // This prevents unauthenticated users from being redirected to dashboard
+      console.log("🔄 Using default signin redirect for unauthenticated users");
+      return `${baseUrl}/auth/signin`;
     },
   },
 

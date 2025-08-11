@@ -82,6 +82,14 @@ function PaymentSuccessContent() {
           if (session?.user) {
             console.log('✅ Fallback: Using existing session data');
             setUserEmail(session.user.email);
+          } else {
+            // For credentials users who aren't signed in, we need to show signin instructions
+            console.log('❌ No session and failed to get user data - user needs to sign in');
+            // We still have the sessionId, so we know a payment was made
+            // Set a placeholder email so we show the sign-in required message
+            if (sessionId) {
+              setUserEmail('payment_completed_but_not_signed_in');
+            }
           }
         }
       } catch (error) {
@@ -90,6 +98,12 @@ function PaymentSuccessContent() {
         if (session?.user) {
           console.log('✅ Fallback: Using existing session data');
           setUserEmail(session.user.email);
+        } else {
+          // For credentials users, show sign-in required message
+          console.log('❌ Error and no session - user needs to sign in');
+          if (sessionId) {
+            setUserEmail('payment_completed_but_not_signed_in');
+          }
         }
       } finally {
         setLoading(false);
@@ -133,8 +147,11 @@ function PaymentSuccessContent() {
                 Ready to Access Your Dashboard
               </h3>
               <p className="text-blue-700 mb-6">
-                Your account (<strong>{userEmail}</strong>) has been created and your subscription is active. 
-                Please sign in using the password you set during checkout.
+                {userEmail === 'payment_completed_but_not_signed_in' ? (
+                  <>Your account has been created and your subscription is active. Please sign in using the email and password you provided during checkout.</>
+                ) : (
+                  <>Your account (<strong>{userEmail}</strong>) has been created and your subscription is active. Please sign in using the password you set during checkout.</>
+                )}
               </p>
               <Link href="/auth/signin">
                 <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
